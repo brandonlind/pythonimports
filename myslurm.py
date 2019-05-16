@@ -1,5 +1,6 @@
 import os
 
+
 def get_mems(infos:dict, unit='MB') -> list:
     mems = []
     for key,info in infos.items():
@@ -44,6 +45,7 @@ def get_times(infos:dict, unit='hrs') -> list:
         times.append(hrs)
     return times
 
+
 def sbatch(files):
     if not type(files) == list:
         files = [files]
@@ -51,9 +53,9 @@ def sbatch(files):
         os.chdir(op.dirname(f))
         os.system('sbatch %s' % f)
 
+
 def getpids():
-    pids = os.popen('squeue -u lindb -o "%i"').read().split("
-")
+    pids = os.popen('squeue -u lindb -o "%i"').read().split("\n")
     pids = [p for p in pids if not p == '']
     if len(pids) != luni(pids):
         print('len !- luni pids')
@@ -61,8 +63,7 @@ def getpids():
 
 
 def getjobs(user='lindb'):
-    jobs = os.popen(f'squeue -u {user} -o "%j"').read().split("
-")
+    jobs = os.popen(f'squeue -u {user} -o "%j"').read().split("\n")
     jobs = [j for j in jobs if not j == '']
     if len(jobs) != luni(jobs):
         print('len != luni jobs')
@@ -71,18 +72,15 @@ def getjobs(user='lindb'):
 
 def getaccounts(pd=False, user='lindb'):
     if pd == False:
-        accounts = os.popen(f'squeue -u {user} -o "%a"').read().split("
-")
+        accounts = os.popen(f'squeue -u {user} -o "%a"').read().split("\n")
     else:
-        accounts = os.popen(f'squeue -u {user} -t "pd" -o "%a"').read().split('
-')
+        accounts = os.popen(f'squeue -u {user} -t "pd" -o "%a"').read().split('\n')
     accounts = [a for a in accounts if not a in ['', 'ACCOUNT']]
     return accounts
 
 
 def seff(pid):
-    lst = os.popen('seff %s' % pid).read().split("
-")
+    lst = os.popen('seff %s' % pid).read().split("\n")
     lst.remove('')
     return lst
 
