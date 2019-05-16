@@ -145,3 +145,9 @@ def getdirs(paths):
             newestdirs = getdirs(fs(path, dirs=True))
             newdirs.extend(newestdirs)
     return newdirs
+def get_client(profile):
+    rc = Client(profile=profile)
+    dview = rc[:]
+    lview = rc.load_balanced_view()
+    print(len(lview),len(dview))
+    return lview, dview
