@@ -151,3 +151,21 @@ def get_client(profile):
     lview = rc.load_balanced_view()
     print(len(lview),len(dview))
     return lview, dview
+
+def make_jobs(inputs, cmd):
+    jobs = []
+    for arg in inputs:
+        jobs.append(lview.apply_async(cmd, arg))
+    return jobs
+
+def watch_async(jobs):
+    """Wait until jobs are done executing, get updates"""
+    print(len(jobs))
+    count = 0
+    while count != len(jobs):
+        time.sleep(5)
+        count = 0
+        for j in jobs:
+            if j.ready():
+                count += 1
+        update([count, len(jobs)])
