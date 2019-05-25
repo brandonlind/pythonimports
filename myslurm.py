@@ -1,5 +1,5 @@
 import os
-
+from pythonimports import luni
 
 def get_mems(infos:dict, unit='MB') -> list:
     mems = []
@@ -10,7 +10,7 @@ def get_mems(infos:dict, unit='MB') -> list:
         if units == 'GB':
             mem = float(mem)*1024
         elif units == 'EB':
-            pass
+            mem = 0
         else:
             try:
                 assert units == 'MB'
@@ -54,8 +54,8 @@ def sbatch(files):
         os.system('sbatch %s' % f)
 
 
-def getpids():
-    pids = os.popen('squeue -u lindb -o "%i"').read().split("\n")
+def getpids(user='lindb'):
+    pids = os.popen(f'squeue -u {user} -o "%i"').read().split("\n")
     pids = [p for p in pids if not p == '']
     if len(pids) != luni(pids):
         print('len !- luni pids')
