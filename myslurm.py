@@ -54,19 +54,19 @@ def sbatch(files):
 
 
 def getpids(user=os.environ['USER']):
-    pids = os.popen(f'squeue -u {user} -o "%i"').read().split("\n")
+    pids = os.popen(f'squeue -u {user} -h -o "%i"').read().split("\n")
     pids = [p for p in pids if not p == '']
-    if len(pids) != list(set(pids)):
+    if len(pids) != len(list(set(pids))):
         print('len !- luni pids')
-    return pids[1:]
+    return pids
 
 
 def getjobs(user=os.environ['USER']):
-    jobs = os.popen(f'squeue -u {user} -o "%j"').read().split("\n")
+    jobs = os.popen(f'squeue -u {user} -h -o "%j"').read().split("\n")
     jobs = [j for j in jobs if not j == '']
-    if len(jobs) != list(set(jobs)):
+    if len(jobs) != len(list(set(jobs))):
         print('len != luni jobs')
-    return jobs[1:]
+    return jobs
 
 
 def getaccounts(pd=False, user=os.environ['USER']):
