@@ -27,6 +27,7 @@ import matplotlib.gridspec as gridspec
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib import pyplot as pl
 import matplotlib.dates as mdates
+from myslurm import *
 
 pd.set_option('display.max_columns', 100)
 def ls(DIR):
