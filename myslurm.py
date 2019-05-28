@@ -1,5 +1,4 @@
 import os
-from pythonimports import luni
 
 def get_mems(infos:dict, unit='MB') -> list:
     mems = []
@@ -54,23 +53,23 @@ def sbatch(files):
         os.system('sbatch %s' % f)
 
 
-def getpids(user='lindb'):
+def getpids(user=os.environ['USER']):
     pids = os.popen(f'squeue -u {user} -o "%i"').read().split("\n")
     pids = [p for p in pids if not p == '']
-    if len(pids) != luni(pids):
+    if len(pids) != list(set(pids)):
         print('len !- luni pids')
     return pids[1:]
 
 
-def getjobs(user='lindb'):
+def getjobs(user=os.environ['USER']):
     jobs = os.popen(f'squeue -u {user} -o "%j"').read().split("\n")
     jobs = [j for j in jobs if not j == '']
-    if len(jobs) != luni(jobs):
+    if len(jobs) != list(set(jobs)):
         print('len != luni jobs')
     return jobs[1:]
 
 
-def getaccounts(pd=False, user='lindb'):
+def getaccounts(pd=False, user=os.environ['USER']):
     if pd == False:
         accounts = os.popen(f'squeue -u {user} -o "%a"').read().split("\n")
     else:
