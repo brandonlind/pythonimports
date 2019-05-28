@@ -8,7 +8,6 @@ import shutil
 import time
 import numpy as np
 import pandas as pd
-from myslurm import *
 from tqdm import tqdm_notebook as nb
 from IPython.display import clear_output
 from collections import OrderedDict, Counter
@@ -31,7 +30,7 @@ import matplotlib.dates as mdates
 
 pd.set_option('display.max_columns', 100)
 def ls(DIR):
-    return sorted([f for f in listdir(DIR)])
+    return sorted(listdir(DIR))
 def fs(DIR, dirs=None):
     if dirs == False:
         return sorted([f for f in fs(DIR) if not op.isdir(f)])
