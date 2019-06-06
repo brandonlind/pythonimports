@@ -154,7 +154,7 @@ def get_client(profile):
 
 def make_jobs(inputs, cmd, lview):
     jobs = []
-    for arg in inputs:
+    for arg in nb(inputs):
         jobs.append(lview.apply_async(cmd, arg))
     return jobs
 
