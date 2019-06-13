@@ -153,12 +153,13 @@ def get_client(profile):
     return lview, dview
 
 def make_jobs(inputs, cmd, lview):
+    print(f"making jobs for {cmd.__name__}")
     jobs = []
     for arg in nb(inputs):
         jobs.append(lview.apply_async(cmd, arg))
     return jobs
 
-def watch_async(jobs):
+def watch_async(jobs, phase=None):
     """Wait until jobs are done executing, get updates"""
     print(len(jobs))
     count = 0
@@ -168,4 +169,8 @@ def watch_async(jobs):
         for j in jobs:
             if j.ready():
                 count += 1
-        update([count, len(jobs)])
+	if phase is not None:
+		update([phase, count, len(jobs)])
+	else:
+	        update([count, len(jobs)])
+
