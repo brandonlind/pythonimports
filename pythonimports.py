@@ -169,8 +169,8 @@ def watch_async(jobs, phase=None):
         for j in jobs:
             if j.ready():
                 count += 1
-    if phase is not None:
-        update([phase, count, len(jobs)])
-    else:
-        update([count, len(jobs)])
+        if phase is not None:
+            update([phase, count, len(jobs)])
+        else:
+            update([count, len(jobs)])
 
