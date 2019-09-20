@@ -121,6 +121,7 @@ def get_mems(infos:dict, unit='MB') -> list:
     for key,info in infos.items():
         if 'running' in info[3].lower() or 'pending' in info[3].lower():
             continue
+        info[-2] = info[-2].split("(estimated")[0]
         mem, units = info[-2].split()[-2:]
         if units == 'GB':
             mem = float(mem)*1024
