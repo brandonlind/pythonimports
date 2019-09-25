@@ -173,4 +173,10 @@ def watch_async(jobs, phase=None):
             update([phase, count, len(jobs)])
         else:
             update([count, len(jobs)])
-
+def read(file, lines=True):
+    with open(file, 'r') as o:
+        text = o.read()
+    if lines is True:
+        return text.split("\n")
+    else:
+        return text

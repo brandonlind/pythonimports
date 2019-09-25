@@ -2,6 +2,7 @@
 
 
 import os
+import subprocess
 
 def get_mems(infos:dict, unit='MB') -> list:
     """From dict(infos) [val = seff output], extract mem in MB.
@@ -66,7 +67,7 @@ def sbatch(files:list) -> list:
         files = [files]
     pids = []
     for file in files:
-        os.chdir(op.dirname(file))
+        os.chdir(os.path.dirname(file))
         pid = subprocess.check_output([shutil.which('sbatch'), file]).decode('utf-8').replace("\n", "").split()[-1]
         print('sbatched %s' % file)
         pids.append(pid)
