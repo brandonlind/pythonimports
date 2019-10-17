@@ -3,6 +3,7 @@
 
 import os
 import subprocess
+import shutil
 
 def get_mems(infos:dict, unit='MB') -> list:
     """From dict(infos) [val = seff output], extract mem in MB.
