@@ -4,8 +4,9 @@
 import os
 import subprocess
 import shutil
+import matplotlib.pyplot as plt
 
-def get_mems(infos:dict, unit='MB') -> list:
+def get_mems(infos:dict, unit='MB', plot=True) -> list:
     """From dict(infos) [val = seff output], extract mem in MB.
     
     fix: add in other mem units
@@ -29,6 +30,12 @@ def get_mems(infos:dict, unit='MB') -> list:
         if unit == 'GB':
             mem = mem/1024
         mems.append(mem)
+    
+    if plot is True:
+        plt.hist(mems)
+        plt.xlabel(units)
+        plt.show()
+    
     return mems
 
 
@@ -47,7 +54,7 @@ def clock_hrs(clock:str, unit='hrs') -> float:
     return hrs
 
 
-def get_times(infos:dict, unit='hrs') -> list:
+def get_times(infos:dict, unit='hrs', plot=True) -> list:
     """From dict(infos) [val = seff output], get times in hours.
     
     fix: add in other clock units"""
@@ -58,6 +65,11 @@ def get_times(infos:dict, unit='hrs') -> list:
         clock = info[-3].split()[-1]
         hrs = clock_hrs(clock, unit=unit)
         times.append(hrs)
+    
+    if plot is True:
+        plt.hist(times)
+        plt.xlabel(unit)
+        plt.show()
     return times
 
 
