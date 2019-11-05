@@ -127,27 +127,3 @@ def getpid(out:str) -> list:
     return out.split("_")[-1].replace('.out', '')
 
 
-def get_mems(infos:dict, unit='MB') -> list:
-    """From dict(infos) [val = seff output], return list of mem in MB.
-    
-    fix: add in other mem units"""
-    mems = []
-    for key,info in infos.items():
-        if 'running' in info[3].lower() or 'pending' in info[3].lower():
-            continue
-        info[-2] = info[-2].split("(estimated")[0]
-        mem, units = info[-2].split()[-2:]
-        if units == 'GB':
-            mem = float(mem)*1024
-        elif units == 'EB':
-            pass
-        else:
-            try:
-                assert units == 'MB'
-            except AssertionError:
-                print('info = ', info)
-            mem = float(mem)
-        if unit == 'GB':
-            mem = mem/1024
-        mems.append(mem)
-    return mems
