@@ -30,26 +30,34 @@ import matplotlib.dates as mdates
 from myslurm import *
 
 pd.set_option('display.max_columns', 100)
+
 def ls(DIR):
     return sorted(listdir(DIR))
-def fs(DIR, dirs=None):
+
+def fs(DIR, dirs=False, pattern=''):
     if dirs == False:
-        return sorted([f for f in fs(DIR) if not op.isdir(f)])
+        return sorted([f for f in fs(DIR, pattern=pattern) if not op.isdir(f)])
     elif dirs == True:
-        return sorted([d for d in fs(DIR) if op.isdir(d)])
+        return sorted([d for d in fs(DIR, pattern=pattern) if op.isdir(d)])
     elif dirs == None:
-        return sorted([op.join(DIR, f) for f in ls(DIR)])
+        return sorted([op.join(DIR, f) for f in os.listdir(DIR) if pattern in f])
+
 def uni(mylist):
     mylist = list(mylist)
     return list(set(mylist))
+
 def luni(mylist):
     return len(uni(mylist))
+
 def suni(mylist):
     return sorted(uni(mylist))
+
 def nrow(df):
     return len(df.index)
+
 def ncol(df):
     return len(df.columns)
+
 def table(lst, exclude=[]):
     c = Counter()
     for x in lst:
@@ -59,28 +67,37 @@ def table(lst, exclude=[]):
             if ex in c:
                 c.pop(ex)
     return c
+
 def pkldump(obj, f):
     with open(f, 'wb') as o:
         pickle.dump(obj, o, protocol=pickle.HIGHEST_PROTOCOL)
+
 def head(df):
     return df.head()
+
 def update(args):
     clear_output(wait=True)
     [print(x) for x in args]
+
 def keys(Dict):
     return list(Dict.keys())
+
 def values(Dict):
     return list(Dict.values())
+
 def setindex(df, colname):
     df.index = df[colname].tolist()
     df.index.names = ['']
     df = df[[c for c in df.columns if not colname == c]]
     return df
+
 def pklload(path):
     pkl = pickle.load(open(path, 'rb'))
     return pkl
+
 def gettimestamp(f):
     return time.ctime(os.path.getmtime(f))
+
 def getmostrecent(files, remove=False):
     if not isinstance(files, list):
         files = [files]
@@ -99,6 +116,7 @@ def getmostrecent(files, remove=False):
         return files[0]
     else:
         return None
+
 def formatclock(hrs):
     # format the time
     TIME = dt(1, 1, 1) + timedelta(hours=hrs)
@@ -126,13 +144,16 @@ def formatclock(hrs):
         TIME = TIME + timedelta(hours=diff) 
     clock = "%s-%s:00:00"  % (TIME.day -1, str(TIME.hour).zfill(2))
     return clock
+
 def printmd(string):
     string = str(string)
     display(Markdown(string))
+
 def makedir(directory):
     if not op.exists(directory):
         os.makedirs(directory)
     return directory
+
 def getdirs(paths):
     if isinstance(paths, str):
         print('converting to list')
