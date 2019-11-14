@@ -34,7 +34,7 @@ pd.set_option('display.max_columns', 100)
 def ls(DIR):
     return sorted(listdir(DIR))
 
-def fs(DIR, dirs=False, pattern=''):
+def fs(DIR, pattern='', dirs=None):
     if dirs == False:
         return sorted([f for f in fs(DIR, pattern=pattern) if not op.isdir(f)])
     elif dirs == True:
