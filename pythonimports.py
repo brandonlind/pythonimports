@@ -8,7 +8,7 @@ import shutil
 import time
 import numpy as np
 import pandas as pd
-from tqdm import tqdm_notebook as nb
+from tqdm import tqdm as nb
 from IPython.display import clear_output
 from collections import OrderedDict, Counter
 from IPython.display import Markdown, display
