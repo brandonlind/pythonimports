@@ -2,6 +2,7 @@
 
 
 import os
+import time
 import subprocess
 import shutil
 import matplotlib.pyplot as plt
@@ -73,7 +74,7 @@ def get_times(infos:dict, unit='hrs', plot=True) -> list:
     return times
 
 
-def sbatch(files:list) -> list:
+def sbatch(files:list, sleep=0) -> list:
     """From a list of .sh files, sbatch them and return associated jobid in a list."""
     if isinstance(files, list) is False:
         assert isinstance(files, str)
@@ -84,6 +85,7 @@ def sbatch(files:list) -> list:
         pid = subprocess.check_output([shutil.which('sbatch'), file]).decode('utf-8').replace("\n", "").split()[-1]
         print('sbatched %s' % file)
         pids.append(pid)
+        time.sleep(sleep)
     return pids
 
 
