@@ -34,7 +34,7 @@ def get_mems(infos:dict, unit='MB', plot=True) -> list:
     
     if plot is True:
         plt.hist(mems)
-        plt.xlabel(units)
+        plt.xlabel(unit)
         plt.show()
     
     return mems
