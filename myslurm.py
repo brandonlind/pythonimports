@@ -127,5 +127,3 @@ def seff(pid:str) -> list:
 def getpid(out:str) -> list:
     """From an .out file with structure <anytext_JOBID.out>, return JOBID."""
     return out.split("_")[-1].replace('.out', '')
-
-
