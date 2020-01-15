@@ -9,6 +9,7 @@ import time
 import numpy as np
 import pandas as pd
 from tqdm import tqdm as nb
+from tqdm import tqdm_notebook as tnb
 from IPython.display import clear_output
 from collections import OrderedDict, Counter
 from IPython.display import Markdown, display
@@ -166,7 +167,7 @@ def getdirs(paths):
             newestdirs = getdirs(fs(path, dirs=True))
             newdirs.extend(newestdirs)
     return newdirs
-def get_client(profile):
+def get_client(profile='default'):
     rc = Client(profile=profile)
     dview = rc[:]
     lview = rc.load_balanced_view()
@@ -176,7 +177,7 @@ def get_client(profile):
 def make_jobs(inputs, cmd, lview):
     print(f"making jobs for {cmd.__name__}")
     jobs = []
-    for arg in nb(inputs):
+    for arg in tnb(inputs):
         jobs.append(lview.apply_async(cmd, arg))
     return jobs
 
