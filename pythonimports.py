@@ -1,65 +1,115 @@
-import sys
 import os
+import sys
+import time
+import math
 import pickle
 import random
 import string
-import math
 import shutil
-import time
 import numpy as np
 import pandas as pd
-from tqdm import tqdm as nb
-from tqdm import tqdm_notebook as tnb
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import matplotlib.gridspec as gridspec
+from myslurm import *
+from typing import Optional, Union
 from IPython.display import clear_output
 from collections import OrderedDict, Counter
 from IPython.display import Markdown, display
+from os import listdir
 from os import path as op
 from os import chdir as cd
+from decimal import Decimal
+from tqdm import tqdm as nb
 from os import getcwd as cwd
-from os import listdir
 from shutil import copy as cp
 from shutil import move as mv
 from ipyparallel import Client
-from decimal import Decimal
 from datetime import timedelta
-from datetime import datetime as dt
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib import pyplot as pl
-import matplotlib.dates as mdates
-from myslurm import *
+from datetime import datetime as dt
+from tqdm import tqdm_notebook as tnb
+from matplotlib.backends.backend_pdf import PdfPages
+
 
 pd.set_option('display.max_columns', 100)
 
-def ls(DIR):
+
+def ls(DIR:str) -> list:
+    """Get a list of file basenames from DIR."""
     return sorted(listdir(DIR))
 
-def fs(DIR, pattern='', dirs=None):
-    if dirs == False:
-        return sorted([f for f in fs(DIR, pattern=pattern) if not op.isdir(f)])
-    elif dirs == True:
-        return sorted([d for d in fs(DIR, pattern=pattern) if op.isdir(d)])
-    elif dirs == None:
-        return sorted([op.join(DIR, f) for f in os.listdir(DIR) if pattern in f])
 
-def uni(mylist):
+def fs(DIR:str, pattern='', endswith='', startswith='', exclude=None, dirs=None) -> list:
+    """Get a list of full path names for files and/or directories in a DIR.
+    
+    pattern - pattern that file/dir basename must have to keep in return
+    endswith - str that file/dir basename must have to keep
+    startswith - str that file/dir basename must have to keep
+    exclude - str that will eliminate file/dir from keep if in basename
+    dirs - bool; True if keep only dirs, False if exclude dirs, None if keep files and dirs
+    """
+    if dirs is False:
+        return sorted([f for f in fs(DIR,
+                                     pattern=pattern,
+                                     endswith=endswith,
+                                     startswith=startswith,
+                                     exclude=exclude)
+                       if not op.isdir(f)])
+    elif dirs is True:
+        return sorted([d for d in fs(DIR,
+                                     pattern=pattern,
+                                     endswith=endswith,
+                                     startswith=startswith,
+                                     exclude=exclude)
+                       if op.isdir(d)])
+    elif dirs is None:
+        if exclude is not None:
+            return sorted([op.join(DIR, f)
+                           for f in os.listdir(DIR)
+                           if pattern in f
+                           and f.endswith(endswith)
+                           and f.startswith(startswith)
+                           and exclude not in f])
+        else:
+            return sorted([op.join(DIR, f)
+                           for f in os.listdir(DIR)
+                           if pattern in f
+                           and f.endswith(endswith)
+                           and f.startswith(startswith)])
+
+
+def uni(mylist:list) -> list:
+    """Return unique values from list."""
     mylist = list(mylist)
     return list(set(mylist))
 
-def luni(mylist):
+
+def luni(mylist:list) -> list:
+    """Return length of unique values from list."""
     return len(uni(mylist))
 
-def suni(mylist):
+
+def suni(mylist:list) -> list:
+    """Retrun sorted unique values from list."""
     return sorted(uni(mylist))
 
-def nrow(df):
+
+def nrow(df) -> int:
+    """Return number of rows in pandas.DataFrame."""
     return len(df.index)
 
-def ncol(df):
+
+def ncol(df) -> int:
+    """Return number of cols in pandas.DataFrame."""
     return len(df.columns)
 
-def table(lst, exclude=[]):
+
+def table(lst:list, exclude=[]) -> dict:
+    """Count each item in a list.
+    
+    Return a dict with key for each item, val of count
+    """
     c = Counter()
     for x in lst:
         c[x] += 1
@@ -69,37 +119,61 @@ def table(lst, exclude=[]):
                 c.pop(ex)
     return c
 
-def pkldump(obj, f):
+
+def pkldump(obj, f:str) -> None:
+    """Save object to .pkl file."""
     with open(f, 'wb') as o:
         pickle.dump(obj, o, protocol=pickle.HIGHEST_PROTOCOL)
 
+
 def head(df):
+    """Return head of pandas.DataFame."""
     return df.head()
 
-def update(args):
+
+def update(args:list):
+    """For jupyter notebook, clear printout and print something new.
+    
+    Good for for-loops etc.
+    """
     clear_output(wait=True)
     [print(x) for x in args]
 
-def keys(Dict):
+
+def keys(Dict:dict) -> list:
+    """Get a list of keys in a dictionary."""
     return list(Dict.keys())
 
-def values(Dict):
+
+def values(Dict:dict) -> list:
+    """Get a list of values in a dictionary."""
     return list(Dict.values())
 
-def setindex(df, colname):
+
+def setindex(df, colname:str):
+    """Set index of pandas.DataFrame to values in a column, remove col."""
     df.index = df[colname].tolist()
     df.index.names = ['']
     df = df[[c for c in df.columns if not colname == c]]
     return df
 
-def pklload(path):
+
+def pklload(path:str):
+    """Load object from a .pkl file"""
     pkl = pickle.load(open(path, 'rb'))
     return pkl
 
-def gettimestamp(f):
+
+def gettimestamp(f:str):
+    """Get ctime from a file path."""
     return time.ctime(os.path.getmtime(f))
 
-def getmostrecent(files, remove=False):
+
+def getmostrecent(files:list, remove=False) -> Optional[str]:
+    """From a list of files, determine most recent.
+    
+    Optional to delete non-most recent files.
+    """
     if not isinstance(files, list):
         files = [files]
     if len(files) > 1:
@@ -118,7 +192,9 @@ def getmostrecent(files, remove=False):
     else:
         return None
 
-def formatclock(hrs):
+
+def formatclock(hrs:float) -> str:
+    """For a given number of hours, format a clock: days-hours:mins:seconds."""
     # format the time
     TIME = dt(1, 1, 1) + timedelta(hours=hrs)
     # zero out the minutes, add an hour
@@ -146,16 +222,28 @@ def formatclock(hrs):
     clock = "%s-%s:00:00"  % (TIME.day -1, str(TIME.hour).zfill(2))
     return clock
 
-def printmd(string):
+
+def printmd(string:str) -> None:
+    """For jupyter notebook, print as markdown.
+    
+    Useful for for-loops, etc
+    """
     string = str(string)
     display(Markdown(string))
 
-def makedir(directory):
+
+def makedir(directory:str) -> str:
+    """If directory doesn't exist, create it.
+    
+    Return directory.
+    """    
     if not op.exists(directory):
         os.makedirs(directory)
     return directory
 
-def getdirs(paths):
+
+def getdirs(paths:Union[str, list]) -> list:
+    """Recursively get a list of all subdirs from given path."""
     if isinstance(paths, str):
         print('converting to list')
         paths = [paths]
@@ -167,21 +255,27 @@ def getdirs(paths):
             newestdirs = getdirs(fs(path, dirs=True))
             newdirs.extend(newestdirs)
     return newdirs
-def get_client(profile='default'):
+
+
+def get_client(profile='default') -> tuple:
+    """Get lview,dview from ipcluster."""
     rc = Client(profile=profile)
     dview = rc[:]
     lview = rc.load_balanced_view()
     print(len(lview),len(dview))
     return lview, dview
 
-def make_jobs(inputs, cmd, lview):
+
+def make_jobs(inputs:list, cmd, lview) -> list:
+    """Send each arg from inputs to a function command; async."""
     print(f"making jobs for {cmd.__name__}")
     jobs = []
     for arg in tnb(inputs):
         jobs.append(lview.apply_async(cmd, arg))
     return jobs
 
-def watch_async(jobs, phase=None):
+
+def watch_async(jobs:list, phase=None) -> None:
     """Wait until jobs are done executing, get updates"""
     print(len(jobs))
     count = 0
@@ -195,7 +289,13 @@ def watch_async(jobs, phase=None):
             update([phase, count, len(jobs)])
         else:
             update([count, len(jobs)])
-def read(file, lines=True):
+
+
+def read(file:str, lines=True) -> Union[str, list]:
+    """Read lines from a file.
+    
+    Return a list of lines, or one large string
+    """
     with open(file, 'r') as o:
         text = o.read()
     if lines is True:
