@@ -40,39 +40,43 @@ def ls(DIR:str) -> list:
     return sorted(listdir(DIR))
 
 
-def fs(DIR:str, pattern='', endswith='', startswith='', exclude=None, dirs=None) -> list:
+def fs(DIR:str, pattern='', endswith='', startswith='', exclude=None, dirs=None, bnames=False) -> list:
     """Get a list of full path names for files and/or directories in a DIR.
-    
+
     pattern - pattern that file/dir basename must have to keep in return
     endswith - str that file/dir basename must have to keep
     startswith - str that file/dir basename must have to keep
     exclude - str that will eliminate file/dir from keep if in basename
     dirs - bool; True if keep only dirs, False if exclude dirs, None if keep files and dirs
     """
+    if isinstance(exclude, str):
+        exclude = [exclude]
     if dirs is False:
         return sorted([f for f in fs(DIR,
                                      pattern=pattern,
                                      endswith=endswith,
                                      startswith=startswith,
-                                     exclude=exclude)
+                                     exclude=exclude,
+                                     bnames=bnames)
                        if not op.isdir(f)])
     elif dirs is True:
         return sorted([d for d in fs(DIR,
                                      pattern=pattern,
                                      endswith=endswith,
                                      startswith=startswith,
-                                     exclude=exclude)
+                                     exclude=exclude,
+                                     bnames=bnames)
                        if op.isdir(d)])
     elif dirs is None:
         if exclude is not None:
-            return sorted([op.join(DIR, f)
+            return sorted([op.join(DIR, f) if bnames is False else f
                            for f in os.listdir(DIR)
                            if pattern in f
                            and f.endswith(endswith)
                            and f.startswith(startswith)
-                           and exclude not in f])
+                           and all([excl not in f for excl in exclude])])
         else:
-            return sorted([op.join(DIR, f)
+            return sorted([op.join(DIR, f) if bnames is False else f
                            for f in os.listdir(DIR)
                            if pattern in f
                            and f.endswith(endswith)
