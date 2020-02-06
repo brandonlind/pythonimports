@@ -48,6 +48,7 @@ def fs(DIR:str, pattern='', endswith='', startswith='', exclude=None, dirs=None,
     startswith - str that file/dir basename must have to keep
     exclude - str that will eliminate file/dir from keep if in basename
     dirs - bool; True if keep only dirs, False if exclude dirs, None if keep files and dirs
+    bnames - bool; True if return is file basenames, False if return is full file path
     """
     if isinstance(exclude, str):
         exclude = [exclude]
@@ -306,3 +307,4 @@ def read(file:str, lines=True) -> Union[str, list]:
         return text.split("\n")
     else:
         return text
+    
