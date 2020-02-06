@@ -7,6 +7,7 @@ import subprocess
 import shutil
 import matplotlib.pyplot as plt
 
+
 def get_mems(infos:dict, unit='MB', plot=True) -> list:
     """From dict(infos) [val = seff output], extract mem in MB.
     
@@ -91,8 +92,7 @@ def sbatch(files:list, sleep=0) -> list:
 
 def getpids(user=os.environ['USER']) -> list:
     """From squeue -u $USER, return list of queue."""
-    pids = os.popen(f'squeue -u {user} -h -o "%i"').read().split("\n")
-    pids = [p for p in pids if not p == '']
+    pids = [q[0] for q in getsq() if q[0] != '']
     if len(pids) != len(list(set(pids))):
         print('len !- luni pids')
     return pids
@@ -100,20 +100,18 @@ def getpids(user=os.environ['USER']) -> list:
 
 def getjobs(user=os.environ['USER']) -> list:
     """From squeue -u $USER, return list of job names, alert if len != unique."""
-    jobs = os.popen(f'squeue -u {user} -h -o "%j"').read().split("\n")
-    jobs = [j for j in jobs if not j == '']
+    jobs = [q[3] for q in getsq() if q[3] != '']
     if len(jobs) != len(list(set(jobs))):
         print('len != luni jobs')
     return jobs
 
 
-def getaccounts(pd=False, user=os.environ['USER']) -> list:
+def qaccounts(pd=False, user=os.environ['USER']) -> list:
     """From squeue -u $USER, return list of billing accounts."""
     if pd == False:
-        accounts = os.popen(f'squeue -u {user} -o "%a"').read().split("\n")
+        accounts = [q[2] for q in getsq() if q != '']
     else:
-        accounts = os.popen(f'squeue -u {user} -t "pd" -o "%a"').read().split('\n')
-    accounts = [a for a in accounts if not a in ['', 'ACCOUNT']]
+        accounts = [q[2] for q in getsq(states=['PD']) if q != '']
     return accounts
 
 
@@ -127,3 +125,105 @@ def seff(pid:str) -> list:
 def getpid(out:str) -> list:
     """From an .out file with structure <anytext_JOBID.out>, return JOBID."""
     return out.split("_")[-1].replace('.out', '')
+
+
+def checksq(sq):
+    """Make sure queue slurm command worked. Sometimes it doesn't.
+    
+    Positional arguments:
+    sq - list of squeue slurm command jobs, each line is str.split()
+       - slurm_job_id is zeroth element of str.split()
+    """
+    exitneeded = False
+    if not isinstance(sq, list):
+        print("\ttype(sq) != list, exiting %(thisfile)s" % globals())
+        exitneeded = True
+    for s in sq:
+        if 'socket' in s.lower():
+            print("\tsocket in sq return, exiting %(thisfile)s" % globals())
+            exitneeded = True
+        if not int(s.split()[0]) == float(s.split()[0]):
+            print("\tcould not assert int == float, %s" % (s[0]))
+            exitneeded = True
+    if exitneeded is True:
+        print('\tslurm screwed something up for %(thisfile)s, lame' % globals())
+        exit()
+    else:
+        return sq
+
+
+def getsq_exit(balancing):
+    """Determine if getsq is being used to balance priority jobs.
+
+    Positional arguments:
+    balancing - bool: True if using to balance priority jobs, else for other queue queries
+    """
+    print('\tno jobs in queue matching query')
+    if balancing is True:
+        print('\texiting balance_queue.py')
+        exit()
+    else:
+        return []
+
+
+def getsq(grepping=None, states=[], balancing=False):
+    """
+    Get jobs from squeue slurm command matching crieteria.
+
+    Positional arguments:
+    grepping - list of key words to look for in each column of job info
+    states - list of states {pending, running} wanted in squeue jobs
+    balancing - bool: True if using to balance priority jobs, else for other queue queries
+
+    Returns:
+    grepped - list of tuples where tuple elements are line.split() for each line of squeue \
+slurm command that matched grepping queries
+    """
+    if grepping is None:
+        grepping = [os.environ['USER']]
+    if isinstance(grepping, str):
+        # in case I pass a single str instead of a list of strings
+        grepping = [grepping]
+
+    # get the queue, without a header
+    cmd = [shutil.which('squeue'),
+           '-u',
+           os.environ['USER'],
+           '-h']
+    if 'running' in states:
+        cmd.extend(['-t', 'RUNNING'])
+    elif 'pending' in states:
+        cmd.extend(['-t', 'PD'])
+    sqout = subprocess.check_output(cmd).decode('utf-8').split('\n')
+
+    sq = [s for s in sqout if s != '']
+    checksq(sq)  # make sure slurm gave me something useful
+
+    # look for the things I want to grep
+    grepped = []
+    if len(sq) > 0:
+        for q in sq:  # for each job in queue
+            splits = q.split()
+            if 'CG' not in splits:  # grep -v 'CG' = skip jobs that are closing
+                keepit = 0
+                if len(grepping) > 0:  # see if all necessary greps are in the job
+                    for grep in grepping:
+                        for split in splits:
+                            if grep.lower() in split.lower():
+                                keepit += 1
+                                break
+                if keepit == len(grepping) and len(grepping) != 0:
+                    grepped.append(tuple(splits))
+
+        if len(grepped) > 0:
+            return grepped
+    return getsq_exit(balancing)
+
+
+def adjustjob(acct, jobid):
+    """Move job from one account to another."""
+    subprocess.Popen([shutil.which('scontrol'),
+                      'update',
+                      'Account=%s_cpu' % acct,
+                      'JobId=%s' % str(jobid)])
+
