@@ -280,15 +280,14 @@ def make_jobs(inputs:list, cmd, lview) -> list:
     return jobs
 
 
-def send_chunks(fxn, elements, thresh):
+def send_chunks(fxn, elements, thresh, kwargs={}):
     """Send a list of args from inputs to a function command; async."""
     jobs = []
     mylst = []
     for i,element in enumerate(elements):
         mylst.append(element)
         if len(mylst) == math.ceil(thresh) or (i+1)==len(elements):
-            print('len(mylst) = ', len(mylst))
-            jobs.append(lview.apply_async(fxn, mylst))
+            jobs.append(lview.apply_async(fxn, mylst, **kwargs))
             mylst = []
     return jobs
 
