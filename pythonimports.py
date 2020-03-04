@@ -28,7 +28,7 @@ from ipyparallel import Client
 from datetime import timedelta
 from matplotlib import pyplot as pl
 from datetime import datetime as dt
-from tqdm import tqdm_notebook as tnb
+from tqdm.notebook import tqdm as tnb
 from matplotlib.backends.backend_pdf import PdfPages
 
 
@@ -53,20 +53,20 @@ def fs(DIR:str, pattern='', endswith='', startswith='', exclude=None, dirs=None,
     if isinstance(exclude, str):
         exclude = [exclude]
     if dirs is False:
-        return sorted([f for f in fs(DIR,
-                                     pattern=pattern,
-                                     endswith=endswith,
-                                     startswith=startswith,
-                                     exclude=exclude,
-                                     bnames=bnames)
+        return sorted([op.basename(f) if bnames is True else f
+                       for f in fs(DIR,
+                                   pattern=pattern,
+                                   endswith=endswith,
+                                   startswith=startswith,
+                                   exclude=exclude)
                        if not op.isdir(f)])
     elif dirs is True:
-        return sorted([d for d in fs(DIR,
-                                     pattern=pattern,
-                                     endswith=endswith,
-                                     startswith=startswith,
-                                     exclude=exclude,
-                                     bnames=bnames)
+        return sorted([op.basename(d) if bnames is True else f
+                       for d in fs(DIR,
+                                   pattern=pattern,
+                                   endswith=endswith,
+                                   startswith=startswith,
+                                   exclude=exclude)
                        if op.isdir(d)])
     elif dirs is None:
         if exclude is not None:
@@ -280,7 +280,7 @@ def make_jobs(inputs:list, cmd, lview) -> list:
     return jobs
 
 
-def send_chunks(fxn, elements, thresh, kwargs={}):
+def send_chunks(fxn, elements, thresh, lview, kwargs={}):
     """Send a list of args from inputs to a function command; async."""
     jobs = []
     mylst = []
@@ -292,12 +292,12 @@ def send_chunks(fxn, elements, thresh, kwargs={}):
     return jobs
 
 
-def watch_async(jobs:list, phase=None) -> None:
+def watch_async(jobs:list, phase=None, sleep=5) -> None:
     """Wait until jobs are done executing, get updates"""
     print(len(jobs))
     count = 0
     while count != len(jobs):
-        time.sleep(5)
+        time.sleep(sleep)
         count = 0
         for j in jobs:
             if j.ready():
