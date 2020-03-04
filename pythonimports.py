@@ -61,7 +61,7 @@ def fs(DIR:str, pattern='', endswith='', startswith='', exclude=None, dirs=None,
                                    exclude=exclude)
                        if not op.isdir(f)])
     elif dirs is True:
-        return sorted([op.basename(d) if bnames is True else f
+        return sorted([op.basename(d) if bnames is True else d
                        for d in fs(DIR,
                                    pattern=pattern,
                                    endswith=endswith,
