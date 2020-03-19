@@ -166,7 +166,7 @@ def getsq_exit(balancing):
         return []
 
 
-def getsq(grepping=None, states=[], balancing=False):
+def getsq(grepping=None, states=[], balancing=False, user=None):
     """
     Get jobs from squeue slurm command matching crieteria.
 
@@ -179,8 +179,10 @@ def getsq(grepping=None, states=[], balancing=False):
     grepped - list of tuples where tuple elements are line.split() for each line of squeue \
 slurm command that matched grepping queries
     """
+    if user is None:
+        user = os.environ['USER']
     if grepping is None:
-        grepping = [os.environ['USER']]
+        grepping = [user]
     if isinstance(grepping, str):
         # in case I pass a single str instead of a list of strings
         grepping = [grepping]
@@ -188,7 +190,7 @@ slurm command that matched grepping queries
     # get the queue, without a header
     cmd = [shutil.which('squeue'),
            '-u',
-           os.environ['USER'],
+           user,
            '-h']
     if 'running' in states:
         cmd.extend(['-t', 'RUNNING'])
