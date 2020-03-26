@@ -84,7 +84,7 @@ def sbatch(shfiles:list, sleep=0, printing=False) -> list:
         shfiles = [shfiles]
     pids = []
     failcount = 0
-    for sh in shfiles:
+    for sh in nb(shfiles):
         os.chdir(os.path.dirname(sh))
         try:
             pid = subprocess.check_output([shutil.which('sbatch'), sh]).decode('utf-8').replace("\n", "").split()[-1]
@@ -93,6 +93,7 @@ def sbatch(shfiles:list, sleep=0, printing=False) -> list:
             if failcount == 10:
                 print('!!!REACHED FAILCOUNT LIMIT OF 10!!!')
                 return pids
+            continue
         if printing is True:
             print('sbatched %s' % sh)
         pids.append(pid)
