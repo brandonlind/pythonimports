@@ -5,6 +5,7 @@ import os
 import time
 import subprocess
 import shutil
+from tqdm import tqdm as nb
 import matplotlib.pyplot as plt
 
 
@@ -75,16 +76,25 @@ def get_times(infos:dict, unit='hrs', plot=True) -> list:
     return times
 
 
-def sbatch(files:list, sleep=0) -> list:
-    """From a list of .sh files, sbatch them and return associated jobid in a list."""
-    if isinstance(files, list) is False:
-        assert isinstance(files, str)
-        files = [files]
+def sbatch(shfiles:list, sleep=0, printing=False) -> list:
+    """From a list of .sh shfiles, sbatch them and return associated jobid in a list."""
+    
+    if isinstance(shfiles, list) is False:
+        assert isinstance(shfiles, str)
+        shfiles = [shfiles]
     pids = []
-    for file in files:
-        os.chdir(os.path.dirname(file))
-        pid = subprocess.check_output([shutil.which('sbatch'), file]).decode('utf-8').replace("\n", "").split()[-1]
-        print('sbatched %s' % file)
+    failcount = 0
+    for sh in shfiles:
+        os.chdir(os.path.dirname(sh))
+        try:
+            pid = subprocess.check_output([shutil.which('sbatch'), sh]).decode('utf-8').replace("\n", "").split()[-1]
+        except subprocess.CalledProcessError as e:
+            failcount += 1
+            if failcount == 10:
+                print('!!!REACHED FAILCOUNT LIMIT OF 10!!!')
+                return pids
+        if printing is True:
+            print('sbatched %s' % sh)
         pids.append(pid)
         time.sleep(sleep)
     return pids
