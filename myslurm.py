@@ -9,43 +9,36 @@ from tqdm import tqdm as nb
 import matplotlib.pyplot as plt
 
 
-def get_mems(infos:dict, unit='MB', plot=True) -> list:
+def get_seff(outs:list):
+    """From a list of .out files (ending in f'_{SLURM_JOB_ID}.out'), get seff output."""
+    infos = {}
+    for out in nb(outs):
+        infos[out] = seff(getpid(out))
+    return infos
+
+
+def get_mems(infos:dict, units='MB', plot=True) -> list:
     """From dict(infos) [val = seff output], extract mem in MB.
-    
+
     fix: add in other mem units
     """
     mems = []
     for key,info in infos.items():
-        if 'running' in info[3].lower() or 'pending' in info[3].lower():
+        if 'running' in info.state().lower() or 'pending' in info.state().lower():
             continue
-        info[-2] = info[-2].split("(estimated")[0]
-        mem, units = info[-2].split()[-2:]
-        if units == 'GB':
-            mem = float(mem)*1024
-        elif units == 'EB':
-            mem = 0
-        else:
-            try:
-                assert units == 'MB'
-            except AssertionError:
-                print('info = ', info)
-            mem = float(mem)
-        if unit == 'GB':
-            mem = mem/1024
-        mems.append(mem)
-    
+        mems.append(info.mem(units=units))
+
     if plot is True:
         plt.hist(mems)
-        plt.xlabel(unit)
+        plt.xlabel(units)
         plt.show()
-    
+
     return mems
 
 
 def clock_hrs(clock:str, unit='hrs') -> float:
-    """from a clock (days-hrs:min:sec) extract hrs.
-    
-    fix: add in other clock units"""
+    """From a clock (days-hrs:min:sec) extract hrs or days as float."""
+    assert unit in ['hrs', 'days']
     hrs = 0
     if '-' in clock:
         days, clock = clock.split("-")
@@ -54,24 +47,25 @@ def clock_hrs(clock:str, unit='hrs') -> float:
     hrs += float(h)
     hrs += float(m)/60
     hrs += float(s)/3600
+    if unit=='days':
+        hrs = hrs/24
     return hrs
 
 
 def get_times(infos:dict, unit='hrs', plot=True) -> list:
     """From dict(infos) [val = seff output], get times in hours.
-    
+
     fix: add in other clock units"""
     times = []
     for key, info in infos.items():
-        if 'running' in info[3].lower() or 'pending' in info[3].lower():
+        if 'running' in info.state().lower() or 'pending' in info.state().lower():
             continue
-        clock = info[-3].split()[-1]
-        hrs = clock_hrs(clock, unit=unit)
+        hrs = info.walltime(unit=unit)
         times.append(hrs)
-    
+
     if plot is True:
         plt.hist(times)
-        plt.xlabel(unit)
+        plt.xlabel(unit.title() if unit=='days' else 'Hours')
         plt.show()
     return times
 
@@ -126,11 +120,100 @@ def qaccounts(pd=False, user=os.environ['USER']) -> list:
     return accounts
 
 
-def seff(pid:str) -> list:
-    """Using jobid, get seff output from bash."""
-    lst = os.popen('seff %s' % pid).read().split("\n")
-    lst.remove('')
-    return lst
+class seff():
+    """Parse info output by `seff $SLURM_JOB_ID`.
+    
+    example output from os.popen __init__ call
+    
+    ['Job ID: 38771990',
+    'Cluster: cedar',
+    'User/Group: lindb/lindb',
+    'State: COMPLETED (exit code 0)',
+    'Nodes: 1',
+    'Cores per node: 48',
+    'CPU Utilized: 56-18:58:40',
+    'CPU Efficiency: 88.71% of 64-00:26:24 core-walltime',
+    'Job Wall-clock time: 1-08:00:33',
+    'Memory Utilized: 828.22 MB',
+    'Memory Efficiency: 34.51% of 2.34 GB']
+    
+    """
+    def __init__(self, slurm_job_id):
+        # get info
+        info = os.popen('seff %s' % str(slurm_job_id)).read().split("\n")
+        info.remove('')
+        self.info = info
+        self.info[-2] = self.info[-2].split("(estimated")[0]
+        self.slurm_job_id = str(slurm_job_id)
+        
+
+    def pid(self) -> str:
+        """Get SLURM_JOB_ID."""
+        return self.slurm_job_id
+    
+    def state(self) -> str:
+        """Get state of job (R, PD, COMPLETED, etc)."""
+        return self.info[3]
+    
+    def cpu_u(self, unit='clock') -> str:
+        """Get CPU time utilized by job (actual time CPUs were active across all cores)."""
+        utilized = self.info[6].split()[-1]
+        if unit != 'clock':
+            utilized = clock_hrs(utilized, unit)
+        return utilized
+    
+    def cpu_e(self) -> str:
+        """Get CPU efficiency (cpu_u() / core_walltime())"""
+        return self.info[7].split()[2]
+    
+    def core_walltime(self, unit='clock') -> str:
+        """Get time that CPUs were active (across all cores)."""
+        walltime = self.info[7].split()[-2]
+        if unit != 'clock':
+            walltime = clock_hrs(walltime, unit)
+        return walltime
+    
+    def walltime(self, unit='clock') -> str:
+        """Get time that job ran after starting."""
+        walltime = self.info[-3].split()[-1]
+        if unit != 'clock':
+            walltime = clock_hrs(walltime, unit)
+        return walltime
+    
+    def mem_req(self, units='MB') -> str:
+        """Get the requested memory for job."""
+        mem, mem_units = self.info[-1].split()[-2:]
+        return self._convert_mem(mem, mem_units, units)
+    
+    def mem_e(self) -> str:
+        """Get the memory efficiency (~ mem / mem_req)"""
+        return self.info[-1].split()[2]
+    
+    def _convert_mem(self, mem, units, unit='MB'):
+        """Convert between memory units."""
+        if units == 'GB':
+            mem = float(mem)*1024
+        elif units == 'EB':
+            mem = 0
+        else:
+            try:
+                assert units == 'MB'
+            except AssertionError as e:
+                print('info = ', self.info)
+                raise e
+            mem = float(mem)
+        if unit == 'GB':
+            mem = mem/1024
+        return mem
+    
+    def mem(self, units='MB', per_core=False) -> str:
+        """Get memory unitilized by job (across all cores, or per core)."""
+        mem, mem_units = self.info[-2].split()[-2:]
+        mem = self._convert_mem(mem, mem_units, units)
+        if per_core is True:
+            mem = mem / self.info[5].split()[-1]
+        return mem
+    pass
 
 
 def getpid(out:str) -> list:
