@@ -139,13 +139,15 @@ class seff():
     
     """
     def __init__(self, slurm_job_id):
-        # get info
+        """Get return from seff command."""
         info = os.popen('seff %s' % str(slurm_job_id)).read().split("\n")
         info.remove('')
         self.info = info
         self.info[-2] = self.info[-2].split("(estimated")[0]
         self.slurm_job_id = str(slurm_job_id)
-        
+
+    def __repr__(self):
+        return repr(self.info)
 
     def pid(self) -> str:
         """Get SLURM_JOB_ID."""
