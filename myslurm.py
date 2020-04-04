@@ -260,18 +260,106 @@ def getsq_exit(balancing):
         exit()
     else:
         return []
+    pass
+
+
+class sqinfo():
+    """Convert each line returned from `squeue -u $USER`.
+    
+    Assumes
+    -------
+    export SQUEUE_FORMAT="%.8i %.8u %.15a %.68j %.3t %16S %.10L %.5D %.4C %.6b %.7m %N (%r)"
+    
+    Example jobinfo
+    ---------------
+    ('38768536',0
+     'lindb',1
+     'def-jonmee_cpu',2
+     'batch_0583',3
+     'PD',4
+     'N/A',5
+     '2-00:00:00',6
+     '1',7
+     '48',8
+     'N/A',9
+     '50M',0
+     '(Priority)')
+    """
+    def __init__(self, jobinfo):
+        self.info = jobinfo
+        pass
+    
+    def __repr__(self):
+        return repr(self.info)
+    
+    def pid(self):
+        return self.info[0]
+    
+    def user(self):
+        return self.info[1]
+    
+    def account(self):
+        return self.info[2]
+    
+    def job(self):
+        return self.info[3]
+    
+    def state(self):
+        return self.info[4]
+    
+    def start(self):
+        """Job start time."""
+        return self.info[5]
+    
+    def time(self):
+        """Remaining time."""
+        return self.info[6]
+    
+    def nodes(self):
+        return self.info[7]
+    
+    def cpus(self):
+        return self.info[8]
+    
+    def mem(self, units='MB'):
+        memory = self.info[10]
+        if all([memory.endswith('G') is False, memory.endswith('M') is False]):
+            print('Unexpected units found in memory: ', memory)
+            raise AssertionError
+        if memory.endswith('G') and units=='MB':
+            memory = memory.replace("G","")
+            memory = int(memory) * 1024
+        elif memory.endswith('M') and units=='GB':
+            memory = memory.replace("M","")
+            memory = int(memory) / 1024
+        else:
+            memory = int(memory.replace('M',''))
+        return memory
+    
+    def status(self):
+        return self.info[11]
+    
+    def reason(self):
+        return self.status()
 
 
 def getsq(grepping=None, states=[], balancing=False, user=None):
     """
-    Get jobs from squeue slurm command matching crieteria.
+    Get jobs from `squeue` slurm command matching criteria.
 
-    Positional arguments:
+    Assumes
+    -------
+    export SQUEUE_FORMAT="%.8i %.8u %.15a %.68j %.3t %16S %.10L %.5D %.4C %.6b %.7m %N (%r)"
+
+    Positional arguments
+    --------------------
     grepping - list of key words to look for in each column of job info
     states - list of states {pending, running} wanted in squeue jobs
     balancing - bool: True if using to balance priority jobs, else for other queue queries
+    user - user name to use to query `squeue -u {user}`
 
-    Returns:
+    Returns
+    -------
     grepped - list of tuples where tuple elements are line.split() for each line of squeue \
 slurm command that matched grepping queries
     """
@@ -311,7 +399,7 @@ slurm command that matched grepping queries
                                 keepit += 1
                                 break
                 if keepit == len(grepping) and len(grepping) != 0:
-                    grepped.append(tuple(splits))
+                    grepped.append(sqinfo(tuple(splits)))
 
         if len(grepped) > 0:
             return grepped
