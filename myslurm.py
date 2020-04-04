@@ -97,7 +97,7 @@ def sbatch(shfiles:list, sleep=0, printing=False) -> list:
 
 def getpids(user=os.environ['USER']) -> list:
     """From squeue -u $USER, return list of queue."""
-    pids = [q[0] for q in getsq() if q[0] != '']
+    pids = [q.pid() for q in getsq() if q.pid() != '']
     if len(pids) != len(list(set(pids))):
         print('len !- luni pids')
     return pids
@@ -105,7 +105,7 @@ def getpids(user=os.environ['USER']) -> list:
 
 def getjobs(user=os.environ['USER']) -> list:
     """From squeue -u $USER, return list of job names, alert if len != unique."""
-    jobs = [q[3] for q in getsq() if q[3] != '']
+    jobs = [q.job() for q in getsq() if q.job() != '']
     if len(jobs) != len(list(set(jobs))):
         print('len != luni jobs')
     return jobs
@@ -114,9 +114,9 @@ def getjobs(user=os.environ['USER']) -> list:
 def qaccounts(pd=False, user=os.environ['USER']) -> list:
     """From squeue -u $USER, return list of billing accounts."""
     if pd == False:
-        accounts = [q[2] for q in getsq() if q != '']
+        accounts = [q.account() for q in getsq() if q.account() != '']
     else:
-        accounts = [q[2] for q in getsq(states=['PD']) if q != '']
+        accounts = [q.account() for q in getsq(states=['PD']) if q.account() != '']
     return accounts
 
 
