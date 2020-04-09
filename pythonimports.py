@@ -319,4 +319,49 @@ def read(file:str, lines=True) -> Union[str, list]:
         return text.split("\n")
     else:
         return text
-    
+
+class ColorText():
+    """
+    Use ANSI escape sequences to print colors +/- bold/underline to bash terminal.
+    """
+    def __init__(self, text:str):
+        self.text = text
+        self.ending = '\033[0m'
+        self.colors = []
+
+    def __str__(self):
+        return self.text
+
+    def bold(self):
+        self.text = '\033[1m' + self.text + self.ending
+        return self
+
+    def underline(self):
+        self.text = '\033[4m' + self.text + self.ending
+        return self
+
+    def green(self):
+        self.text = '\033[92m' + self.text + self.ending
+        self.colors.append('green')
+        return self
+
+    def purple(self):
+        self.text = '\033[95m' + self.text + self.ending
+        self.colors.append('purple')
+        return self
+
+    def blue(self):
+        self.text = '\033[94m' + self.text + self.ending
+        self.colors.append('blue')
+        return self
+
+    def warn(self):
+        self.text = '\033[93m' + self.text + self.ending
+        self.colors.append('yellow')
+        return self
+
+    def fail(self):
+        self.text = '\033[91m' + self.text + self.ending
+        self.colors.append('red')
+        return self
+    pass
