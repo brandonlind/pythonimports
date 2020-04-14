@@ -17,6 +17,7 @@ from IPython.display import clear_output
 from collections import OrderedDict, Counter
 from IPython.display import Markdown, display
 from os import listdir
+from tqdm import trange
 from os import path as op
 from os import chdir as cd
 from decimal import Decimal
@@ -365,3 +366,103 @@ class ColorText():
         self.colors.append('red')
         return self
     pass
+
+
+def get_skipto_df(f, skipto, nrows, sep='\t', index_col=None, header='infer', **kwargs):
+    """Retrieve dataframe in parallel so that all rows are captured when iterating.
+    
+    Parameters
+    ----------
+    f - filename to open
+    skipto - row number to skip, read rows thereafter
+    nrows - how many rows to read from f after skipto
+    args - a list of functions to apply to df after reading in
+    kwargs - kwargs for the functions in args
+    
+    Returns
+    -------
+    df - pandas.DataFrame
+    """
+    import pandas
+    
+    # read in the appropriate chunk of the file
+    if skipto == 0:
+        df = pandas.read_table(f,
+                               sep=sep,
+                               index_col=index_col,
+                               header=header,
+                               nrows=nrows-1)
+    else:
+        df = pandas.read_table(f,
+                               sep=sep,
+                               index_col=index_col,
+                               header=header,
+                               skiprows=range(1, skipto),
+                               nrows=nrows)
+
+    # do other stuff to the dataframe while in parallel
+    if len(kwargs) > 0:
+        for function,args in kwargs.items():  # for a list of functions
+            func = globals()[function]
+            print('function = ', func.__name__)
+            if 'None' in args:
+                df = func(df)
+            else:
+                df = func(df, *args)  # do stuff
+
+    return df
+
+
+def parallel_read(f:str, linenums=None, nrows=None, header=None, **kwargs):
+    """
+    Read in a dataframe file in parallel with ipcluster.
+    
+    Parameters
+    ----------
+    f - filename to open
+    linenums - the number of non-header lines in the txt/csv file
+    nrows - the number of lines to read in each parallel process
+    
+    Returns
+    -------
+    jobs - a list of AsyncResult for each iteration (num iterations = linenums/nrows)
+    """
+    print(ColorText('parallel_read()').bold().__str__() + ' is:')
+    
+    # determine how many lines are in the file
+    if linenums is None:
+        print('\tdeterming line numbers for ', f, ' ...')
+        linenums = int(subprocess.check_output(['wc', '-l', f]).decode('utf-8').replace("\n", "").split()[0])
+        if header is not None:
+            # if there is a header, subtract from line count
+            linenums = linenums - 1
+
+    # evenly distribute jobs across engines
+    lview = globals()['lview']
+    if nrows is None:
+        print('\tdetermining chunksize (nrows) ...')
+        nrows = math.ceil(linenums/len(lview))
+
+    # load other functions to engines
+    if len(kwargs) > 0:
+        print('\tloading functions to engines ...')
+        for func,args in kwargs.items():
+            dview[func] = globals()[func]
+#             print('args = ', args)
+#             print('type(args) = ', type(args))
+            if 'None' in args:
+                continue
+            for arg in args:
+                dview[arg] = globals()[arg]
+                time.sleep(1)
+        time.sleep(5)
+
+    # read-in in parallel
+    print('\tsending jobs to engines ...')
+    time.sleep(0.1)
+    jobs = []
+    for skipto in trange(0, linenums, nrows):
+        jobs.append(lview.apply_async(get_skipto_df, *(f, skipto, nrows), **kwargs))
+#         jobs.append(get_skipto_df(f, skipto, nrows, **kwargs))  # for testing
+    
+    return jobs
