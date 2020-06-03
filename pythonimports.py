@@ -199,33 +199,45 @@ def getmostrecent(files:list, remove=False) -> Optional[str]:
         return None
 
 
-def formatclock(hrs:float) -> str:
-    """For a given number of hours, format a clock: days-hours:mins:seconds."""
+def formatclock(hrs:float, exact=False) -> str:
+    """For a given number of hours, format a clock: days-hours:mins:seconds.
+    
+    Parameters
+    ----------
+    exact - if False, return clock rounded up by partitions on Compute Canada
+            if True, return clock with exactly days/min/hrs/seconds
+    """
     # format the time
     TIME = dt(1, 1, 1) + timedelta(hours=hrs)
-    # zero out the minutes, add an hour
-    if TIME.minute > 0:
-        TIME = TIME + timedelta(hours=1) - timedelta(minutes=TIME.minute)
-    # round up to 7 days, zero out the hours
-    if 3 < (TIME.day-1) < 7 or (3 <= TIME.day-1 and TIME.hour > 0):
-        diff = 7 - (TIME.day-1)
-        TIME = TIME + timedelta(days=diff) - timedelta(hours=TIME.hour)
-    # round up to 3 days, zero out the hours
-    if 1 < (TIME.day-1) < 3 or (1 <= TIME.day-1 and TIME.hour > 0):
-        diff = 3 - (TIME.day-1)
-        TIME = TIME + timedelta(days=diff) - timedelta(hours=TIME.hour)
-    # round up to 24 hrs, zero out the hours
-    if TIME.day == 1 and 12 < TIME.hour < 24:
-        TIME = TIME + timedelta(days=1) - timedelta(hours=TIME.hour)
-    # round up to 12 hrs 
-    if TIME.day == 1 and 3 < TIME.hour < 12:
-        diff = 12 - TIME.hour
-        TIME = TIME + timedelta(hours=diff)
-    # round up to 3 hrs 
-    if TIME.day == 1 and TIME.hour < 3:
-        diff = 3 - TIME.hour
-        TIME = TIME + timedelta(hours=diff) 
-    clock = "%s-%s:00:00"  % (TIME.day -1, str(TIME.hour).zfill(2))
+    if exact is False:
+        # zero out the minutes, add an hour
+        if TIME.minute > 0:
+            TIME = TIME + timedelta(hours=1) - timedelta(minutes=TIME.minute)
+        # round up to 7 days, zero out the hours
+        if 3 < (TIME.day-1) < 7 or (3 <= TIME.day-1 and TIME.hour > 0):
+            diff = 7 - (TIME.day-1)
+            TIME = TIME + timedelta(days=diff) - timedelta(hours=TIME.hour)
+        # round up to 3 days, zero out the hours
+        if 1 < (TIME.day-1) < 3 or (1 <= TIME.day-1 and TIME.hour > 0):
+            diff = 3 - (TIME.day-1)
+            TIME = TIME + timedelta(days=diff) - timedelta(hours=TIME.hour)
+        # round up to 24 hrs, zero out the hours
+        if TIME.day == 1 and 12 < TIME.hour < 24:
+            TIME = TIME + timedelta(days=1) - timedelta(hours=TIME.hour)
+        # round up to 12 hrs 
+        if TIME.day == 1 and 3 < TIME.hour < 12:
+            diff = 12 - TIME.hour
+            TIME = TIME + timedelta(hours=diff)
+        # round up to 3 hrs 
+        if TIME.day == 1 and TIME.hour < 3:
+            diff = 3 - TIME.hour
+            TIME = TIME + timedelta(hours=diff) 
+        clock = "%s-%s:00:00"  % (TIME.day -1, str(TIME.hour).zfill(2))
+    else:
+        clock = "%s-%s:%s:%s" % (TIME.day - 1,
+                                 str(TIME.hour).zfill(2),
+                                 str(TIME.minute).zfill(2),
+                                 str(TIME.second).zfill(2))
     return clock
 
 
