@@ -305,20 +305,23 @@ def send_chunks(fxn, elements, thresh, lview, kwargs={}):
     return jobs
 
 
-def watch_async(jobs:list, phase=None, sleep=5) -> None:
-    """Wait until jobs are done executing, get updates"""
-    print(len(jobs))
-    count = 0
-    while count != len(jobs):
-        time.sleep(sleep)
+def watch_async(jobs:list, phase=None) -> None:
+    """Wait until jobs are done executing, show progress bar."""
+    from tqdm import trange
+
+    print(ColorText(f"\nWatching {len(jobs)} {f'{phase} ' if phase is not None else ''}jobs ...").bold())
+    time.sleep(1)
+
+    job_idx = list(range(len(jobs)))
+    for i in trange(len(jobs), desc=phase):
         count = 0
-        for j in jobs:
-            if j.ready():
-                count += 1
-        if phase is not None:
-            update([phase, count, len(jobs)])
-        else:
-            update([count, len(jobs)])
+        while count < (i+1):
+            count = len(jobs) - len(job_idx)
+            for j in job_idx:
+                if jobs[j].ready():
+                    count += 1
+                    job_idx.remove(j)
+    pass
 
 
 def read(file:str, lines=True) -> Union[str, list]:
@@ -425,7 +428,7 @@ def get_skipto_df(f, skipto, nrows, sep='\t', index_col=None, header='infer', **
     return df
 
 
-def parallel_read(f:str, linenums=None, nrows=None, header=None, **kwargs):
+def parallel_read(f:str, linenums=None, nrows=None, header=None, lview=None, **kwargs):
     """
     Read in a dataframe file in parallel with ipcluster.
     
@@ -450,7 +453,6 @@ def parallel_read(f:str, linenums=None, nrows=None, header=None, **kwargs):
             linenums = linenums - 1
 
     # evenly distribute jobs across engines
-    lview = globals()['lview']
     if nrows is None:
         print('\tdetermining chunksize (nrows) ...')
         nrows = math.ceil(linenums/len(lview))
@@ -523,5 +525,6 @@ def makesweetgraph(x=None,y=None,cmap='jet',ylab=None,xlab=None,bins=100,saveloc
     if saveloc is not None:
         with PdfPages(saveloc) as pdf:
             pdf.savefig(bbox_inches='tight')
+        print(ColorText('Saved to: ').bold(), saveloc)
     plt.show()
     pass
