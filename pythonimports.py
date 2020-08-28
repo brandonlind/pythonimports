@@ -13,6 +13,7 @@ import matplotlib.dates as mdates
 import matplotlib.gridspec as gridspec
 from myslurm import *
 from typing import Optional, Union
+from collections import defaultdict
 from IPython.display import clear_output
 from collections import OrderedDict, Counter
 from IPython.display import Markdown, display
@@ -284,7 +285,7 @@ def get_client(profile='default') -> tuple:
     return lview, dview
 
 
-def make_jobs(inputs:list, cmd, lview) -> list:
+def make_jobs(cmd, inputs:list, lview) -> list:
     """Send each arg from inputs to a function command; async."""
     print(f"making jobs for {cmd.__name__}")
     jobs = []
@@ -345,6 +346,9 @@ class ColorText():
         self.ending = '\033[0m'
         self.colors = []
 
+    def __repr__(self):
+        return self.text
+
     def __str__(self):
         return self.text
 
@@ -371,6 +375,26 @@ class ColorText():
         self.colors.append('blue')
         return self
 
+    def ltblue(self):
+        self.text = '\033[34m' + self.text + self.ending
+        self.colors.append('lightblue')
+        return self
+
+    def pink(self):
+        self.text = '\033[35m' + self.text + self.ending
+        self.colors.append('pink')
+        return self
+    
+    def gray(self):
+        self.text = '\033[30m' + self.text + self.ending
+        self.colors.append('gray')
+        return self
+
+    def ltgray(self):
+        self.text = '\033[37m' + self.text + self.ending
+        self.colors.append('ltgray')
+        return self
+
     def warn(self):
         self.text = '\033[93m' + self.text + self.ending
         self.colors.append('yellow')
@@ -379,6 +403,16 @@ class ColorText():
     def fail(self):
         self.text = '\033[91m' + self.text + self.ending
         self.colors.append('red')
+        return self
+
+    def ltred(self):
+        self.text = '\033[31m' + self.text + self.ending
+        self.colors.append('lightred')
+        return self
+
+    def cyan(self):
+        self.text = '\033[36m' + self.text + self.ending
+        self.colors.append('cyan')
         return self
     pass
 
@@ -392,7 +426,9 @@ def get_skipto_df(f, skipto, nrows, sep='\t', index_col=None, header='infer', **
     skipto - row number to skip, read rows thereafter
     nrows - how many rows to read from f after skipto
     args - a list of functions to apply to df after reading in
-    kwargs - kwargs for the functions in args
+    kwargs - kwargs for pandas.read_table;
+             kwargs['functions'] are functions (keys) and args (values) to apply
+                 to dataframe while in parallel
     
     Returns
     -------
@@ -406,20 +442,22 @@ def get_skipto_df(f, skipto, nrows, sep='\t', index_col=None, header='infer', **
                                sep=sep,
                                index_col=index_col,
                                header=header,
-                               nrows=nrows-1)
+                               nrows=nrows-1,
+                               **kwargs)
     else:
         df = pandas.read_table(f,
                                sep=sep,
                                index_col=index_col,
                                header=header,
                                skiprows=range(1, skipto),
-                               nrows=nrows)
+                               nrows=nrows,
+                               **kwargs)
 
     # do other stuff to the dataframe while in parallel
-    if len(kwargs) > 0:
-        for function,args in kwargs.items():  # for a list of functions
+    if 'functions' in kwargs.keys():
+        for function,args in kwargs['functions'].items():  # for a list of functions
+            print(function)
             func = globals()[function]
-            print('function = ', func.__name__)
             if 'None' in args:
                 df = func(df)
             else:
@@ -428,7 +466,7 @@ def get_skipto_df(f, skipto, nrows, sep='\t', index_col=None, header='infer', **
     return df
 
 
-def parallel_read(f:str, linenums=None, nrows=None, header=None, lview=None, **kwargs):
+def parallel_read(f:str, linenums=None, nrows=None, header=None, lview=None, dview=None, **kwargs):
     """
     Read in a dataframe file in parallel with ipcluster.
     
@@ -437,6 +475,7 @@ def parallel_read(f:str, linenums=None, nrows=None, header=None, lview=None, **k
     f - filename to open
     linenums - the number of non-header lines in the txt/csv file
     nrows - the number of lines to read in each parallel process
+    kwargs - passed to get_skipto_df(); see get_skipto_df() docstring for more info
     
     Returns
     -------
@@ -446,7 +485,7 @@ def parallel_read(f:str, linenums=None, nrows=None, header=None, lview=None, **k
     
     # determine how many lines are in the file
     if linenums is None:
-        print('\tdeterming line numbers for ', f, ' ...')
+        print('\tdeterming line numbers for ', ColorText(f).gray(), ' ...')
         linenums = int(subprocess.check_output(['wc', '-l', f]).decode('utf-8').replace("\n", "").split()[0])
         if header is not None:
             # if there is a header, subtract from line count
@@ -458,28 +497,31 @@ def parallel_read(f:str, linenums=None, nrows=None, header=None, lview=None, **k
         nrows = math.ceil(linenums/len(lview))
 
     # load other functions to engines
-    if len(kwargs) > 0:
+    if 'functions' in kwargs.keys():
         print('\tloading functions to engines ...')
-        for func,args in kwargs.items():
+        for func,args in kwargs['functions'].items():
+            print('\t', '\t', func)
             dview[func] = globals()[func]
-#             print('args = ', args)
-#             print('type(args) = ', type(args))
             if 'None' in args:
                 continue
             for arg in args:
                 dview[arg] = globals()[arg]
                 time.sleep(1)
+            time.sleep(1)
         time.sleep(5)
 
     # read-in in parallel
     print('\tsending jobs to engines ...')
     time.sleep(0.1)
-    jobs = []
-    for skipto in trange(0, linenums, nrows):
+    globals().update({'jobs': []})  # put in global in case I want to interrupt parallel_read()
+    for skipto in trange(0, linenums, nrows, desc='sending jobs'):
         jobs.append(lview.apply_async(get_skipto_df, *(f, skipto, nrows), **kwargs))
 #         jobs.append(get_skipto_df(f, skipto, nrows, **kwargs))  # for testing
+
+    watch_async(jobs, phase='parallel_read()')
+    df = pd.concat([j.r for j in jobs])
     
-    return jobs
+    return df
 
 
 def makesweetgraph(x=None,y=None,cmap='jet',ylab=None,xlab=None,bins=100,saveloc=None,
