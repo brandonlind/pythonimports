@@ -117,9 +117,7 @@ def table(lst:list, exclude=[]) -> dict:
     
     Return a dict with key for each item, val of count
     """
-    c = Counter()
-    for x in lst:
-        c[x] += 1
+    c = Counter(lst)
     if len(exclude) > 0:
         for ex in exclude:
             if ex in c:
@@ -340,11 +338,28 @@ def read(file:str, lines=True) -> Union[str, list]:
 class ColorText():
     """
     Use ANSI escape sequences to print colors +/- bold/underline to bash terminal.
+    
+    Notes
+    -----
+    execute ColorText.demo() for a printout of colors.
     """
+    def demo():
+        """Prints examples of all colors in normal, bold, underline, bold+underline."""
+        for color in dir(ColorText):
+            if all([color.startswith('_') is False,
+                   color not in ['bold', 'underline', 'demo'],
+                   callable(getattr(ColorText, color))]):
+                print(getattr(ColorText(color), color)(),'\t',                
+                      getattr(ColorText(f'bold {color}').bold(), color)(),'\t',
+                      getattr(ColorText(f'underline {color}').underline(), color)(),'\t',
+                      getattr(ColorText(f'bold underline {color}').underline().bold(), color)())
+        pass
+
     def __init__(self, text:str):
         self.text = text
         self.ending = '\033[0m'
         self.colors = []
+        pass
 
     def __repr__(self):
         return self.text
@@ -414,6 +429,7 @@ class ColorText():
         self.text = '\033[36m' + self.text + self.ending
         self.colors.append('cyan')
         return self
+
     pass
 
 
@@ -512,7 +528,7 @@ def parallel_read(f:str, linenums=None, nrows=None, header=None, lview=None, dvi
 
     # read-in in parallel
     print('\tsending jobs to engines ...')
-    time.sleep(0.1)
+    time.sleep(1)
     globals().update({'jobs': []})  # put in global in case I want to interrupt parallel_read()
     for skipto in trange(0, linenums, nrows, desc='sending jobs'):
         jobs.append(lview.apply_async(get_skipto_df, *(f, skipto, nrows), **kwargs))
@@ -520,6 +536,10 @@ def parallel_read(f:str, linenums=None, nrows=None, header=None, lview=None, dvi
 
     watch_async(jobs, phase='parallel_read()')
     df = pd.concat([j.r for j in jobs])
+
+    if 'index_col' not in kwargs:
+        # avoid duplicated indices across jobs when no index was set
+        df.index = range(len(df.index))
     
     return df
 
