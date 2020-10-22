@@ -590,3 +590,16 @@ def makesweetgraph(x=None,y=None,cmap='jet',ylab=None,xlab=None,bins=100,saveloc
         print(ColorText('Saved to: ').bold(), saveloc)
     plt.show()
     pass
+
+
+def rsync(src, dstdir, dstserver=''):
+    """Execute rsync command; can execute via ipyparallel engines."""
+    import subprocess, shutil, os
+    
+    if dstserver != '' and dstserver.endswith(':') is False:
+        dstserver = f'{dstserver}:'
+    
+    dst = os.path.join(dstdir, os.path.basename(src))
+    output = subprocess.check_output([shutil.which('rsync'), '-azv', src, f'{dstserver}{dst}']).decode('utf-8').split('\n')
+    
+    return output
