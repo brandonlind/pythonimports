@@ -195,6 +195,8 @@ class Seff():
         """Convert between memory units."""
         if units == 'GB':
             mem = float(mem)*1024
+        elif units == 'KB':
+            mem = float(mem)/1024
         elif units == 'EB':
             mem = 0
         else:
@@ -429,6 +431,7 @@ class Squeue():
     TODO: update_job needs to handle skipping over jobs that started running after class instantiation
     TODO: allow onaccount to accept list of accounts
     TODO: handle running/missing in _update_job()
+    TODO: make it so it can return the queue for `grepping` without needing `user`
     
     
     kwargs
@@ -487,7 +490,7 @@ class Squeue():
         return len(self.sq)
 
     def __iter__(self):
-        return iter(self.sq.values())
+        return iter(self.sq.keys())
 
     def __getitem__(self, key):
         return self.sq[key]
