@@ -259,7 +259,7 @@ def makedir(directory:str) -> str:
     return directory
 
 
-def getdirs(paths:Union[str, list], **kwargs) -> list:
+def getdirs(paths:Union[str, list], verbose=False, **kwargs) -> list:
     """Recursively get a list of all subdirs from given path."""
     if isinstance(paths, str):
         print('converting to list')
@@ -267,9 +267,10 @@ def getdirs(paths:Union[str, list], **kwargs) -> list:
     newdirs = []
     for path in paths:
         if op.isdir(path):
-            print(path)
+            if verbose is True:
+                print(path)
             newdirs.append(path)
-            newestdirs = getdirs(fs(path, dirs=True, **kwargs))
+            newestdirs = getdirs(fs(path, dirs=True, **kwargs), verbose=verbose)
             newdirs.extend(newestdirs)
     return newdirs
 
@@ -592,14 +593,36 @@ def makesweetgraph(x=None,y=None,cmap='jet',ylab=None,xlab=None,bins=100,saveloc
     pass
 
 
-def rsync(src, dstdir, dstserver=''):
-    """Execute rsync command; can execute via ipyparallel engines."""
+def rsync(src, dst, different_basenames=False):
+    """Execute rsync command; can execute via ipyparallel engines.
+
+    Parameters
+    ----------
+    src - source file; assumes full file path is given
+    dst - destination path, either a directory or full file path name
+    different_basenames - bool; True if src and dst file paths differ in their basenames, False otherwise
+
+    Notes
+    -----
+    - src and dst basenames can differ.
+
+    TODO : add override kwarg to skip over hacky assertion of destination being a full filepath ...
+           if the src and dst basenames do not match
+    """
     import subprocess, shutil, os
-    
-    if dstserver != '' and dstserver.endswith(':') is False:
-        dstserver = f'{dstserver}:'
-    
-    dst = os.path.join(dstdir, os.path.basename(src))
-    output = subprocess.check_output([shutil.which('rsync'), '-azv', src, f'{dstserver}{dst}']).decode('utf-8').split('\n')
-    
+
+    assertion_msg = 'Either the source or the destination should have a server \
+in the name that includes a colon (":") that prepends the path.'
+    assert any([':' in src, ':' in dst]), assertion_msg
+
+    # so I can pass a directory or the actual destination path
+    if dst.endswith(os.path.basename(src)) is False and different_basenames is False:
+        # if dst is a directory and it's not expected that source or destination basenames vary
+        dst = op.join(dst, os.path.basename(src))  # change dst to full destination file path
+    elif dst.endswith(os.path.basename(src)) is False and different_basenames is True:
+        # hacky way to ensure this is a file: assert that the basename has a '.' in it
+        assert '.' in op.basename, 'it seems that dst is a directory'
+
+    output = subprocess.check_output([shutil.which('rsync'), '-azv', src, dst]).decode('utf-8').split('\n')
+
     return output
