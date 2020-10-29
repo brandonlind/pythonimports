@@ -504,6 +504,9 @@ class Squeue():
     def keys(self):
         return list(self.sq.keys())
     
+    def values(self):
+        return list(self.sq.values())
+    
     def items(self):
         return self.sq.items()
 
