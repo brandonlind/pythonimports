@@ -259,7 +259,7 @@ def makedir(directory:str) -> str:
     return directory
 
 
-def getdirs(paths:Union[str, list]) -> list:
+def getdirs(paths:Union[str, list], **kwargs) -> list:
     """Recursively get a list of all subdirs from given path."""
     if isinstance(paths, str):
         print('converting to list')
@@ -269,7 +269,7 @@ def getdirs(paths:Union[str, list]) -> list:
         if op.isdir(path):
             print(path)
             newdirs.append(path)
-            newestdirs = getdirs(fs(path, dirs=True))
+            newestdirs = getdirs(fs(path, dirs=True, **kwargs))
             newdirs.extend(newestdirs)
     return newdirs
 
