@@ -6,6 +6,7 @@ import pickle
 import random
 import string
 import shutil
+import datetime
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -198,14 +199,20 @@ def getmostrecent(files:list, remove=False) -> Optional[str]:
         return None
 
 
-def formatclock(hrs:float, exact=False) -> str:
+def formatclock(hrs:Union[datetime.timedelta, float], exact=False) -> str:
     """For a given number of hours, format a clock: days-hours:mins:seconds.
     
     Parameters
     ----------
+    hrs - either a float (in hours) or a datetime.timedelta object (which is converted to hours)
     exact - if False, return clock rounded up by partitions on Compute Canada
             if True, return clock with exactly days/min/hrs/seconds
-    """
+    """    
+    # format hours
+    if isinstance(hrs, datetime.timedelta):
+        hrs = hrs.total_seconds() / 3600
+    else:
+        assert isinstance(hrs, float), 'hrs object must either be of type `datetime.timedelta` or `float`'
     # format the time
     TIME = dt(1, 1, 1) + timedelta(hours=hrs)
     if exact is False:
