@@ -277,7 +277,7 @@ def getdirs(paths:Union[str, list], verbose=False, **kwargs) -> list:
             if verbose is True:
                 print(path)
             newdirs.append(path)
-            newestdirs = getdirs(fs(path, dirs=True, **kwargs), verbose=verbose)
+            newestdirs = getdirs(fs(path, dirs=True, **kwargs), verbose=verbose, **kwargs)
             newdirs.extend(newestdirs)
     return newdirs
 
