@@ -312,7 +312,7 @@ def send_chunks(fxn, elements, thresh, lview, kwargs={}):
     return jobs
 
 
-def watch_async(jobs:list, phase=None) -> None:
+def watch_async(jobs:list, phase=None, desc=None) -> None:
     """Wait until jobs are done executing, show progress bar."""
     from tqdm import trange
 
@@ -320,7 +320,7 @@ def watch_async(jobs:list, phase=None) -> None:
     time.sleep(1)
 
     job_idx = list(range(len(jobs)))
-    for i in trange(len(jobs), desc=phase):
+    for i in trange(len(jobs), desc=phase if desc is None else desc):
         count = 0
         while count < (i+1):
             count = len(jobs) - len(job_idx)
@@ -490,7 +490,7 @@ def get_skipto_df(f, skipto, nrows, sep='\t', index_col=None, header='infer', **
     return df
 
 
-def parallel_read(f:str, linenums=None, nrows=None, header=None, lview=None, dview=None, **kwargs):
+def parallel_read(f:str, linenums=None, nrows=None, header=None, lview=None, dview=None, verbose=True, desc=None, **kwargs):
     """
     Read in a dataframe file in parallel with ipcluster.
     
@@ -505,11 +505,15 @@ def parallel_read(f:str, linenums=None, nrows=None, header=None, lview=None, dvi
     -------
     jobs - a list of AsyncResult for each iteration (num iterations = linenums/nrows)
     """
-    print(ColorText('parallel_read()').bold().__str__() + ' is:')
+    from functools import partial
+    
+    if verbose:
+        print(ColorText('parallel_read()').bold().__str__() + ' is:')
     
     # determine how many lines are in the file
     if linenums is None:
-        print('\tdeterming line numbers for ', ColorText(f).gray(), ' ...')
+        if verbose:
+            print('\tdeterming line numbers for ', ColorText(f).gray(), ' ...')
         linenums = int(subprocess.check_output(['wc', '-l', f]).decode('utf-8').replace("\n", "").split()[0])
         if header is not None:
             # if there is a header, subtract from line count
@@ -517,14 +521,17 @@ def parallel_read(f:str, linenums=None, nrows=None, header=None, lview=None, dvi
 
     # evenly distribute jobs across engines
     if nrows is None:
-        print('\tdetermining chunksize (nrows) ...')
+        if verbose:
+            print('\tdetermining chunksize (nrows) ...')
         nrows = math.ceil(linenums/len(lview))
 
     # load other functions to engines
     if 'functions' in kwargs.keys():
-        print('\tloading functions to engines ...')
+        if verbose:
+            print('\tloading functions to engines ...')
         for func,args in kwargs['functions'].items():
-            print('\t', '\t', func)
+            if verbose:
+                print('\t', '\t', func)
             dview[func] = globals()[func]
             if 'None' in args:
                 continue
@@ -535,14 +542,18 @@ def parallel_read(f:str, linenums=None, nrows=None, header=None, lview=None, dvi
         time.sleep(5)
 
     # read-in in parallel
-    print('\tsending jobs to engines ...')
+    if verbose:
+        print('\tsending jobs to engines ...')
+        ranger = partial(trange, desc='sending jobs')
+    else:
+        ranger = range
     time.sleep(1)
     globals().update({'jobs': []})  # put in global in case I want to interrupt parallel_read()
-    for skipto in trange(0, linenums, nrows, desc='sending jobs'):
+    for skipto in ranger(0, linenums, nrows):
         jobs.append(lview.apply_async(get_skipto_df, *(f, skipto, nrows), **kwargs))
 #         jobs.append(get_skipto_df(f, skipto, nrows, **kwargs))  # for testing
 
-    watch_async(jobs, phase='parallel_read()')
+    watch_async(jobs, phase='parallel_read()', desc=desc if desc is not None else op.basename(f))
     df = pd.concat([j.r for j in jobs])
 
     if 'index_col' not in kwargs:
