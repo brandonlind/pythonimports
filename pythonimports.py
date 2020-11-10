@@ -644,3 +644,23 @@ in the name that includes a colon (":") that prepends the path.'
     output = subprocess.check_output([shutil.which('rsync'), '-azv', src, dst]).decode('utf-8').split('\n')
 
     return output
+
+
+def quick_write(df, dst, sep='\t', header=True, index=False):
+    """Quickly write a pd.DataFrame to file, much faster than .to_csv for large files."""
+    from tqdm import tqdm
+    tqdm.pandas()
+    
+    if index is not False:
+        raise AssertionError('as of now this function cannot write indices to file.')
+
+    lines = []
+    if header is True:
+        lines = [sep.join(df.columns)]
+
+    lines.extend(df.progress_apply(lambda line: sep.join(map(str, line)), axis=1).tolist())
+
+    with open(dst, 'w') as o:
+        o.write('\n'.join(lines))
+
+    pass
