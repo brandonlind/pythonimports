@@ -282,9 +282,9 @@ def getdirs(paths:Union[str, list], verbose=False, **kwargs) -> list:
     return newdirs
 
 
-def get_client(profile='default') -> tuple:
+def get_client(profile='default', **kwargs) -> tuple:
     """Get lview,dview from ipcluster."""
-    rc = Client(profile=profile)
+    rc = Client(profile=profile, **kwargs)
     dview = rc[:]
     lview = rc.load_balanced_view()
     print(len(lview),len(dview))
