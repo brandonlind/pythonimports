@@ -18,15 +18,19 @@ def get_seff(outs:list):
 
 
 def get_mems(infos:dict, units='MB', plot=True) -> list:
-    """From dict(infos) [val = seff output], extract mem in MB.
+    """From output by `get_seff()`, extract mem in `units` units; histogram if `plot` is True.
+    
+    Parameters
+    ----------
+    - infos : dict of any key with values of class Seff
+    - units : passed to Seff._convert_mem(). options: GB, MB, KB
 
-    fix: add in other mem units
     """
     mems = []
     for key,info in infos.items():
         if 'running' in info.state().lower() or 'pending' in info.state().lower():
             continue
-        mems.append(info.mem(units=units))
+        mems.append(info.mem(units=units, per_core=False))
 
     if plot is True:
         plt.hist(mems)
@@ -191,23 +195,27 @@ class Seff():
         """Get the memory efficiency (~ mem / mem_req)"""
         return self.info[-1].split()[2]
     
-    def _convert_mem(self, mem, units, unit='MB'):
-        """Convert between memory units."""
-        if units == 'GB':
+    def _convert_mem(self, mem, mem_units, units='MB'):
+        """Convert between memory mem_units."""
+        # first convert reported mem to MB
+        if mem_units == 'GB':
             mem = float(mem)*1024
-        elif units == 'KB':
+        elif mem_units == 'KB':
             mem = float(mem)/1024
-        elif units == 'EB':
+        elif mem_units == 'EB':
             mem = 0
         else:
             try:
-                assert units == 'MB'
+                assert mem_units == 'MB'
             except AssertionError as e:
                 print('info = ', self.info)
                 raise e
             mem = float(mem)
-        if unit == 'GB':
-            mem = mem/1024
+        # then convert to requested mem
+        if units == 'GB':
+            mem /= 1024
+        elif units == 'KB':
+            mem *= 1024
         return mem
     
     def mem(self, units='MB', per_core=False) -> str:
@@ -225,29 +233,29 @@ def getpid(out:str) -> list:
     return out.split("_")[-1].replace('.out', '')
 
 
-def checksq(sq):
-    """Make sure queue slurm command worked. Sometimes it doesn't.
+# def checksq(sq):
+#     """Make sure queue slurm command worked. Sometimes it doesn't.
     
-    Positional arguments:
-    sq - list of squeue slurm command jobs, each line is str.split()
-       - slurm_job_id is zeroth element of str.split()
-    """
-    exitneeded = False
-    if not isinstance(sq, list):
-        print("\ttype(sq) != list, exiting %(thisfile)s" % globals())
-        exitneeded = True
-    for s in sq:
-        if 'socket' in s.lower():
-            print("\tsocket in sq return, exiting %(thisfile)s" % globals())
-            exitneeded = True
-        if not int(s.split()[0]) == float(s.split()[0]):
-            print("\tcould not assert int == float, %s" % (s[0]))
-            exitneeded = True
-    if exitneeded is True:
-        print('\tslurm screwed something up for %(thisfile)s, lame' % globals())
-        exit()
-    else:
-        return sq
+#     Positional arguments:
+#     sq - list of squeue slurm command jobs, each line is str.split()
+#        - slurm_job_id is zeroth element of str.split()
+#     """
+#     exitneeded = False
+#     if not isinstance(sq, list):
+#         print("\ttype(sq) != list, exiting %(thisfile)s" % globals())
+#         exitneeded = True
+#     for s in sq:
+#         if 'socket' in s.lower():
+#             print("\tsocket in sq return, exiting %(thisfile)s" % globals())
+#             exitneeded = True
+#         if not int(s.split()[0]) == float(s.split()[0]):
+#             print("\tcould not assert int == float, %s" % (s[0]))
+#             exitneeded = True
+#     if exitneeded is True:
+#         print('\tslurm screwed something up for %(thisfile)s, lame' % globals())
+#         exit()
+#     else:
+#         return sq
 
 
 def getsq_exit(balancing):
@@ -348,68 +356,67 @@ class SQInfo():
 sqinfo = SQInfo
 
 
-def getsq(grepping=None, states=[], balancing=False, user=None):
-    """
-    Get jobs from `squeue` slurm command matching criteria.
+# def getsq(grepping=None, states=[], balancing=False, user=None):
+#     """
+#     Get jobs from `squeue` slurm command matching criteria.
 
-    Assumes
-    -------
-    export SQUEUE_FORMAT="%.8i %.8u %.15a %.68j %.3t %16S %.10L %.5D %.4C %.6b %.7m %N (%r)"
+#     Assumes
+#     -------
+#     export SQUEUE_FORMAT="%.8i %.8u %.15a %.68j %.3t %16S %.10L %.5D %.4C %.6b %.7m %N (%r)"
 
-    Positional arguments
-    --------------------
-    grepping - list of key words to look for in each column of job info
-    states - list of states {pending, running} wanted in squeue jobs
-    balancing - bool: True if using to balance priority jobs, else for other queue queries
-    user - user name to use to query `squeue -u {user}`
+#     Positional arguments
+#     --------------------
+#     grepping - list of key words to look for in each column of job info
+#     states - list of states {pending, running} wanted in squeue jobs
+#     balancing - bool: True if using to balance priority jobs, else for other queue queries
+#     user - user name to use to query `squeue -u {user}`
 
-    Returns
-    -------
-    grepped - list of tuples where tuple elements are line.split() for each line of squeue \
-slurm command that matched grepping queries
-    """
-    if user is None:
-        user = os.environ['USER']
-    if grepping is None:
-        grepping = [user]
-    if isinstance(grepping, str):
-        # in case I pass a single str instead of a list of strings
-        grepping = [grepping]
+#     Returns
+#     -------
+#     grepped - list of tuples where tuple elements are line.split() for each line of squeue \
+# slurm command that matched grepping queries
+#     """
+#     if user is None:
+#         user = os.environ['USER']
+#     if grepping is None:
+#         grepping = [user]
+#     if isinstance(grepping, str):
+#         # in case I pass a single str instead of a list of strings
+#         grepping = [grepping]
 
-    # get the queue, without a header
-    cmd = [shutil.which('squeue'),
-           '-u',
-           user,
-           '-h']
-    if 'running' in states:
-        cmd.extend(['-t', 'RUNNING'])
-    elif 'pending' in states:
-        cmd.extend(['-t', 'PD'])
-    sqout = subprocess.check_output(cmd).decode('utf-8').split('\n')
+#     # get the queue, without a header
+#     cmd = [shutil.which('squeue'),
+#            '-u',
+#            user,
+#            '-h']
+#     if 'running' in states:
+#         cmd.extend(['-t', 'RUNNING'])
+#     elif 'pending' in states:
+#         cmd.extend(['-t', 'PD'])
+#     sqout = subprocess.check_output(cmd).decode('utf-8').split('\n')
 
-    sq = [s for s in sqout if s != '']
-    checksq(sq)  # make sure slurm gave me something useful
+#     sq = [s for s in sqout if s != '']
+#     checksq(sq)  # make sure slurm gave me something useful
 
-    # look for the things I want to grep
-    grepped = []
-    if len(sq) > 0:
-        for q in sq:  # for each job in queue
-            splits = q.split()
-            if 'CG' not in splits:  # grep -v 'CG' = skip jobs that are closing
-                keepit = 0
-                if len(grepping) > 0:  # see if all necessary greps are in the job
-                    for grep in grepping:
-                        for split in splits:
-                            if grep.lower() in split.lower():
-                                keepit += 1
-                                break
-                if keepit == len(grepping) and len(grepping) != 0:
-                    grepped.append(sqinfo(tuple(splits)))
+#     # look for the things I want to grep
+#     grepped = []
+#     if len(sq) > 0:
+#         for q in sq:  # for each job in queue
+#             splits = q.split()
+#             if 'CG' not in splits:  # grep -v 'CG' = skip jobs that are closing
+#                 keepit = 0
+#                 if len(grepping) > 0:  # see if all necessary greps are in the job
+#                     for grep in grepping:
+#                         for split in splits:
+#                             if grep.lower() in split.lower():
+#                                 keepit += 1
+#                                 break
+#                 if keepit == len(grepping) and len(grepping) != 0:
+#                     grepped.append(sqinfo(tuple(splits)))
 
-        if len(grepped) > 0:
-            return grepped
-    return getsq_exit(balancing)
-
+#         if len(grepped) > 0:
+#             return grepped
+#     return getsq_exit(balancing)
 
 def adjustjob(acct, jobid):
     """Move job from one account to another."""
@@ -432,6 +439,7 @@ class Squeue():
     TODO: allow onaccount to accept list of accounts
     TODO: handle running/missing in _update_job()
     TODO: make it so it can return the queue for `grepping` without needing `user`
+    TODO: add methods to isolate the running/pending/closing jobs
     
     
     kwargs
@@ -517,7 +525,7 @@ class Squeue():
         self.sq = Squeue._getsq(**kwargs)
         self.kwargs = kwargs
 
-    def _getsq(grepping=None, states=[], user=None):
+    def _getsq(grepping=None, states=[], user=None, balancing=False):
         """Get and parse slurm queue according to kwargs criteria."""
         def _checksq(sq):
             """Make sure queue slurm command worked. Sometimes it doesn't.
@@ -599,7 +607,7 @@ class Squeue():
 
             if len(grepped) > 0:
                 return grepped
-        return getsq_exit(False)
+        return getsq_exit(balancing)
 
     def _handle_mem(mem):
         """If the memory units are specified, remove."""
@@ -805,3 +813,4 @@ class Squeue():
         Squeue._update_queue(self.sq, cmd, 'update', **kwargs)
         
         pass
+getsq = Squeue._getsq  # so I can still work with previous notebooks without errors
