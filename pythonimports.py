@@ -664,3 +664,19 @@ def quick_write(df, dst, sep='\t', header=True, index=False):
         o.write('\n'.join(lines))
 
     pass
+
+
+def flatten(list_of_lists, unique=False):
+    """Return a single list of values from each value in a list of lists.
+    
+    Parameters
+    ----------
+    - list_of_lists - a list where each element is a list
+    - unique - bool; True to return only unique values, False to return all values.
+    
+    """
+    assert list_of_lists.__class__.__name__ in ['list', 'dict_values']
+    vals = list(pd.core.common.flatten(list_of_lists))
+    if unique is True:
+        vals = uni(vals)
+    return vals
