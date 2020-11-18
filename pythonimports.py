@@ -37,6 +37,19 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 pd.set_option('display.max_columns', 100)
 
+def latest_commit():
+    """Print latest commit upon import."""
+    cwd = os.getcwd()
+    pypaths = os.environ['PYTHONPATH'].split(":")
+    pyimportpath = [path for path in pypaths if 'pythonimports' in path][0]
+    os.chdir(pyimportpath)
+    gitout = subprocess.check_output([shutil.which('git'), 'log', '--pretty', '-n1', pyimportpath]).decode('utf-8')
+    hashes = '##################################################################\n'
+    print(hashes + 'Current commit of pythonimports:\n' + gitout + hashes + '\n')
+    os.chdir(cwd)
+    pass
+#latest_commit()
+
 
 def ls(DIR:str) -> list:
     """Get a list of file basenames from DIR."""
@@ -490,7 +503,7 @@ def get_skipto_df(f, skipto, nrows, sep='\t', index_col=None, header='infer', **
     return df
 
 
-def parallel_read(f:str, linenums=None, nrows=None, header=None, lview=None, dview=None, verbose=True, desc=None, **kwargs):
+def parallel_read(f:str, linenums=None, nrows=None, header=0, lview=None, dview=None, verbose=True, desc=None, **kwargs):
     """
     Read in a dataframe file in parallel with ipcluster.
     
@@ -507,6 +520,8 @@ def parallel_read(f:str, linenums=None, nrows=None, header=None, lview=None, dvi
     """
     from functools import partial
     
+    kwargs.update({'header': header})
+    
     if verbose:
         print(ColorText('parallel_read()').bold().__str__() + ' is:')
     
@@ -515,9 +530,6 @@ def parallel_read(f:str, linenums=None, nrows=None, header=None, lview=None, dvi
         if verbose:
             print('\tdeterming line numbers for ', ColorText(f).gray(), ' ...')
         linenums = int(subprocess.check_output(['wc', '-l', f]).decode('utf-8').replace("\n", "").split()[0])
-        if header is not None:
-            # if there is a header, subtract from line count
-            linenums = linenums - 1
 
     # evenly distribute jobs across engines
     if nrows is None:
@@ -548,7 +560,8 @@ def parallel_read(f:str, linenums=None, nrows=None, header=None, lview=None, dvi
     else:
         ranger = range
     time.sleep(1)
-    globals().update({'jobs': []})  # put in global in case I want to interrupt parallel_read()
+    global jobs  # put in global in case I want to interrupt parallel_read()
+    jobs = []
     for skipto in ranger(0, linenums, nrows):
         jobs.append(lview.apply_async(get_skipto_df, *(f, skipto, nrows), **kwargs))
 #         jobs.append(get_skipto_df(f, skipto, nrows, **kwargs))  # for testing
@@ -559,6 +572,12 @@ def parallel_read(f:str, linenums=None, nrows=None, header=None, lview=None, dvi
     if 'index_col' not in kwargs:
         # avoid duplicated indices across jobs when no index was set
         df.index = range(len(df.index))
+
+    if header is not None:
+        # if there is a header, subtract from line count
+        linenums = linenums - 1
+    
+    assert nrow(df) == linenums, (nrow(df), linenums)
     
     return df
 
