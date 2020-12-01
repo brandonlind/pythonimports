@@ -44,8 +44,10 @@ def latest_commit():
     pyimportpath = [path for path in pypaths if 'pythonimports' in path][0]
     os.chdir(pyimportpath)
     gitout = subprocess.check_output([shutil.which('git'), 'log', '--pretty', '-n1', pyimportpath]).decode('utf-8')
+    gitout = '\n'.join(gitout.split('\n')[:3])
+    current_datetime = "Today:\t" + dt.now().strftime("%B %d, %Y - %H:%M:%S")
     hashes = '##################################################################\n'
-    print(hashes + 'Current commit of pythonimports:\n' + gitout + hashes + '\n')
+    print(hashes + 'Current commit of pythonimports:\n' + gitout + '\n' + current_datetime + '\n' + hashes)
     os.chdir(cwd)
     pass
 #latest_commit()
@@ -344,7 +346,7 @@ def watch_async(jobs:list, phase=None, desc=None) -> None:
     pass
 
 
-def read(file:str, lines=True) -> Union[str, list]:
+def read(file:str, lines=True, ignore_blank=True) -> Union[str, list]:
     """Read lines from a file.
     
     Return a list of lines, or one large string
@@ -352,7 +354,10 @@ def read(file:str, lines=True) -> Union[str, list]:
     with open(file, 'r') as o:
         text = o.read()
     if lines is True:
-        return text.split("\n")
+        text = text.split("\n")
+        if ignore_blank is True:
+            text = [line for line in text if line != '']
+        return text
     else:
         return text
 
@@ -453,7 +458,6 @@ class ColorText():
 
     pass
 
-
 def get_skipto_df(f, skipto, nrows, sep='\t', index_col=None, header='infer', **kwargs):
     """Retrieve dataframe in parallel so that all rows are captured when iterating.
     
@@ -473,6 +477,12 @@ def get_skipto_df(f, skipto, nrows, sep='\t', index_col=None, header='infer', **
     """
     import pandas
     
+    # isolate functions that are wanted to be applied to df chunk after being read in
+    if 'functions' in list(kwargs.keys()):
+        func_dict = kwargs.pop('functions')
+    else:
+        func_dict = {}
+    
     # read in the appropriate chunk of the file
     if skipto == 0:
         df = pandas.read_table(f,
@@ -491,19 +501,17 @@ def get_skipto_df(f, skipto, nrows, sep='\t', index_col=None, header='infer', **
                                **kwargs)
 
     # do other stuff to the dataframe while in parallel
-    if 'functions' in kwargs.keys():
-        for function,args in kwargs['functions'].items():  # for a list of functions
+    if len(func_dict) > 0:
+        for function,func_info in func_dict.items():  # for a list of functions
             print(function)
-            func = globals()[function]
-            if 'None' in args:
-                df = func(df)
-            else:
-                df = func(df, *args)  # do stuff
+            func = func_info[function]
+            df = func(df, *func_info['args'], **func_info['kwargs'])    # do stuff
 
     return df
 
 
-def parallel_read(f:str, linenums=None, nrows=None, header=0, lview=None, dview=None, verbose=True, desc=None, **kwargs):
+def parallel_read(f:str, linenums=None, nrows=None, header=0, lview=None, dview=None,
+                  verbose=True, desc=None, assert_rowcount=True, **kwargs):
     """
     Read in a dataframe file in parallel with ipcluster.
     
@@ -512,11 +520,49 @@ def parallel_read(f:str, linenums=None, nrows=None, header=0, lview=None, dview=
     f - filename to open
     linenums - the number of non-header lines in the txt/csv file
     nrows - the number of lines to read in each parallel process
+    header - passed to pd.read_csv(), used to infer proper line counts
+    verbose - more printing
+    desc - passed to watch_async(); if None, then uses basename of `f`
+    assert_rowcount - if one of the functions passed in kwargs filters rows, 
+        then set to False otherwise there will be an AssertionError when double checking it read them in
     kwargs - passed to get_skipto_df(); see get_skipto_df() docstring for more info
     
     Returns
     -------
     jobs - a list of AsyncResult for each iteration (num iterations = linenums/nrows)
+    
+    
+    Example
+    -------
+    # function_x will be executed while in parallel, and therefore cannot depend on the full dataframe
+        # the parallel execution is only operating on a chunk of the dataframe - see get_skipto_df
+        # so if this function reduces the number of rows that are read in, set `assert_rowcount` to `False`
+
+    # step 1) start by importing and specify the file path
+    >>> from somemodule import function_x  # you can also just define this function in line
+    >>> from pythonimports import get_client, parallel_read
+    >>>
+    >>> lview,dview = get_client()  # get ipcluster engines
+    >>> f = '/some/path.txt'  # path to really big file
+    
+    # step 2)
+    # set up a dictionary that contains functions and their arguments that are availale in __main__.globals()
+        # this is a multidimensional dict that in the upper most dimension has the function names as keys
+        # each key points to another dictionary, with three keys:
+                # the function name as a string, 'args', and 'kwargs'
+            # the function name key points to the actual function in __main__.globals()
+            # the value of 'args' and 'kwargs' will be applied to the function (while in parallel) as:
+                # function(df, *args, **kwargs)
+                # therefore the value for the `args` and `kwargs` key must have a .__len__() method
+
+    >>> fundict = dict({'function_x': dict({'function_x': function_x,
+                                            'args': [],
+                                            'kwargs': {}
+                                           })
+                       })
+
+    # step 3) run parallel_read()
+    >>> df = parallel_read(f, lview=lview, dview=dview, assert_rowcount=False, **dict(functions=fundict))
     """
     from functools import partial
     
@@ -529,7 +575,10 @@ def parallel_read(f:str, linenums=None, nrows=None, header=0, lview=None, dview=
     if linenums is None:
         if verbose:
             print('\tdeterming line numbers for ', ColorText(f).gray(), ' ...')
-        linenums = int(subprocess.check_output(['wc', '-l', f]).decode('utf-8').replace("\n", "").split()[0])
+#         linenums = int(subprocess.check_output(['wc', '-l', f]).decode('utf-8').replace("\n", "").split()[0])
+        lines = subprocess.check_output([shutil.which('awk'), '{print $1}', f]).split(b"\n")
+        linenums = len([line for line in lines if line != b'']) # use this to avoid weird cases where file ends with '\n'
+            
 
     # evenly distribute jobs across engines
     if nrows is None:
@@ -541,26 +590,31 @@ def parallel_read(f:str, linenums=None, nrows=None, header=0, lview=None, dview=
     if 'functions' in kwargs.keys():
         if verbose:
             print('\tloading functions to engines ...')
-        for func,args in kwargs['functions'].items():
+        for func,func_info in kwargs['functions'].items():
             if verbose:
                 print('\t', '\t', func)
-            dview[func] = globals()[func]
-            if 'None' in args:
-                continue
-            for arg in args:
-                dview[arg] = globals()[arg]
-                time.sleep(1)
+            dview[func] = func_info[func]
+            if len(func_info['args']) > 0:
+                for arg_name,arg in func_info['args'].items():
+                    dview[arg_name] = arg
+                    time.sleep(1)
+            if len(func_info['kwargs']) > 0:
+                for kwarg_name,kwarg in func_info['kwargs'].items():
+                    if all([isinstance(kwarg, bool) is False, isinstance(kwarg, str) is False]):
+                        # if the kwarg is an object that needs to be loaded to engines, load it.
+                        dview[kwarg_name] = kwarg
             time.sleep(1)
         time.sleep(5)
 
-    # read-in in parallel
+    # set iterator function
     if verbose:
         print('\tsending jobs to engines ...')
         ranger = partial(trange, desc='sending jobs')
     else:
         ranger = range
     time.sleep(1)
-    global jobs  # put in global in case I want to interrupt parallel_read()
+
+    # read-in in parallel
     jobs = []
     for skipto in ranger(0, linenums, nrows):
         jobs.append(lview.apply_async(get_skipto_df, *(f, skipto, nrows), **kwargs))
@@ -577,7 +631,8 @@ def parallel_read(f:str, linenums=None, nrows=None, header=0, lview=None, dview=
         # if there is a header, subtract from line count
         linenums = linenums - 1
     
-    assert nrow(df) == linenums, (nrow(df), linenums)
+    if assert_rowcount is True:
+        assert nrow(df) == linenums, (nrow(df), linenums)
     
     return df
 
