@@ -505,13 +505,23 @@ def get_skipto_df(f, skipto, nrows, sep='\t', index_col=None, header='infer', **
         for function,func_info in func_dict.items():  # for a list of functions
             print(function)
             func = func_info[function]
-            df = func(df, *func_info['args'], **func_info['kwargs'])    # do stuff
+            df = func(df, *list(func_info['args'].values()), **func_info['kwargs'])    # do stuff
 
     return df
 
 
+def create_fundict(function, args={}, kwargs={}):
+    """Create a fundict for `parallel_read()`."""
+    fundict = OrderedDict({function.__name__: dict({function.__name__: function,
+                                                    'args': args,
+                                                    'kwargs': kwargs
+                                                   })
+                          })
+    return fundict
+
+
 def parallel_read(f:str, linenums=None, nrows=None, header=0, lview=None, dview=None,
-                  verbose=True, desc=None, assert_rowcount=True, **kwargs):
+                  verbose=True, desc=None, assert_rowcount=True, reset_index=True, **kwargs):
     """
     Read in a dataframe file in parallel with ipcluster.
     
@@ -523,6 +533,7 @@ def parallel_read(f:str, linenums=None, nrows=None, header=0, lview=None, dview=
     header - passed to pd.read_csv(), used to infer proper line counts
     verbose - more printing
     desc - passed to watch_async(); if None, then uses basename of `f`
+    reset_index - name index with range(len(df.index))
     assert_rowcount - if one of the functions passed in kwargs filters rows, 
         then set to False otherwise there will be an AssertionError when double checking it read them in
     kwargs - passed to get_skipto_df(); see get_skipto_df() docstring for more info
@@ -623,7 +634,7 @@ def parallel_read(f:str, linenums=None, nrows=None, header=0, lview=None, dview=
     watch_async(jobs, phase='parallel_read()', desc=desc if desc is not None else op.basename(f))
     df = pd.concat([j.r for j in jobs])
 
-    if 'index_col' not in kwargs:
+    if reset_index is True:
         # avoid duplicated indices across jobs when no index was set
         df.index = range(len(df.index))
 
@@ -754,3 +765,9 @@ def flatten(list_of_lists, unique=False):
     if unique is True:
         vals = uni(vals)
     return vals
+
+def sleeping(counts:int, desc='sleeping', sleep=1):
+    """Basically a sleep timer with a progress bar; counts up to `counts`, interval = 1sec."""
+    for i in trange(counts, desc=desc):
+        time.sleep(sleep)
+    pass
