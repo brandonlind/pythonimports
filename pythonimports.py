@@ -334,15 +334,19 @@ def watch_async(jobs:list, phase=None, desc=None) -> None:
     print(ColorText(f"\nWatching {len(jobs)} {f'{phase} ' if phase is not None else ''}jobs ...").bold())
     time.sleep(1)
 
-    job_idx = list(range(len(jobs)))
-    for i in trange(len(jobs), desc=phase if desc is None else desc):
-        count = 0
-        while count < (i+1):
+    try:
+        job_idx = list(range(len(jobs)))
+        for i in trange(len(jobs), desc=phase if desc is None else desc):
             count = len(jobs) - len(job_idx)
-            for j in job_idx:
-                if jobs[j].ready():
-                    count += 1
-                    job_idx.remove(j)
+            while count < (i+1):
+                for j in job_idx:
+                    if jobs[j].ready():
+                        count += 1
+                        job_idx.remove(j)
+    except KeyboardInterrupt:
+        time.sleep(0.2)
+        print(ColorText(f'KeboardInterrupted').warn())
+        
     pass
 
 
@@ -760,7 +764,7 @@ def flatten(list_of_lists, unique=False):
     - unique - bool; True to return only unique values, False to return all values.
     
     """
-    assert list_of_lists.__class__.__name__ in ['list', 'dict_values']
+    assert list_of_lists.__class__.__name__ in ['list', 'dict_values', 'ndarray']
     vals = list(pd.core.common.flatten(list_of_lists))
     if unique is True:
         vals = uni(vals)
@@ -768,6 +772,23 @@ def flatten(list_of_lists, unique=False):
 
 def sleeping(counts:int, desc='sleeping', sleep=1):
     """Basically a sleep timer with a progress bar; counts up to `counts`, interval = 1sec."""
-    for i in trange(counts, desc=desc):
-        time.sleep(sleep)
+    try:
+        for i in trange(counts, desc=desc):
+            time.sleep(sleep)
+    except KeyboardInterrupt:
+        print(ColorText(f'KeyboardInterrupt after {i} seconds of sleep.').warn())
     pass
+
+
+def timer(func):
+    """Decorator to report time to complete function `func`."""
+    from functools import wraps
+    
+    @wraps(func)
+    def call(*args, **kwargs):
+        t1 = dt.now()
+        result = func(*args, **kwargs)
+        time.sleep(0.2)
+        print(f'Function `{call.__name__}` completed after : %s' % formatclock(dt.now() - t1, exact=True))
+        return result
+    return call
