@@ -1,0 +1,10 @@
+seaborn==0.11.1
+Cartopy==0.18.0
+fastcluster==1.1.26
+scipy==1.5.2
+tqdm==4.55.1
+ipyparallel==6.3.0
+numpy==1.19.2
+pandas==1.2.0
+matplotlib==3.3.2
+ipython==7.19.0
