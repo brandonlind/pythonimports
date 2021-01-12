@@ -12,27 +12,29 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.gridspec as gridspec
-from myslurm import *
 from typing import Optional, Union
-from collections import defaultdict
-from IPython.display import clear_output
-from collections import OrderedDict, Counter
-from IPython.display import Markdown, display
-from os import listdir
+from collections import OrderedDict, Counter, defaultdict
+from IPython.display import Markdown, display, clear_output
 from tqdm import trange
 from os import path as op
 from os import chdir as cd
 from decimal import Decimal
-from tqdm import tqdm as nb
+from tqdm import tqdm as pbar
 from os import getcwd as cwd
 from shutil import copy as cp
 from shutil import move as mv
 from ipyparallel import Client
 from datetime import timedelta
-from matplotlib import pyplot as pl
 from datetime import datetime as dt
 from tqdm.notebook import tqdm as tnb
 from matplotlib.backends.backend_pdf import PdfPages
+
+from myutils import *
+from myslurm import *
+
+# backwards compatibility
+nb = pbar
+# /backwards compatibility
 
 
 pd.set_option('display.max_columns', 100)
@@ -50,12 +52,11 @@ def latest_commit():
     print(hashes + 'Current commit of pythonimports:\n' + gitout + '\n' + current_datetime + '\n' + hashes)
     os.chdir(cwd)
     pass
-#latest_commit()
 
 
 def ls(DIR:str) -> list:
     """Get a list of file basenames from DIR."""
-    return sorted(listdir(DIR))
+    return sorted(os.listdir(DIR))
 
 
 def fs(DIR:str, pattern='', endswith='', startswith='', exclude=None, dirs=None, bnames=False) -> list:
@@ -365,102 +366,104 @@ def read(file:str, lines=True, ignore_blank=True) -> Union[str, list]:
     else:
         return text
 
-class ColorText():
-    """
-    Use ANSI escape sequences to print colors +/- bold/underline to bash terminal.
+
+# class ColorText():
+#     """
+#     Use ANSI escape sequences to print colors +/- bold/underline to bash terminal.
     
-    Notes
-    -----
-    execute ColorText.demo() for a printout of colors.
-    """
-    def demo():
-        """Prints examples of all colors in normal, bold, underline, bold+underline."""
-        for color in dir(ColorText):
-            if all([color.startswith('_') is False,
-                   color not in ['bold', 'underline', 'demo'],
-                   callable(getattr(ColorText, color))]):
-                print(getattr(ColorText(color), color)(),'\t',                
-                      getattr(ColorText(f'bold {color}').bold(), color)(),'\t',
-                      getattr(ColorText(f'underline {color}').underline(), color)(),'\t',
-                      getattr(ColorText(f'bold underline {color}').underline().bold(), color)())
-        pass
+#     Notes
+#     -----
+#     execute ColorText.demo() for a printout of colors.
+#     """
+#     def demo():
+#         """Prints examples of all colors in normal, bold, underline, bold+underline."""
+#         for color in dir(ColorText):
+#             if all([color.startswith('_') is False,
+#                    color not in ['bold', 'underline', 'demo'],
+#                    callable(getattr(ColorText, color))]):
+#                 print(getattr(ColorText(color), color)(),'\t',                
+#                       getattr(ColorText(f'bold {color}').bold(), color)(),'\t',
+#                       getattr(ColorText(f'underline {color}').underline(), color)(),'\t',
+#                       getattr(ColorText(f'bold underline {color}').underline().bold(), color)())
+#         pass
 
-    def __init__(self, text:str):
-        self.text = text
-        self.ending = '\033[0m'
-        self.colors = []
-        pass
+#     def __init__(self, text:str):
+#         self.text = text
+#         self.ending = '\033[0m'
+#         self.colors = []
+#         pass
 
-    def __repr__(self):
-        return self.text
+#     def __repr__(self):
+#         return self.text
 
-    def __str__(self):
-        return self.text
+#     def __str__(self):
+#         return self.text
 
-    def bold(self):
-        self.text = '\033[1m' + self.text + self.ending
-        return self
+#     def bold(self):
+#         self.text = '\033[1m' + self.text + self.ending
+#         return self
 
-    def underline(self):
-        self.text = '\033[4m' + self.text + self.ending
-        return self
+#     def underline(self):
+#         self.text = '\033[4m' + self.text + self.ending
+#         return self
 
-    def green(self):
-        self.text = '\033[92m' + self.text + self.ending
-        self.colors.append('green')
-        return self
+#     def green(self):
+#         self.text = '\033[92m' + self.text + self.ending
+#         self.colors.append('green')
+#         return self
 
-    def purple(self):
-        self.text = '\033[95m' + self.text + self.ending
-        self.colors.append('purple')
-        return self
+#     def purple(self):
+#         self.text = '\033[95m' + self.text + self.ending
+#         self.colors.append('purple')
+#         return self
 
-    def blue(self):
-        self.text = '\033[94m' + self.text + self.ending
-        self.colors.append('blue')
-        return self
+#     def blue(self):
+#         self.text = '\033[94m' + self.text + self.ending
+#         self.colors.append('blue')
+#         return self
 
-    def ltblue(self):
-        self.text = '\033[34m' + self.text + self.ending
-        self.colors.append('lightblue')
-        return self
+#     def ltblue(self):
+#         self.text = '\033[34m' + self.text + self.ending
+#         self.colors.append('lightblue')
+#         return self
 
-    def pink(self):
-        self.text = '\033[35m' + self.text + self.ending
-        self.colors.append('pink')
-        return self
+#     def pink(self):
+#         self.text = '\033[35m' + self.text + self.ending
+#         self.colors.append('pink')
+#         return self
     
-    def gray(self):
-        self.text = '\033[30m' + self.text + self.ending
-        self.colors.append('gray')
-        return self
+#     def gray(self):
+#         self.text = '\033[30m' + self.text + self.ending
+#         self.colors.append('gray')
+#         return self
 
-    def ltgray(self):
-        self.text = '\033[37m' + self.text + self.ending
-        self.colors.append('ltgray')
-        return self
+#     def ltgray(self):
+#         self.text = '\033[37m' + self.text + self.ending
+#         self.colors.append('ltgray')
+#         return self
 
-    def warn(self):
-        self.text = '\033[93m' + self.text + self.ending
-        self.colors.append('yellow')
-        return self
+#     def warn(self):
+#         self.text = '\033[93m' + self.text + self.ending
+#         self.colors.append('yellow')
+#         return self
 
-    def fail(self):
-        self.text = '\033[91m' + self.text + self.ending
-        self.colors.append('red')
-        return self
+#     def fail(self):
+#         self.text = '\033[91m' + self.text + self.ending
+#         self.colors.append('red')
+#         return self
 
-    def ltred(self):
-        self.text = '\033[31m' + self.text + self.ending
-        self.colors.append('lightred')
-        return self
+#     def ltred(self):
+#         self.text = '\033[31m' + self.text + self.ending
+#         self.colors.append('lightred')
+#         return self
 
-    def cyan(self):
-        self.text = '\033[36m' + self.text + self.ending
-        self.colors.append('cyan')
-        return self
+#     def cyan(self):
+#         self.text = '\033[36m' + self.text + self.ending
+#         self.colors.append('cyan')
+#         return self
 
-    pass
+#     pass
+
 
 def get_skipto_df(f, skipto, nrows, sep='\t', index_col=None, header='infer', **kwargs):
     """Retrieve dataframe in parallel so that all rows are captured when iterating.
@@ -524,8 +527,23 @@ def create_fundict(function, args={}, kwargs={}):
     return fundict
 
 
-def parallel_read(f:str, linenums=None, nrows=None, header=0, lview=None, dview=None,
-                  verbose=True, desc=None, assert_rowcount=True, reset_index=True, **kwargs):
+def timer(func):
+    """Decorator to report time to complete function `func`."""
+    from functools import wraps
+    
+    @wraps(func)
+    def call(*args, **kwargs):
+        t1 = dt.now()
+        result = func(*args, **kwargs)
+        time.sleep(0.2)
+        print(f'Function `{call.__name__}` completed after : %s' % formatclock(dt.now() - t1, exact=True))
+        return result
+    return call
+
+
+@timer
+def parallel_read(f:str, linenums=None, nrows=None, header=0, lview=None, dview=None, verbose=True, desc=None,
+                  assert_rowcount=True, reset_index=True, maintain_dataframe=True, **kwargs):
     """
     Read in a dataframe file in parallel with ipcluster.
     
@@ -540,6 +558,8 @@ def parallel_read(f:str, linenums=None, nrows=None, header=0, lview=None, dview=
     reset_index - name index with range(len(df.index))
     assert_rowcount - if one of the functions passed in kwargs filters rows, 
         then set to False otherwise there will be an AssertionError when double checking it read them in
+    maintain_dataframe - True if I pass functions that do return pd.DataFrame
+        - set to False if the functions in kwargs['functions'] do not return pd.DataFrame's
     kwargs - passed to get_skipto_df(); see get_skipto_df() docstring for more info
     
     Returns
@@ -636,18 +656,23 @@ def parallel_read(f:str, linenums=None, nrows=None, header=0, lview=None, dview=
 #         jobs.append(get_skipto_df(f, skipto, nrows, **kwargs))  # for testing
 
     watch_async(jobs, phase='parallel_read()', desc=desc if desc is not None else op.basename(f))
-    df = pd.concat([j.r for j in jobs])
-
-    if reset_index is True:
-        # avoid duplicated indices across jobs when no index was set
-        df.index = range(len(df.index))
-
-    if header is not None:
-        # if there is a header, subtract from line count
-        linenums = linenums - 1
     
-    if assert_rowcount is True:
-        assert nrow(df) == linenums, (nrow(df), linenums)
+    if maintain_dataframe is True:
+        df = pd.concat([j.r for j in jobs])
+
+        if reset_index is True:
+            # avoid duplicated indices across jobs when no index was set
+            df.index = range(len(df.index))
+
+        if header is not None:
+            # if there is a header, subtract from line count
+            linenums = linenums - 1
+
+        if assert_rowcount is True:
+            assert nrow(df) == linenums, (nrow(df), linenums)
+    else:
+        # in case I want to execute functions that do not return dataframes
+        df = [j.r for j in jobs]
     
     return df
 
@@ -770,6 +795,7 @@ def flatten(list_of_lists, unique=False):
         vals = uni(vals)
     return vals
 
+
 def sleeping(counts:int, desc='sleeping', sleep=1):
     """Basically a sleep timer with a progress bar; counts up to `counts`, interval = 1sec."""
     try:
@@ -778,17 +804,3 @@ def sleeping(counts:int, desc='sleeping', sleep=1):
     except KeyboardInterrupt:
         print(ColorText(f'KeyboardInterrupt after {i} seconds of sleep.').warn())
     pass
-
-
-def timer(func):
-    """Decorator to report time to complete function `func`."""
-    from functools import wraps
-    
-    @wraps(func)
-    def call(*args, **kwargs):
-        t1 = dt.now()
-        result = func(*args, **kwargs)
-        time.sleep(0.2)
-        print(f'Function `{call.__name__}` completed after : %s' % formatclock(dt.now() - t1, exact=True))
-        return result
-    return call

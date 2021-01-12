@@ -8,6 +8,8 @@ import shutil
 from tqdm import tqdm as nb
 import matplotlib.pyplot as plt
 
+from myutils import ColorText
+
 
 def get_seff(outs:list):
     """From a list of .out files (ending in f'_{SLURM_JOB_ID}.out'), get seff output."""
@@ -439,6 +441,9 @@ class Squeue():
     TODO: pass .cancel() and .update() a list of pids
     TODO: add balance method
     TODO: update_job needs to handle skipping over jobs that started running after class instantiation
+    TODO: update_job needs to skip errors when eg trying to increase time of job beyond initial submission
+            eg when initially scheduled for 1 day, but update tries to extend beyond 1 day
+            (not allowed on compute canada)
     TODO: allow onaccount to accept list of accounts
     TODO: handle running/missing in _update_job()
     TODO: make it so it can return the queue for `grepping` without needing `user`
@@ -817,3 +822,32 @@ class Squeue():
         
         pass
 getsq = Squeue._getsq  # so I can still work with previous notebooks without errors
+
+
+def create_watcherfile(pids, directory, watcher_name='watcher', calc_info=True, email='brandon.lind@ubc.ca'):
+    """From a list of dependency pids, sbatch a file that will email once pids are completed.
+    
+    TODO
+    ----
+    - incorporate code to save mem and time info
+    """
+    watcherfile = op.join(directory, 'watcher.sh')
+    jpids = ','.join(pids)
+    text = f'''#!/bin/bash
+#SBATCH --job-name={watchername}
+#SBATCH --time=0:00:01
+#SBATCH --ntasks=1
+#SBATCH --mem=25
+#SBATCH --output=watcher_%j.out
+#SBATCH --dependency=afterok:{jpids}
+#SBATCH --mail-user={email}
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-type=END
+'''
+
+    with open(watcherfile, 'w') as o:
+        o.write(text)
+
+    print(sbatch(watcherfile))
+    
+    pass
