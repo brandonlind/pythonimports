@@ -4,9 +4,14 @@ from cartopy.io.img_tiles import Stamen
 import cartopy.crs as ccrs
 from cartopy.io.shapereader import Reader
 import numpy as np
+from matplotlib.backends.backend_pdf import PdfPages
 
-def draw_pie_marker(ratios, xcoord, ycoord, sizes, colors, ax, edgecolors='black', slice_edgecolors='none',
-                    edge_linewidths=1.5, slice_linewidths=1.5, zorder=1, transform=False, popname=None, offset=True):
+from myutils import ColorText
+
+
+def draw_pie_marker(ratios, xcoord, ycoord, sizes, colors, ax, edgecolors='black', slice_edgecolors='none', alpha=1,
+                    edge_linewidths=1.5, slice_linewidths=1.5, zorder=10, transform=False, label=None, edgefactor=1,
+                    offset=True):
     """Draw a pie chart at coordinates `[xcoord,ycoord]` on `ax`.
     
     Parameters
@@ -38,8 +43,8 @@ def draw_pie_marker(ratios, xcoord, ycoord, sizes, colors, ax, edgecolors='black
     # calculate the points of the pie pieces
     for color, ratio in zip(colors, ratios):
         this = 2 * np.pi * ratio + previous
-        x  = np.cos(np.linspace(previous, this, 10)).tolist()
-        y  = np.sin(np.linspace(previous, this, 10)).tolist()
+        x  = np.cos(np.linspace(previous, this, 100)).tolist()
+        y  = np.sin(np.linspace(previous, this, 100)).tolist()
         if len(ratios) > 1 and 1 not in ratios:
             # commenting this section out will convert pie chart to cross-sectional shading
             # adding the [0] to x and y without a condition will result in an interior edge when circle should be completely filled
@@ -48,23 +53,23 @@ def draw_pie_marker(ratios, xcoord, ycoord, sizes, colors, ax, edgecolors='black
         
         xy = np.column_stack([x, y])
         previous = this
-        markers.append({'marker':xy, 's':np.abs(xy).max()**2*np.array(sizes),
+        markers.append({'marker':xy, 's':np.abs(xy).max()**2*np.array(sizes), 'alpha':alpha,
                         'facecolor':color, 'edgecolors':slice_edgecolors, 'linewidths':slice_linewidths})
-    markers.append({'marker':np.column_stack([np.cos(np.linspace(0, 2*np.pi, 10)).tolist(),
-                                              np.sin(np.linspace(0, 2*np.pi, 10)).tolist()]),
-                    's':np.abs(xy).max()**2*np.array(sizes), 'facecolor':'none', 'edgecolors':edgecolors,
-                    'linewidths':edge_linewidths})
+    markers.append({'marker':np.column_stack([np.cos(np.linspace(0, 2*np.pi, 100)).tolist(),
+                                              np.sin(np.linspace(0, 2*np.pi, 100)).tolist()]),
+                    's':np.abs(xy).max()**2*np.array(sizes)*edgefactor,
+                    'facecolor':'none', 'edgecolors':edgecolors, 'linewidths':edge_linewidths, 'alpha':alpha})
 
     # scatter each of the pie pieces to create pies
     scatter = ax.scatter if transform is False else partial(ax.scatter, transform=ccrs.PlateCarree())
     annotate = ax.annotate if transform is False else partial(ax.annotate, xycoords=ccrs.PlateCarree()._as_mpl_transform(ax))
     for marker in markers:
         scatter(xcoord, ycoord, zorder=zorder, **marker)
-    if popname is not None:
+    if label is not None:
 #         if offset is True:
 #             xs = xs-0.15
 #             ys = ys-0.1
-        annotate(popname, (xs, ys), zorder=zorder+10, color='white', weight='bold')
+        annotate(label, (xs, ys), zorder=zorder+10, color='white', weight='bold')
 
     pass
 
@@ -103,11 +108,11 @@ def basemap():
     for color,variety in zip(['lime', 'purple'], [coastrange, intrange]):
         ax.add_geometries(Reader(variety).geometries(),
                           ccrs.PlateCarree(),
-                          facecolor=color, alpha=0.1, edgecolor='none', zorder=10)
+                          facecolor=color, alpha=0.1, edgecolor='none', zorder=2)
         ax.add_geometries(Reader(variety).geometries(),
                           ccrs.PlateCarree(),
-                          facecolor='none', edgecolor=color, alpha=0.8, zorder=15)
-    ax.coastlines(resolution='10m', zorder=20)
+                          facecolor='none', edgecolor=color, alpha=0.8, zorder=3)
+    ax.coastlines(resolution='10m', zorder=4)
     ax.add_feature(cfeature.BORDERS)
     
     bathym = cfeature.NaturalEarthFeature(name='bathymetry_J_1000', scale='10m', category='physical')
@@ -146,33 +151,35 @@ def basemap():
 #     return ax
 
 
-def plot_pie_freqs(locus, snpinfo, envinfo, saveloc=None, use_popnames=False):
+def plot_pie_freqs(locus, snpinfo, envinfo, saveloc=None, use_popnames=False, popcolors=None, **kwargs):
     """Create geographic map, overlay pie graphs (ref/alt allele freqs)."""
     freqcols = [col for col in snpinfo.columns if 'FREQ' in col]
     snpdata = snpinfo.loc[locus, freqcols].str.replace("%","").astype(float)  # eg change 97.5% to 97.5
     print(len(snpdata))
     
-    ax = draw_basemap()
+    ax = basemap()
     
     # plot the pops
     for pop in envinfo.index:
+        color = 'black' if popcolors is None else popcolors[pop]
         long,lat = envinfo.loc[pop, ['LONG', 'LAT']]
 #         try:
         try:
             af = round(snpdata[f'{pop}.FREQ'])  # ALT freq
-            rf = 100 - af  # REF freq
-            drawPieMarker([af, rf],
-                          long,
-                          lat,
-                          150,
-                          ax=ax,
-                          colors=['blue', 'orange'],
-                          zorder=10,
-                          transform=True,
-                          popname=None if use_popnames is False else pop)
-        except:
+        except ValueError as e:
             print('passing ', pop)
-            pass
+            continue
+        rf = 100 - af  # REF freq
+        draw_pie_marker([af, rf],
+                        long,
+                        lat,
+                        150,
+                        ax=ax,
+                        colors=['blue', 'orange'],
+                        transform=True,
+                        label=None if use_popnames is False else pop,
+                        edgecolors=color,
+                        **kwargs)
     # save
     if saveloc is not None:
         with PdfPages(saveloc) as pdf:
