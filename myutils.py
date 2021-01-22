@@ -10,12 +10,13 @@ class ColorText():
         """Prints examples of all colors in normal, bold, underline, bold+underline."""
         for color in dir(ColorText):
             if all([color.startswith('_') is False,
-                   color not in ['bold', 'underline', 'demo'],
+                   color not in ['bold', 'underline', 'demo', 'custom'],
                    callable(getattr(ColorText, color))]):
                 print(getattr(ColorText(color), color)(),'\t',                
                       getattr(ColorText(f'bold {color}').bold(), color)(),'\t',
                       getattr(ColorText(f'underline {color}').underline(), color)(),'\t',
                       getattr(ColorText(f'bold underline {color}').underline().bold(), color)())
+        print(ColorText('Input can also be color hex or R,G,B with ColorText.custom()').bold())
         pass
 
     def __init__(self, text:str):
@@ -91,6 +92,20 @@ class ColorText():
     def cyan(self):
         self.text = '\033[36m' + self.text + self.ending
         self.colors.append('cyan')
+        return self
+    
+    def custom(self, *color_hex):
+        """Print in custom color, `color_hex` - either actual hex, or tuple(r,g,b)"""
+        from matplotlib.colors import rgb2hex, colorConverter
+        from PIL import ImageColor
+        if len(color_hex) == 1:
+            c = rgb2hex(colorConverter.to_rgb(color_hex[0]))
+            rgb = ImageColor.getcolor(c, 'RGB')
+        else:
+            assert len(color_hex)==3, 'If not a color hex, ColorText.custom should have R,G,B as input'
+            rgb = color_hex
+        self.text = '\033[{};2;{};{};{}m'.format(38, *rgb) + self.text + self.ending
+        self.colors.append(rgb)
         return self
 
     pass
