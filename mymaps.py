@@ -6,7 +6,7 @@ from cartopy.io.shapereader import Reader
 import numpy as np
 from matplotlib.backends.backend_pdf import PdfPages
 
-from myutils import ColorText
+from myutils import *
 
 
 def draw_pie_marker(ratios, xcoord, ycoord, sizes, colors, ax, edgecolors='black', slice_edgecolors='none', alpha=1,
@@ -69,12 +69,29 @@ def draw_pie_marker(ratios, xcoord, ycoord, sizes, colors, ax, edgecolors='black
 #         if offset is True:
 #             xs = xs-0.15
 #             ys = ys-0.1
-        annotate(label, (xs, ys), zorder=zorder+10, color='white', weight='bold')
+        annotate(label, (xcoord, ycoord), zorder=zorder+10, color='white', weight='bold')
 
     pass
 
-
-def basemap():
+def basemap(extent, shapefiles=None, figsize=(8,15)):
+    """Build basemap +/- range shapefile.
+    
+    Parameters
+    ----------
+    - extent - the geographic extent to be displayed
+    - shapefiles - a list of tuples, each tuple is (color, shapefile_path.shp)
+    
+    # douglas-fir shortcuts
+    coastrange = '/data/projects/pool_seq/environemental_data/shapefiles/Coastal_DF.shp'
+    intrange = '/data/projects/pool_seq/environemental_data/shapefiles/Interior_DF.shp'
+        # df_shapfiles = zip(['lime', 'purple'], [coastrange, intrange])
+        # extent=[-130, -112.5, 37.5, 55.5]
+        # zoom out [-130, -108.5, 32.5, 55.5]
+        
+    # jack pine shortcuts
+    extent=[-119.5, -58, 41, 60], figsize=(15,10),
+    shapefiles=[('green', '/data/projects/pool_seq/environemental_data/shapefiles/jackpine.shp')]
+    """
     from cartopy.io.img_tiles import GoogleTiles
     class _ShadedReliefESRI(GoogleTiles):
         """https://stackoverflow.com/questions/37423997/cartopy-shaded-relief"""
@@ -87,15 +104,14 @@ def basemap():
             return url
         pass
     
-    fig = plt.figure(figsize=(8,15))
+    fig = plt.figure(figsize=figsize)
     ax = plt.axes(projection=_ShadedReliefESRI().crs)
-    ax.set_extent([-130, -112.5, 37.5, 55.5], crs=ccrs.PlateCarree())  # zoom out [-130, -108.5, 32.5, 55.5]
-    ax.add_image(_ShadedReliefESRI(), 8)
+    ax.set_extent(extent, crs=ccrs.PlateCarree())
+    ax.add_image(_ShadedReliefESRI(), 7)
     ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False, alpha=0.2)
     
     land_50m = cfeature.NaturalEarthFeature('physical', 'land', '50m',
                                             edgecolor='face')
-    #                                             facecolor=cfeature.COLORS['land'])
     ax.add_feature(land_50m, edgecolor='black', facecolor='gray', alpha=0.4)
     states_provinces = cfeature.NaturalEarthFeature(category='cultural',
                                                     name='admin_1_states_provinces_lines',
@@ -103,15 +119,14 @@ def basemap():
                                                     facecolor='none')
     ax.add_feature(states_provinces, edgecolor='black')
     
-    coastrange = '/data/projects/pool_seq/environemental_data/shapefiles/Coastal_DF.shp'
-    intrange = '/data/projects/pool_seq/environemental_data/shapefiles/Interior_DF.shp'
-    for color,variety in zip(['lime', 'purple'], [coastrange, intrange]):
-        ax.add_geometries(Reader(variety).geometries(),
-                          ccrs.PlateCarree(),
-                          facecolor=color, alpha=0.1, edgecolor='none', zorder=2)
-        ax.add_geometries(Reader(variety).geometries(),
-                          ccrs.PlateCarree(),
-                          facecolor='none', edgecolor=color, alpha=0.8, zorder=3)
+    if shapefiles is not None:
+        for color,shape in shapefiles:
+            ax.add_geometries(Reader(shape).geometries(),
+                              ccrs.PlateCarree(),
+                              facecolor=color, alpha=0.1, edgecolor='none', zorder=2)
+            ax.add_geometries(Reader(shape).geometries(),
+                              ccrs.PlateCarree(),
+                              facecolor='none', edgecolor=color, alpha=0.8, zorder=3)
     ax.coastlines(resolution='10m', zorder=4)
     ax.add_feature(cfeature.BORDERS)
     
@@ -151,13 +166,14 @@ def basemap():
 #     return ax
 
 
-def plot_pie_freqs(locus, snpinfo, envinfo, saveloc=None, use_popnames=False, popcolors=None, **kwargs):
+
+def plot_pie_freqs(locus, snpinfo, envinfo, saveloc=None, use_popnames=False, popcolors=None, bmargs=[], **kwargs):
     """Create geographic map, overlay pie graphs (ref/alt allele freqs)."""
     freqcols = [col for col in snpinfo.columns if 'FREQ' in col]
     snpdata = snpinfo.loc[locus, freqcols].str.replace("%","").astype(float)  # eg change 97.5% to 97.5
     print(len(snpdata))
     
-    ax = basemap()
+    ax = basemap(**bmargs)
     
     # plot the pops
     for pop in envinfo.index:
