@@ -46,10 +46,11 @@ def latest_commit():
     pyimportpath = [path for path in pypaths if 'pythonimports' in path][0]
     os.chdir(pyimportpath)
     gitout = subprocess.check_output([shutil.which('git'), 'log', '--pretty', '-n1', pyimportpath]).decode('utf-8')
-    gitout = '\n'.join(gitout.split('\n')[:3])
-    current_datetime = "Today:\t" + dt.now().strftime("%B %d, %Y - %H:%M:%S")
+    gitout = '\n'.join(gitout.split('\n')[:3]) + '\n'
+    current_datetime = "Today:\t" + dt.now().strftime("%B %d, %Y - %H:%M:%S") + '\n'
+    version = 'python version: ' + sys.version.split()[0] + '\n'
     hashes = '##################################################################\n'
-    print(hashes + 'Current commit of pythonimports:\n' + gitout + '\n' + current_datetime + '\n' + hashes)
+    print(hashes + 'Current commit of pythonimports:\n' + gitout + current_datetime + version + hashes)
     os.chdir(cwd)
     pass
 
@@ -213,6 +214,7 @@ def getmostrecent(files:list, remove=False) -> Optional[str]:
         return files[0]
     else:
         return None
+    pass
 
 
 def formatclock(hrs:Union[datetime.timedelta, float], exact=False) -> str:
