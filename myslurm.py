@@ -7,6 +7,7 @@ import subprocess
 import shutil
 from tqdm import tqdm as nb
 import matplotlib.pyplot as plt
+from os import path as op
 
 from myutils import ColorText
 
@@ -824,17 +825,17 @@ class Squeue():
 getsq = Squeue._getsq  # so I can still work with previous notebooks without errors
 
 
-def create_watcherfile(pids, directory, watcher_name='watcher', calc_info=True, email='brandon.lind@ubc.ca'):
+def create_watcherfile(pids, directory, watcher_name='watcher', email='brandon.lind@ubc.ca'):
     """From a list of dependency pids, sbatch a file that will email once pids are completed.
     
     TODO
     ----
     - incorporate code to save mem and time info
     """
-    watcherfile = op.join(directory, 'watcher.sh')
+    watcherfile = op.join(directory, f'{watcher_name}.sh')
     jpids = ','.join(pids)
     text = f'''#!/bin/bash
-#SBATCH --job-name={watchername}
+#SBATCH --job-name={watcher_name}
 #SBATCH --time=0:00:01
 #SBATCH --ntasks=1
 #SBATCH --mem=25
@@ -850,4 +851,4 @@ def create_watcherfile(pids, directory, watcher_name='watcher', calc_info=True, 
 
     print(sbatch(watcherfile))
     
-    pass
+    return watcherfile
