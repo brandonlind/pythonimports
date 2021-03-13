@@ -6,7 +6,7 @@ from cartopy.io.shapereader import Reader
 import numpy as np
 from matplotlib.backends.backend_pdf import PdfPages
 
-from myutils import *
+import pythonimports as pyimp
 
 
 def draw_pie_marker(ratios, xcoord, ycoord, sizes, colors, ax, edgecolors='black', slice_edgecolors='none', alpha=1,
@@ -136,37 +136,6 @@ def basemap(extent, shapefiles=None, figsize=(8,15)):
     return ax
 
 
-# def draw_basemap():
-#     """Draw Douglas-fir map with range shapefiles for each variety."""
-#     fig = plt.figure(figsize=(8,15))
-#     tiler = Stamen('terrain-background')
-#     ax = plt.axes(projection=tiler.crs)
-#     ax.set_extent([-130, -112.5, 37.5, 55.5], crs=ccrs.PlateCarree())
-#     ax.add_image(tiler, 6)
-#     ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False, alpha=0.2)
-
-#     coastrange = '/data/projects/pool_seq/environemental_data/shapefiles/Coastal_DF.shp'
-#     intrange = '/data/projects/pool_seq/environemental_data/shapefiles/Interior_DF.shp'
-    
-#     states_provinces = cfeature.NaturalEarthFeature(category='cultural',
-#                                                     name='admin_1_states_provinces_lines',
-#                                                     scale='50m',
-#                                                     facecolor='none')
-#     ax.add_feature(states_provinces, edgecolor='black')
-    
-#     ax.add_geometries(Reader(coastrange).geometries(),
-#                       ccrs.Mercator(false_northing=35000),
-#                       facecolor='green', alpha=0.2, edgecolor='white')
-#     ax.add_geometries(Reader(coastrange).geometries(),
-#                       ccrs.Mercator(false_northing=35000),
-#                       facecolor='none', alpha=1, edgecolor='white')
-#     ax.coastlines(resolution='10m')
-#     ax.add_feature(cfeature.BORDERS)
-    
-#     return ax
-
-
-
 def plot_pie_freqs(locus, snpinfo, envinfo, saveloc=None, use_popnames=False, popcolors=None, bmargs=[], **kwargs):
     """Create geographic map, overlay pie graphs (ref/alt allele freqs)."""
     freqcols = [col for col in snpinfo.columns if 'FREQ' in col]
@@ -200,7 +169,8 @@ def plot_pie_freqs(locus, snpinfo, envinfo, saveloc=None, use_popnames=False, po
     if saveloc is not None:
         with PdfPages(saveloc) as pdf:
             pdf.savefig(bbox_inches='tight')
-        print(ColorText('Saved to: ').bold(), saveloc)
+        print(pyimp.ColorText('Saved to: ').bold(), saveloc)
     plt.show()
     
     pass
+
