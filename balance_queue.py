@@ -1,5 +1,5 @@
 """
-Distribute priority jobs among accounts.
+Distribute priority jobs among accounts. To distribute non-priority jobs see myslurm.Squeue.balance.
 
 ###
 # purpose: evenly redistributes jobs across available slurm accounts. Jobs are
@@ -33,8 +33,13 @@ Distribute priority jobs among accounts.
 ###
 
 ### assumes
-# export SQUEUE_FORMAT="%.8i %.8u %.15a %.68j %.3t %16S %.10L %.5D %.4C %.6b %.7m %N (%r)"
+# export SQUEUE_FORMAT="%i %u %a %j %t %S %L %D %C %b %m %N (%r)"
 ###
+
+# FUN FACTS
+# 🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁
+# balance_queue.py originated as part of the CoAdapTree project: github.com/CoAdapTree/varscan_pipeline
+# 🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁
 """
 
 import os, shutil, sys, math, subprocess, time
@@ -59,101 +64,6 @@ def announceacctlens(accounts, fin, priority=True):
         status = 'with Priority status ' if priority is True else ''
         print(f"\t{num_acct} jobs {status}on {account}")
     pass
-
-
-# def checksq(sq):
-#     """Make sure queue slurm command worked. Sometimes it doesn't.
-    
-#     Positional arguments:
-#     sq - list of squeue slurm command jobs, each line is str.split()
-#        - slurm_job_id is zeroth element of str.split()
-#     """
-#     exitneeded = False
-#     if not isinstance(sq, list):
-#         print("\ttype(sq) != list, exiting %(thisfile)s" % globals())
-#         exitneeded = True
-#     for s in sq:
-#         if 'socket' in s.lower():
-#             print("\tsocket in sq return, exiting %(thisfile)s" % globals())
-#             exitneeded = True
-#         if not int(s.split()[0]) == float(s.split()[0]):
-#             print("\tcould not assert int == float, %s" % (s[0]))
-#             exitneeded = True
-#     if exitneeded is True:
-#         print('\tslurm screwed something up for %(thisfile)s, lame' % globals())
-#         exit()
-#     else:
-#         return sq
-#     pass
-
-
-# def getsq_exit(balancing):
-#     """Determine if getsq is being used to balance priority jobs.
-
-#     Positional arguments:
-#     balancing - bool: True if using to balance priority jobs, else for other queue queries
-#     """
-#     print('\tno jobs in queue matching query')
-#     if balancing is True:
-#         print('\texiting balance_queue.py')
-#         exit()
-#     else:
-#         return []
-#     pass
-
-
-# def getsq(grepping=None, states=[], balancing=False):
-#     """
-#     Get jobs from squeue slurm command matching crieteria.
-
-#     Positional arguments:
-#     grepping - list of key words to look for in each column of job info
-#     states - list of states {pending, running} wanted in squeue jobs
-#     balancing - bool: True if using to balance priority jobs, else for other queue queries
-
-#     Returns:
-#     grepped - list of tuples where tuple elements are line.split() for each line of squeue \
-# slurm command that matched grepping queries
-#     """
-#     if grepping is None:
-#         grepping = [os.environ['USER']]
-#     if isinstance(grepping, str):
-#         # in case I pass a single str instead of a list of strings
-#         grepping = [grepping]
-
-#     # get the queue, without a header
-#     cmd = [shutil.which('squeue'),
-#            '-u',
-#            os.environ['USER'],
-#            '-h']
-#     if 'running' in states:
-#         cmd.extend(['-t', 'RUNNING'])
-#     elif 'pending' in states:
-#         cmd.extend(['-t', 'PD'])
-#     sqout = subprocess.check_output(cmd).decode('utf-8').split('\n')
-
-#     sq = [s for s in sqout if s != '']
-#     checksq(sq)  # make sure slurm gave me something useful
-
-#     # look for the things I want to grep
-#     grepped = []
-#     if len(sq) > 0:
-#         for q in sq:  # for each job in queue
-#             splits = q.split()
-#             if 'CG' not in splits:  # grep -v 'CG' = skip jobs that are closing
-#                 keepit = 0
-#                 if len(grepping) > 0:  # see if all necessary greps are in the job
-#                     for grep in grepping:
-#                         for split in splits:
-#                             if grep.lower() in split.lower():
-#                                 keepit += 1
-#                                 break
-#                 if keepit == len(grepping) and len(grepping) != 0:
-#                     grepped.append(tuple(splits))
-
-#         if len(grepped) > 0:
-#             return grepped
-#     return getsq_exit(balancing)
 
 
 def adjustjob(acct, jobid):
@@ -188,8 +98,6 @@ def getaccounts(sq, stage, user_accts):
     if len(accounts.keys()) == len(user_accts) and stage != 'final':
         print('\tall accounts have low priority, leaving queue as-is')
         early_exit_decision = True
-        # announceacctlens(accounts, True)
-        # exit()
     else:
         early_exit_decision = False
     if stage=='final':
@@ -212,7 +120,6 @@ def getbalance(accounts, num):
 
 
 def choose_accounts(accts):
-#     print(Bcolors.BOLD + '\nDetermining which slurm accounts are available for use by balance_queue.py' + Bcolors.ENDC)
     print(pyimp.ColorText('\nDetermining which slurm accounts are available for use by balance_queue.py').bold())
     if len(accts) > 1:
         keep = []
@@ -233,7 +140,6 @@ def choose_accounts(accts):
         keep = accts
     # make sure they've chosen at least one account
     while len(keep) == 0:
-#         print(Bcolors.FAIL + "FAIL: You need to specify at least one account. Revisiting accounts..." + Bcolors.ENDC)
         print(pyimp.ColorText("FAIL: You need to specify at least one account. Revisiting accounts...").fail())
         keep = choose_accounts(accts)
     return keep
@@ -269,9 +175,9 @@ def get_avail_accounts(parentdir=None, save=False):
     
     # for running outside of the pipeline:
     if parentdir is None:
-        # to manually run on command line, using all accounts (default + RAC)
+        # to manually run on command line, using all accounts
         return accts
-    elif parentdir == 'choose':
+    elif parentdir=='choose':
         # to manually run on command line, choose accounts
         return choose_accounts(accts)
     
@@ -342,7 +248,6 @@ def redistribute_jobs(accts, user_accts, balance):
 def main(thisfile, keyword, parentdir):
     globals().update({'thisfile': thisfile, 'keyword': keyword})
 
-#     print(Bcolors.BOLD + '\nStarting balance_queue.py' + Bcolors.ENDC)
     print(pyimp.ColorText('\nStarting balance_queue.py').bold())
     # get accounts available for billing
     user_accts = get_avail_accounts(parentdir)
@@ -354,7 +259,6 @@ def main(thisfile, keyword, parentdir):
         exit()
 
     # get priority jobs from the queue
-#     sq = getsq(grepping=[keyword, 'Priority'], balancing=True)
     sq = myslurm.Squeue(grepping=[keyword, 'Priority'])
     if sq is None or len(sq) == 0:
         print('\texiting balance_queue.py')
@@ -373,9 +277,6 @@ def main(thisfile, keyword, parentdir):
     redistribute_jobs(accts, user_accts, balance)
 
     # announce final job counts
-#     announceacctlens(*getaccounts(getsq(grepping=[keyword, 'Priority'], balancing=True),
-#                                   'final',
-#                                   user_accts))
     announceacctlens(*getaccounts(myslurm.Squeue(grepping=[keyword, 'Priority']),
                                   'final',
                                   user_accts))
