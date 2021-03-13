@@ -29,7 +29,6 @@ from datetime import datetime as dt
 from tqdm.notebook import tqdm as tnb
 from matplotlib.backends.backend_pdf import PdfPages
 
-#from myutils import *
 from myslurm import *
 from mymaps import *
 
@@ -144,10 +143,10 @@ def table(lst:list, exclude=[]) -> dict:
     return c
 
 
-def pkldump(obj, f:str) -> None:
+def pkldump(obj, f:str, protocol=pickle.HIGHEST_PROTOCOL) -> None:
     """Save object to .pkl file."""
     with open(f, 'wb') as o:
-        pickle.dump(obj, o, protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump(obj, o, protocol=protocol)
 
 
 def head(df):
@@ -743,13 +742,14 @@ def makesweetgraph(x=None,y=None,cmap='jet',ylab=None,xlab=None,bins=100,saveloc
     pass
 
 
-def rsync(src, dst, different_basenames=False):
+def rsync(src, dst, options='-azv', different_basenames=False):
     """Execute rsync command; can execute via ipyparallel engines.
 
     Parameters
     ----------
     src - source file; assumes full file path is given
     dst - destination path, either a directory or full file path name
+    options - the flags that should be used with the command; default -azv
     different_basenames - bool; True if src and dst file paths differ in their basenames, False otherwise
 
     Notes
@@ -773,7 +773,7 @@ in the name that includes a colon (":") that prepends the path.'
         # hacky way to ensure this is a file: assert that the basename has a '.' in it
         assert '.' in op.basename, 'it seems that dst is a directory'
 
-    output = subprocess.check_output([shutil.which('rsync'), '-azv', src, dst]).decode('utf-8').split('\n')
+    output = subprocess.check_output([shutil.which('rsync'), options, src, dst]).decode('utf-8').split('\n')
 
     return output
 
