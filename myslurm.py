@@ -5,17 +5,21 @@ import os
 import time
 import subprocess
 import shutil
-from tqdm import tqdm as nb
+from tqdm import tqdm as pbar
 import matplotlib.pyplot as plt
 from os import path as op
+from collections import defaultdict, Counter
+from tqdm import tqdm as pbar
 
-from myutils import ColorText
+# from myutils import ColorText
+# from pythonimports import *
+import pythonimports as pyimp
 
 
-def get_seff(outs:list):
+def get_seff(outs:list, desc=None):
     """From a list of .out files (ending in f'_{SLURM_JOB_ID}.out'), get seff output."""
     infos = {}
-    for out in nb(outs):
+    for out in pbar(outs, desc=desc):
         infos[out] = Seff(getpid(out))
     return infos
 
@@ -78,13 +82,21 @@ def get_times(infos:dict, unit='hrs', plot=True) -> list:
 
 
 def sbatch(shfiles:list, sleep=0, printing=False) -> list:
-    """From a list of .sh shfiles, sbatch them and return associated jobid in a list."""
-    
+    """From a list of .sh shfiles, sbatch them and return associated jobid in a list.
+
+    Notes
+    -----
+    - assumes that the job name that appears in the queue is the basename of the .sh file
+        - eg for job_187.sh, the job name is job_187
+        - this convention is used to make sure a job isn't submitted twice
+    """
+
     if isinstance(shfiles, list) is False:
         assert isinstance(shfiles, str)
         shfiles = [shfiles]
     pids = []
-    for sh in nb(shfiles):
+    for sh in pbar(shfiles):
+        job = op.basename(sh).split('.')[0]
         os.chdir(os.path.dirname(sh))
         # try and sbatch file 10 times before giving up
         failcount = 0
@@ -98,16 +110,28 @@ def sbatch(shfiles:list, sleep=0, printing=False) -> list:
                 if failcount == 10:
                     print('!!!REACHED FAILCOUNT LIMIT OF 10!!!')
                     return pids
+            # one more failsafe to ensure a job isn't submitted twice
+            sq = Squeue()
+            jobs = defaultdict(list)
+            for pid,q in sq.items():
+                jobs[q.job()].append(q.pid())
+            if job in list(jobs.keys()):
+                sbatched = True
+                pid = jobs[job]
+                if len(jobs[job]) > 1:
+                    sq.cancel(match=pid)
+                break
         if printing is True:
             print('sbatched %s' % sh)
         pids.append(pid)
         time.sleep(sleep)
+        del pid
     return pids
 
 
 def getpids(user=os.environ['USER']) -> list:
     """From squeue -u $USER, return list of queue."""
-    pids = [q.pid() for q in getsq() if q.pid() != '']
+    pids = Squeue().pids()
     if len(pids) != len(list(set(pids))):
         print('len !- luni pids')
     return pids
@@ -115,7 +139,7 @@ def getpids(user=os.environ['USER']) -> list:
 
 def getjobs(user=os.environ['USER']) -> list:
     """From squeue -u $USER, return list of job names, alert if len != unique."""
-    jobs = [q.job() for q in getsq() if q.job() != '']
+    jobs = Squeue().jobs()
     if len(jobs) != len(list(set(jobs))):
         print('len != luni jobs')
     return jobs
@@ -124,9 +148,9 @@ def getjobs(user=os.environ['USER']) -> list:
 def qaccounts(pd=False, user=os.environ['USER']) -> list:
     """From squeue -u $USER, return list of billing accounts."""
     if pd == False:
-        accounts = [q.account() for q in getsq() if q.account() != '']
+        accounts = Squeue(user=user).accounts()
     else:
-        accounts = [q.account() for q in getsq(states=['PD']) if q.account() != '']
+        accounts = Squeue(states=['PD'], user=user).accounts()
     return accounts
 
 
@@ -239,46 +263,6 @@ def getpid(out:str) -> list:
     return out.split("_")[-1].replace('.out', '')
 
 
-# def checksq(sq):
-#     """Make sure queue slurm command worked. Sometimes it doesn't.
-    
-#     Positional arguments:
-#     sq - list of squeue slurm command jobs, each line is str.split()
-#        - slurm_job_id is zeroth element of str.split()
-#     """
-#     exitneeded = False
-#     if not isinstance(sq, list):
-#         print("\ttype(sq) != list, exiting %(thisfile)s" % globals())
-#         exitneeded = True
-#     for s in sq:
-#         if 'socket' in s.lower():
-#             print("\tsocket in sq return, exiting %(thisfile)s" % globals())
-#             exitneeded = True
-#         if not int(s.split()[0]) == float(s.split()[0]):
-#             print("\tcould not assert int == float, %s" % (s[0]))
-#             exitneeded = True
-#     if exitneeded is True:
-#         print('\tslurm screwed something up for %(thisfile)s, lame' % globals())
-#         exit()
-#     else:
-#         return sq
-
-
-def getsq_exit(balancing):
-    """Determine if getsq is being used to balance priority jobs.
-
-    Positional arguments:
-    balancing - bool: True if using to balance priority jobs, else for other queue queries
-    """
-    print('\tno jobs in queue matching query')
-    if balancing is True:
-        print('\texiting balance_queue.py')
-        exit()
-    else:
-        return []
-    pass
-
-
 class SQInfo():
     """Convert each line returned from `squeue -u $USER`.
     
@@ -288,57 +272,60 @@ class SQInfo():
     # JOBID USER ACCOUNT NAME ST START_TIME TIME_LEFT NODES CPUS TRES_PER_NODE MIN_MEMORY NODELIST (REASON)
     #   %i   %u    %a     %j  %t     %S        %L      %D    %C       %b           %m        %N      (%r)
     
-    Example jobinfo
+    Example jobinfo    (index number of list)
     ---------------
-    ('38768536',0
-     'lindb',1
-     'def-jonmee_cpu',2
-     'batch_0583',3
-     'PD',4
-     'N/A',5
-     '2-00:00:00',6
-     '1',7
-     '48',8
-     'N/A',9
-     '50M',0
-     '(Priority)')
+    ('38768536',       0
+     'lindb',          1
+     'def-jonmee_cpu', 2
+     'batch_0583',     3
+     'PD',             4
+     'N/A',            5
+     '2-00:00:00',     6
+     '1',              7
+     '48',             8
+     'N/A',            9
+     '50M',            10
+     '(Priority)')     11
     """
     def __init__(self, jobinfo):
         self.info = list(jobinfo)
         pass
-    
+
     def __repr__(self):
         return repr(self.info)
-    
+
+    def __iter__(self):
+        return iter(self.info)
+
     def pid(self):
         return self.info[0]
-    
+
     def user(self):
         return self.info[1]
-    
+
     def account(self):
         return self.info[2]
-    
+
     def job(self):
         return self.info[3]
-    
+
     def state(self):
         return self.info[4]
-    
+
     def start(self):
         """Job start time."""
         return self.info[5]
-    
+
     def time(self):
         """Remaining time."""
         return self.info[6]
-    
+
     def nodes(self):
         return self.info[7]
-    
+
     def cpus(self):
         return self.info[8]
-    
+
     def mem(self, units='MB'):
         memory = self.info[10]
         if all([memory.endswith('G') is False, memory.endswith('M') is False]):
@@ -353,76 +340,15 @@ class SQInfo():
         else:
             memory = int(memory.replace('M',''))
         return memory
-    
+
     def status(self):
-        return self.info[11]
-    
+        return self.info[-1]
+
     def reason(self):
         return self.status()
-sqinfo = SQInfo
 
-
-# def getsq(grepping=None, states=[], balancing=False, user=None):
-#     """
-#     Get jobs from `squeue` slurm command matching criteria.
-
-#     Assumes
-#     -------
-#     export SQUEUE_FORMAT="%.8i %.8u %.15a %.68j %.3t %16S %.10L %.5D %.4C %.6b %.7m %N (%r)"
-
-#     Positional arguments
-#     --------------------
-#     grepping - list of key words to look for in each column of job info
-#     states - list of states {pending, running} wanted in squeue jobs
-#     balancing - bool: True if using to balance priority jobs, else for other queue queries
-#     user - user name to use to query `squeue -u {user}`
-
-#     Returns
-#     -------
-#     grepped - list of tuples where tuple elements are line.split() for each line of squeue \
-# slurm command that matched grepping queries
-#     """
-#     if user is None:
-#         user = os.environ['USER']
-#     if grepping is None:
-#         grepping = [user]
-#     if isinstance(grepping, str):
-#         # in case I pass a single str instead of a list of strings
-#         grepping = [grepping]
-
-#     # get the queue, without a header
-#     cmd = [shutil.which('squeue'),
-#            '-u',
-#            user,
-#            '-h']
-#     if 'running' in states:
-#         cmd.extend(['-t', 'RUNNING'])
-#     elif 'pending' in states:
-#         cmd.extend(['-t', 'PD'])
-#     sqout = subprocess.check_output(cmd).decode('utf-8').split('\n')
-
-#     sq = [s for s in sqout if s != '']
-#     checksq(sq)  # make sure slurm gave me something useful
-
-#     # look for the things I want to grep
-#     grepped = []
-#     if len(sq) > 0:
-#         for q in sq:  # for each job in queue
-#             splits = q.split()
-#             if 'CG' not in splits:  # grep -v 'CG' = skip jobs that are closing
-#                 keepit = 0
-#                 if len(grepping) > 0:  # see if all necessary greps are in the job
-#                     for grep in grepping:
-#                         for split in splits:
-#                             if grep.lower() in split.lower():
-#                                 keepit += 1
-#                                 break
-#                 if keepit == len(grepping) and len(grepping) != 0:
-#                     grepped.append(sqinfo(tuple(splits)))
-
-#         if len(grepped) > 0:
-#             return grepped
-#     return getsq_exit(balancing)
+    pass
+sqinfo = SQInfo  # backwards compatibility
 
 def adjustjob(acct, jobid):
     """Move job from one account to another."""
@@ -435,65 +361,75 @@ def adjustjob(acct, jobid):
 
 class Squeue():
     """dict-like container class for holding and updating slurm squeue information.
+
+    Methods - all methods can be filtered with the kwargs from Squeue._filter_jobs
+    -------
+    states - return a list of job states (eg running, pending)
+    jobs - return a list of job names
+    pids - return a list of pids
+    accounts - return a list of accounts
+    cancel - cancel entire queue or specific jobs for specific accounts
+    update - update time, memory, or account for specifc jobs for specific accounts
+    balance - balance jobs in queue across available slurm accounts
+    summary - print counts of various categories within the queue
+    hold - hold jobs
+    release - release held jobs
     
-    todo
+
+    TODO
     ----
-    TODO: describe kwargs
     TODO: pass .cancel() and .update() a list of pids
-    TODO: add balance method
-    TODO: update_job needs to handle skipping over jobs that started running after class instantiation
+    TODO: address Squeue.balance() TODOs
+    TODO: update_job needs to handle skipping over jobs that started running or closed after class instantiation
     TODO: update_job needs to skip errors when eg trying to increase time of job beyond initial submission
             eg when initially scheduled for 1 day, but update tries to extend beyond 1 day
             (not allowed on compute canada)
-    TODO: allow onaccount to accept list of accounts
-    TODO: handle running/missing in _update_job()
+    TODO: allow _subset's `onaccount` kwarg to accept list of accounts
     TODO: make it so it can return the queue for `grepping` without needing `user`
     TODO: add methods to isolate the running/pending/closing jobs
-    
-    
-    kwargs
-    ------
-    
-    
-    Methods
-    -------
-    cancel - cancel entire queue or specific jobs for specific accounts
-    update - update time, memory, or account for specifc jobs for specific accounts
-    
-    
+    TODO: address redundant code when handling `_update_job` return
+    TODO: replace _subset with _filter_jobs
+
     Examples
     --------
-    Get squeue information (of class SQInfo) for each job in queue containing 'batch' or 'gatk'.
-    
+    Get squeue information (of class SQInfo) for each job in output (stdout line) containing 'batch' or 'gatk'.
+
     >>> sq = Squeue(grepping=['batch', 'gatk'])
-    
+
     
     Get queue with "batch" in one of the columns (eg the NAME col).
     For theses jobs, only update jobs with "batch_001" for mem and time.
-    
+
     >>> sq = Squeue(grepping='batch', states='PD')
     >>> sq.update(match='batch_001', minmemorynode=1000, timelimit=3-00:00:00)
-    
-    
+
+
     Cancel all jobs in queue.
-    
+
     >>> sq = Squeue()
     >>> sq.cancel(user=True)
     # OR:
     >>> Squeue().cancel(user=True)
-    
-    
+
+
     Cancel jobs in queue with "batch" in one of the columns (eg the NAME col).
     For theses jobs only cancel job names containing "batch_001" and 3 day run time,
         but not the 'batch_0010' job.
-    
+
     >>> sq = Squeue(grepping='batch', states='PD')
     >>> sq.cancel(match=['batch_001', '3-00:00:00'], exclude='batch_0010')
-    
-    
+
+
     Get jobs from a specific user.
-    
+
     >>> sq = Squeue(user='some_user')
+    
+    Get a summary of queue.
+    
+    >>> sq = Squeue()
+    >>> sq.summary()
+    
+    
     """
     # export SQUEUE_FORMAT
     # (JOBID USER ACCOUNT NAME ST START_TIME TIME_LEFT NODES CPUS TRES_PER_NODE MIN_MEMORY NODELIST (REASON))
@@ -531,10 +467,40 @@ class Squeue():
         return True if item in self.keys() else False
 
     def __init__(self, **kwargs):
-        self.sq = Squeue._getsq(**kwargs)
+        # get queue matching grepping
+        sq = Squeue._getsq(**kwargs)
+        # filter further with kwargs
+        self.sq = Squeue._filter_jobs(sq, **kwargs)
         self.kwargs = kwargs
+        
+    def _grep_sq(sq, grepping):
+        """Get jobs that have any match to anything in `grepping`."""
+        if isinstance(grepping, str):
+            # in case I pass a single str instead of a list of strings
+            grepping = [grepping]
+        elif grepping is None:
+            grepping = [os.environ['USER']]
 
-    def _getsq(grepping=None, states=[], user=None, balancing=False):
+        grepped = {}
+        for q in sq:  # for each job in queue
+            if q.__class__.__name__ == 'SQInfo':  # when called from Squeue.balance()
+                splits = q.info
+            else:  # when called from Squeue._getsq()
+                splits = q.split()
+            if 'CG' not in splits:  # grep -v 'CG' = skip jobs that are closing
+                keepit = 0
+                if len(grepping) > 0:  # see if all necessary greps are in the job
+                    for grep in grepping:
+                        for split in splits:
+                            if grep.lower() in split.lower():
+                                keepit += 1
+                                break
+                if keepit == len(grepping):  #  and len(grepping) != 0
+                    info = SQInfo(splits)
+                    grepped[info.pid()] = info
+        return grepped
+
+    def _getsq(grepping=None, states=[], user=None, **kwargs):
         """Get and parse slurm queue according to kwargs criteria."""
         def _checksq(sq):
             """Make sure queue slurm command worked. Sometimes it doesn't.
@@ -563,9 +529,6 @@ class Squeue():
             user = os.environ['USER']
         if grepping is None:
             grepping = [user]
-        if isinstance(grepping, str):
-            # in case I pass a single str instead of a list of strings
-            grepping = [grepping]
 
         # get the queue, without a header
         cmd = [shutil.which('squeue'),
@@ -591,32 +554,20 @@ class Squeue():
                 found += 1
                 pass
         if found != 10:
-            print(ColorText('FAIL: Exceeded five subprocess.CalledProcessError errors.').fail.bold())
+            print(pyimp.ColorText('FAIL: Exceeded five subprocess.CalledProcessError errors.').fail.bold())
             return []
 
         sq = [s for s in sqout if s != '']
-        _checksq(sq)  # make sure slurm gave me something useful
+        if _checksq(sq) is None:  # make sure slurm gave me something useful
+            return None
 
         # look for the things I want to grep
-        grepped = {}
         if len(sq) > 0:
-            for q in sq:  # for each job in queue
-                splits = q.split()
-                if 'CG' not in splits:  # grep -v 'CG' = skip jobs that are closing
-                    keepit = 0
-                    if len(grepping) > 0:  # see if all necessary greps are in the job
-                        for grep in grepping:
-                            for split in splits:
-                                if grep.lower() in split.lower():
-                                    keepit += 1
-                                    break
-                    if keepit == len(grepping) and len(grepping) != 0:
-                        info = SQInfo(splits)
-                        grepped[info.pid()] = info
-
+            grepped = Squeue._grep_sq(sq, grepping)
             if len(grepped) > 0:
                 return grepped
-        return getsq_exit(balancing)
+        print('\tno jobs in queue matching query')
+        return []
 
     def _handle_mem(mem):
         """If the memory units are specified, remove."""
@@ -642,159 +593,182 @@ class Squeue():
         clock = ':'.join([digits.zfill(2) for digits in clock.split(":")])
         return f'{days[0]}-{clock}' if len(days) > 0 else clock
 
+    def _update_self(info, **kwargs):
+        """After successfully updating jobid with scontrol update, update Squeue class object."""
+        if 'account' in kwargs:
+            info[2] = Squeue._handle_account(kwargs['account'])
+        if 'minmemorynode' in kwargs:
+            info[10] = Squeue._handle_mem(kwargs['minmemorynode']) + 'M'
+        if 'timelimit' in kwargs:
+            info[6] = Squeue._handle_clock(kwargs['timelimit'])
+        return info
+
+    def _update_job(cmd, job, jobid):
+        """Execute 'scontrol update' or 'scancel' command for jobid."""
+        # add jobid to command
+        cmd.append(f'jobid={jobid}' if 'scancel' not in cmd else jobid)
+
+        failcount = 0
+        # try to execute commands three times before giving up (slurm is a jerk sometimes)
+        while failcount < 3:
+            try:
+                out = subprocess.check_output(cmd).decode('utf-8').replace("\n", "").split()
+                return True
+            except subprocess.CalledProcessError as e:
+                # see if job is running or still in queue
+                jobq = Squeue(grepping=jobid)
+                if len(jobq) == 0:
+                    return 'missing'
+                elif jobq[jobid].state() == 'R':
+                    return ('running', jobq[jobid])
+                # otherwise count as failure
+                failcount += 1
+        print(pyimp.ColorText(f'FAIL: Update failed for cmd: {job} {jobid}').fail().bold())
+        return False
+
+    def _filter_jobs(sq, grepping=None, exclude=None, onaccount=None, priority=None, **kwargs):
+        """Filter jobs in `Squeue` class object.
+
+        Parameters
+        ----------
+        grepping - a string or list of strings to use as queries to select job from queue (case insensitive)
+            - strings are converted to a single-element list internally
+            - to keep a job from the queue, all elements of `grepping` must be found in at least one of the squeue columns
+                - the elements of `grepping` can be a subset of the column info (eg `squeue -u $USER | grep match`)
+                    - to retrieve specific jobs, make sure elements of grep are not substrings of any other job info
+                - note SQUEUE_FORMAT immediately after Squeue.__doc__
+        exclude - a string or list of strings that should be excluded if found in any of the job info fields
+            (case insensitive)
+            - strings are converted to a single-element list internally
+            - if any element of `exclude` is found in one of the columns, the job is not returned
+                - jobs will be excluded if any element of exclude is a substring of any of the job info
+            - note SQUEUE_FORMAT immediately after Squeue.__doc__
+        onaccount - a string or list of strings (account names) to subset queue
+            - strings are converted to lists internally
+            - like `grepping` and `exclude`, if any element of onaccount is a substring of the job info, the job
+                will be returned
+            - onaccount gets appended to `grepping` and so account name should not be a substrint of other column
+                info TODO: use SQInfo.account after queue query to filter jobs based on account
+            - note SQUEUE_FORMAT immediately after Squeue.__doc__
+        priority - if True, only balance jobs with priority status; if False, balance jobs without priority status,
+            if None, balance all jobs regardless of priority status
+
+        TODO
+        ----
+        - use SQInfo.account after queue query to filter jobs based on account
+        """
+        def _exclude_jobs(_sq, exclude=None):
+            """Remove anything that needs to be excluded (including non-pending jobs)."""
+            for pid in list(_sq.keys()):
+                information = _sq[pid]
+                remove = False
+                if exclude is not None:
+                    for info in information:
+                        for ex in exclude:
+                            if ex.lower() in info.lower():
+                                remove = True
+#                 if 'pd' not in information.state().lower():  # if a job isn't pending, it can't be updated
+#                     remove = True
+                if remove is True:
+                    _sq.pop(pid)
+            return _sq
+        
+        # set up exclude as list
+        if exclude is not None:
+            if isinstance(exclude, str):
+                exclude = [exclude]
+            else:
+                assert isinstance(exclude, list), 'Squeue.balance() only expects `exclude` as `str` or `list`.'
+
+        # set up grepping as list
+        if grepping is None:
+            grepping = []
+        elif isinstance(grepping, str):
+            grepping = [grepping]
+        else:
+            assert isinstance(grepping, list), 'Squeue.balance() only expects `grepping` as `str` or `list`.'
+
+        # add wanted accounts to `grepping`
+        if onaccount is not None:
+            # add accounts to grepping
+            if isinstance(onaccount, str):
+                grepping.append(onaccount)
+            elif isinstance(onaccount, list):
+                grepping.extend(onaccount)
+            else:
+                raise Exception('Squeue.balance() only expects `onaccount` as `str` or `list`.')
+
+        # determine whether to keep/ignore priority status jobs
+        if priority is True:
+            grepping.append('priority')
+        elif priority is False:
+            exclude.append('priority')
+
+        # limit queue to keyword match
+        _sq = Squeue._grep_sq(sq.values(), grepping)
+
+        # remove anything that needs to be excluded (including non-pending jobs)
+        _sq = _exclude_jobs(_sq, exclude)
+        
+        return _sq
+
     def _update_queue(self, cmd, desc, user=False, **kwargs):
         """Update jobs in queue and job info in Squeue class object."""
-        from tqdm import tqdm as pbar
-        def _update_self(info, **kwargs):
-            """After successfully updating jobid with scontrol update, update Squeue class object."""
-            if 'account' in kwargs:
-                info[2] = Squeue._handle_account(kwargs['account'])
-            if 'minmemorynode' in kwargs:
-                info[10] = Squeue._handle_mem(kwargs['minmemorynode']) + 'M'
-            if 'timelimit' in kwargs:
-                info[6] = Squeue._handle_clock(kwargs['timelimit'])
-            return info
-
-        def _subset(sq, match=None, exclude=None, onaccount=None, **kwargs):
-            """Return jobs in Squeue class according to kwarg criteria.
-            Assumes first element of list is representative of entire list.
-            """
-            def _pid_or_job(match, exclude):
-                """Determine if matching on pid or jobname."""
-                def _ispid(flag):
-                    """Determine if flag is representing jobIDs or jobnames."""
-                    if isinstance(flag, list):
-                        # no need to except TypeError here, list should not contain None
-                        try:
-                            assert float(flag[0]) == int(flag[0])
-                            ispid = True
-                        except ValueError:
-                            # trying to float an alphanumeric string
-                            ispid = False
-                    else:
-                        try:
-                            assert float(flag) == int(flag)
-                            ispid = True
-                        except ValueError:
-                            # trying to float an alphanumeric string
-                            ispid = False
-                        except TypeError:
-                            assert flag is None
-                            ispid = None
-                    return ispid
-                # first decide about match
-                match_ispid = _ispid(match)
-                # next decide about exclude
-                exclude_ispid = _ispid(exclude)
-                
-                if sum([match_ispid is not None, exclude_ispid is not None]) == 2:
-                    # if both are not none, make sure they are the same
-                    try:
-                        # make sure they are both pids or not pids
-                        assert match_ispid == exclude_ispid
-                    except AssertionError as e:
-                        text = f'FAIL: match and exclude must both be either pids or job names, not a mixture.'
-                        print(ColorText(text).fail().bold())
-                        raise e
-                # return True or False if one of the flags is not None, otherwise return None
-                return match_ispid if match_ispid is not None else exclude_ispid
-            
-            def _handle_match(query, match_in):
-                """Determine if query is the same as, or is in, match_in."""
-                matches = False
-                if isinstance(match_in, list):
-                    if query in match_in:
-                        matches = True
-                else:
-                    assert isinstance(match_in, str)
-                    if query == match_in:
-                        matches = True
-                return matches
-                                       
-            _sq = dict(sq)
-            # if iteration is not necessary, return input sq
-            if any([match is not None, exclude is not None, onaccount is not None]):
-                match_onpid = _pid_or_job(match, exclude)
-                # determine which jobs I want to update:
-                for pid,q in sq.items():
-                    # if this job's account is not in the accounts I want, remove it
-                    if onaccount is not None:
-                        if _handle_match(q.account(), Squeue._handle_account(onaccount)) is False:
-                            _sq.pop(pid)
-                            continue                    
-                    # determine what to query
-                    if match_onpid is True:
-                        query = pid
-                    else:
-                        query = q.job()                    
-                    # if this job does not match the jobs I want, remove it
-                    if match is not None:
-                        if _handle_match(query, match) is False:
-                            _sq.pop(q.pid())
-                            continue
-                    # if this job is one of the jobs I want to exclude, remove it
-                    if exclude is not None:
-                        if _handle_match(query, exclude):
-                            _sq.pop(q.pid())
-            return _sq
-
-        def _update_job(cmd, job, jobid):
-            """Execute 'scontrol update' or 'scancel' command for jobid."""
-            # add jobid to command
-            cmd.append(f'jobid={jobid}' if 'scancel' not in cmd else jobid)
-
-            failcount = 0
-            # try to execute commands three times before giving up (slurm is a jerk sometimes)
-            while failcount < 3:
-                try:
-                    out = subprocess.check_output(cmd).decode('utf-8').replace("\n", "").split()
-                    return True
-                except subprocess.CalledProcessError as e:
-                    # see if job is running or still in queue
-                    jobq = Squeue._getsq(grepping=jobid)
-                    if len(jobq) == 0:
-                        return 'missing'
-                    elif jobq[jobid].state() == 'R':
-                        return ('running', jobq[jobid])
-                    # otherwise count as failure
-                    failcount += 1
-            print(ColorText(f'FAIL: Update failed for cmd: {job} {jobid}').fail().bold())
-            print(ColorText('FAIL: Exiting iteration.').bold().fail())
-            return False
         
         if user is False:  # scontrol commands
             cmd = cmd.split()
-        else:  # cancel all jobs
-            return _update_job(['scancel', '-u', os.environ['USER']], None, None)
+        elif desc=='scancel' and user==True:  # cancel all jobs
+            return Squeue._update_job(['scancel', '-u', os.environ['USER']], None, None)
         # get subset of jobs returned from __init__()
-        sq = _subset(self, **kwargs)
+        sq = Squeue._filter_jobs(self, **kwargs)
         # update each of the jobs
         if len(sq) > 0:
             for q in pbar(list(sq.values()), desc=desc):
                 # if the job is updated successfully
-                updated_result = _update_job(cmd, q.job(), q.pid())
+                updated_result = Squeue._update_job(cmd, q.job(), q.pid())
                 if updated_result is True:
                     if 'scancel' in cmd:
                         # remove job from Squeue container
                         self.__delitem__(q.pid())
                     else:
                         # update job info in Squeue container
-                        self[q.pid()].info = _update_self(q.info, **kwargs)
+                        self[q.pid()].info = Squeue._update_self(q.info, **kwargs)
                 elif updated_result == 'running':
                     self[q.pid()].info = updated_result[1]
                 elif updated_result == 'missing':
                     self.__delitem__(q.pid())
                 else:
-                    break
+                    assert updated_result is False, '`updated_result` must be one of {True, False, "missing", "running"}'
         else:
-            print(ColorText('None of the jobs in Squeue class passed criteria.').warn())
+            print(pyimp.ColorText('None of the jobs in Squeue class passed criteria.').warn())
+        pass
+    
+    def states(self, **kwargs):
+        """Get a list of job states."""
+        _sq = Squeue._filter_jobs(self, **kwargs)
+        return [info.state() for q,info in _sq.items()]
+    
+    def pids(self, **kwargs):
+        """Get a list of pids, subset with kwargs."""
+        _sq = Squeue._filter_jobs(self, **kwargs)
+        return [info.pid() for q,info in _sq.items()]
+    
+    def jobs(self, **kwargs):
+        """Get a list of job names, subset with kwargs."""
+        _sq = Squeue._filter_jobs(self, **kwargs)
+        return [info.job() for q,info in _sq.items()]
+    
+    def accounts(self, **kwargs):
+        """Get a list of accounts, subset with kwargs."""
+        _sq = Squeue._filter_jobs(self, **kwargs)
+        return [info.account() for q,info in _sq.items()]
 
     def cancel(self, **kwargs):
         """Cancel jobs in slurm queue, remove job info from Squeue class."""
         # cancel all jobs if user is True
 #         self._update_queue(self.sq, cmd='scancel', desc='scancel', **kwargs)
         self._update_queue(cmd='scancel', desc='scancel', **kwargs)
-        
+
         pass
 
     def update(self, **kwargs):
@@ -814,20 +788,178 @@ class Squeue():
                 timelimit = Squeue._handle_clock(timelimit)
                 cmd = f'{cmd} TimeLimit={timelimit}'
             return cmd
-        
+
         # get scontrol update command
         cmd = _cmd(**kwargs)
-        
+
         # update each of the jobs
         Squeue._update_queue(self.sq, cmd, 'update', **kwargs)
-        
-        pass
-getsq = Squeue._getsq  # so I can still work with previous notebooks without errors
 
+        pass
+
+    def balance(self, parentdir=os.environ['HOME'], **kwargs):
+        """Evenly distribute pending jobs across available slurm sbatch accounts.
+
+        Parameters
+        ----------
+        parentdir - used in balance_queue to look for `accounts.pkl`; see balance_queue.__doc__
+            - `parentdir` can be set to 'choose' to manually choose slurm accounts from those available
+            - if `parentdir` is set to `None`, then all available accounts will be used to balance
+            - otherwise, `parentdir` can be set to `some_directory` that contains "accounts.pkl" saved from:
+                balance_queue.get_avail_accounts(some_directory, save=True)
+        kwargs - see Squeue._filter_jobs.__doc__
+
+        Notes
+        -----
+        - printouts (and docstrings of balance_queue.py + functions) will refer to 'priority jobs', since this
+            was the purpose of the app. However, Squeue.balance() can pass jobs that are not necessarily of 
+            priority status.
+
+        TODO
+        ----
+        - develop `balance_queue.announceacctlens()` to print flexible job types
+            Currently, balance_queue.py assumes priority jobs are to be balanced. Because the functions are imported,
+            the printouts make it seem like jobs have priority status, even if `priority` is `None` or `False`.
+        - balance even if all accounts have jobs
+            As of now, if all accounts have jobs (whether filtering for priority status or not),
+            Squeue.balance() will not balance. This behavior is inherited from balance_queue.py
+        """
+        # 🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁
+        # balance_queue.py originated as part of the CoAdapTree project: github.com/CoAdapTree/varscan_pipeline
+        # 🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁
+        import balance_queue as balq
+        os.environ['SQUEUE_FORMAT'] = "%i %u %a %j %t %S %L %D %C %b %m %N (%r)"
+        
+        if 'priority' in kwargs.keys():
+            priority = kwargs['priority']
+        else:
+            priority = False
+
+        print(pyimp.ColorText('\nStarting balance_queue.py').bold())
+
+        # get jobs that match input parameters
+        _sq = Squeue._filter_jobs(self, **kwargs)
+        for pid in list(_sq.keys()):
+            # remove non-pending jobs, since these cannot be balanced
+            info = _sq[pid]
+            if info.state() != 'PD':
+                _sq.pop(pid)
+        if len(_sq) == 0 or _sq is None:
+            print('\tno jobs in queue matching query')
+            return
+
+        # get accounts available for billing
+        user_accts = balq.get_avail_accounts(parentdir)
+
+        if len(user_accts) > 1:
+            # get per-account lists of jobs in pending status, return if all accounts have jobs (no need to balance)
+            accts,early_exit_decision = balq.getaccounts([q.info for q in _sq.values() if 'pd' in q.state().lower()],
+                                                         '',
+                                                         user_accts)
+            balq.announceacctlens(accts, early_exit_decision, priority=priority)
+            if early_exit_decision is True:
+                return
+
+            # determine number of jobs to redistribute to each account
+            balance = balq.getbalance(accts, len(user_accts))
+
+            # redistribute
+            balq.redistribute_jobs(accts, user_accts, balance)
+
+            # announce final job counts
+            time.sleep(2)  # give system a little time to update (sometimes it can print original job counts)
+            if 'priority' in kwargs:
+                # if the job no longer has same priority status, it won't be found in new queue query
+                kwargs.pop('priority')
+            if 'onaccount' in kwargs:
+                # if the job is no longer on the queried account, it won't be found in new queue query
+                kwargs.pop('onaccount')
+            sq = Squeue._filter_jobs(Squeue(), **kwargs)  # re-query the queue, filter
+            balq.announceacctlens(*balq.getaccounts([q.info for q in sq.values() if 'pd' in q.state().lower()],
+                                                    'final',
+                                                    user_accts),
+                                  priority=priority)  # print updated counts
+            # update self
+            for pid,q in _sq.items():
+                account = sq[pid].account()
+                self[q.pid()].info = Squeue._update_self(q.info, account=account)
+        else:
+            print('\tthere is only one account (%s), no more accounts to balance queue.' % user_accts[0])
+
+        pass
+
+    def summary(self, **kwargs):
+        """Print counts of states and statuses of the queue."""
+        _sq = Squeue._filter_jobs(self, **kwargs)
+
+        # count stuff
+        stats = defaultdict(Counter)
+        statuses = Counter()
+        states = Counter()
+        account_counts = Counter()
+        for pid,q in _sq.items():
+            stats[q.account()][q.status()] += 1
+            stats[q.account()][q.state()] += 1
+            statuses[q.status()] += 1
+            states[q.state()] += 1
+            account_counts[q.account()] += 1
+
+        # print account stats
+        print(pyimp.ColorText('There are %s accounts with jobs matching search criteria.' % len(stats.keys())).bold())
+        for account,acct_stats in stats.items():
+            print('\t', account, 'has', account_counts[account], 'total jobs, which include:')
+            for stat,count in acct_stats.items():
+                print('\t\t', count, 'jobs with', '%s' % 'state =' if stat in ['R', 'PD'] else 'status =', stat)
+        # print status counts
+        print(pyimp.ColorText('\nIn total, there are %s jobs:' % sum(statuses.values())).bold())
+        for status,count in statuses.items():
+            print('\t', count, 'jobs with status =', status)
+        # print state counts
+        for state,count in states.items():
+            print('\t', count, 'jobs with state =', state)
+        pass
+
+    def hold(self, **kwargs):
+        """Hold jobs. Parameters described in `Squeue._update_job.__doc__`."""
+        _sq = Squeue._filter_jobs(self, **kwargs)
+
+        for pid,q in pbar(_sq.items()):
+            if 'pd' in q.state().lower():  # only pending jobs can be held
+                updated_result = Squeue._update_job([shutil.which('scontrol'), 'hold'], q.job(), pid)
+                if updated_result is True:
+                    # update job info in Squeue container
+                    self[q.pid()].info = Squeue._update_self(q.info, **kwargs)
+                elif updated_result == 'running':
+                    self[q.pid()].info = updated_result[1]
+                elif updated_result == 'missing':
+                    self.__delitem__(q.pid())
+        pass
+
+    def release(self, **kwargs):
+        """Release held jobs. Parameters described in `Squeue._update_job.__doc__`."""
+        _sq = Squeue._filter_jobs(self, **kwargs)
+
+        released = 0
+        for pid,q in pbar(_sq.items()):
+            if 'held' in q.status().lower():  # JobHeldUser
+                updated_result = Squeue._update_job([shutil.which('scontrol'), 'release'], q.job(), pid)
+                if updated_result is True:
+                    # update job info in Squeue container
+                    self[q.pid()].info = Squeue._update_self(q.info, **kwargs)
+                elif updated_result == 'running':
+                    self[q.pid()].info = updated_result[1]
+                elif updated_result == 'missing':
+                    self.__delitem__(q.pid())
+                released += 1
+        print(pyimp.ColorText(f'\tReleased {released} jobs').gray())
+        pass
+
+    pass
+getsq = Squeue._getsq  # backwards compatibility
 
 def create_watcherfile(pids, directory, watcher_name='watcher', email='brandon.lind@ubc.ca'):
     """From a list of dependency pids, sbatch a file that will email once pids are completed.
-    
+
     TODO
     ----
     - incorporate code to save mem and time info
