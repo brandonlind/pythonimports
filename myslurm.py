@@ -362,18 +362,22 @@ def adjustjob(acct, jobid):
 class Squeue():
     """dict-like container class for holding and updating slurm squeue information.
 
-    Methods - all methods can be filtered with the kwargs from Squeue._filter_jobs
+    Methods - most methods can be filtered by passing the kwargs from Squeue._filter_jobs to the method
     -------
     states - return a list of job states (eg running, pending)
     jobs - return a list of job names
-    pids - return a list of pids
+    pids - return a list of pids (SLURM_JOB_IDs)
     accounts - return a list of accounts
-    cancel - cancel entire queue or specific jobs for specific accounts
+    cancel - cancel entire queue or specific jobs for specific accounts (if user is True, cancel all jobs)
     update - update time, memory, or account for specifc jobs for specific accounts
     balance - balance jobs in queue across available slurm accounts
     summary - print counts of various categories within the queue
     hold - hold jobs
     release - release held jobs
+    keys - returns list of all pids (SLURM_JOB_IDs) - cannot be filtered with Squeue._filter_jobs
+    items - returns item tuples of (pid,SQInfo) - cannot be filtered with Squeue._filter_jobs
+    values - returns list of SQInfos - cannot be filtered with Squeue._filter_jobs
+    save_default_accounts - save default accounts to use in Squeue.balance, cannot be filtered with Squeue._filter_jobs
     
 
     TODO
@@ -384,11 +388,7 @@ class Squeue():
     TODO: update_job needs to skip errors when eg trying to increase time of job beyond initial submission
             eg when initially scheduled for 1 day, but update tries to extend beyond 1 day
             (not allowed on compute canada)
-    TODO: allow _subset's `onaccount` kwarg to accept list of accounts
-    TODO: make it so it can return the queue for `grepping` without needing `user`
-    TODO: add methods to isolate the running/pending/closing jobs
-    TODO: address redundant code when handling `_update_job` return
-    TODO: replace _subset with _filter_jobs
+    TODO: make it so it can return the queue for `grepping` without needing `user` (ie all users)
 
     Examples
     --------
@@ -454,17 +454,8 @@ class Squeue():
     def __delitem__(self, key):
         del self.sq[key]
 
-    def keys(self):
-        return list(self.sq.keys())
-    
-    def values(self):
-        return list(self.sq.values())
-    
-    def items(self):
-        return self.sq.items()
-
-    def __contains__(self, item):
-        return True if item in self.keys() else False
+    def __contains__(self, pid):
+        return True if pid in self.keys() else False
 
     def __init__(self, **kwargs):
         # get queue matching grepping
@@ -720,10 +711,10 @@ class Squeue():
         elif desc=='scancel' and user==True:  # cancel all jobs
             return Squeue._update_job(['scancel', '-u', os.environ['USER']], None, None)
         # get subset of jobs returned from __init__()
-        sq = Squeue._filter_jobs(self, **kwargs)
+        _sq = Squeue._filter_jobs(self, **kwargs)
         # update each of the jobs
-        if len(sq) > 0:
-            for q in pbar(list(sq.values()), desc=desc):
+        if len(_sq) > 0:
+            for q in pbar(list(_sq.values()), desc=desc):
                 # if the job is updated successfully
                 updated_result = Squeue._update_job(cmd, q.job(), q.pid())
                 if updated_result is True:
@@ -742,22 +733,31 @@ class Squeue():
         else:
             print(pyimp.ColorText('None of the jobs in Squeue class passed criteria.').warn())
         pass
-    
+
+    def keys(self):
+        return list(self.sq.keys())
+
+    def values(self):
+        return list(self.sq.values())
+
+    def items(self):
+        return self.sq.items()
+
     def states(self, **kwargs):
         """Get a list of job states."""
         _sq = Squeue._filter_jobs(self, **kwargs)
         return [info.state() for q,info in _sq.items()]
-    
+
     def pids(self, **kwargs):
         """Get a list of pids, subset with kwargs."""
         _sq = Squeue._filter_jobs(self, **kwargs)
         return [info.pid() for q,info in _sq.items()]
-    
+
     def jobs(self, **kwargs):
         """Get a list of job names, subset with kwargs."""
         _sq = Squeue._filter_jobs(self, **kwargs)
         return [info.job() for q,info in _sq.items()]
-    
+
     def accounts(self, **kwargs):
         """Get a list of accounts, subset with kwargs."""
         _sq = Squeue._filter_jobs(self, **kwargs)
@@ -766,13 +766,19 @@ class Squeue():
     def cancel(self, **kwargs):
         """Cancel jobs in slurm queue, remove job info from Squeue class."""
         # cancel all jobs if user is True
-#         self._update_queue(self.sq, cmd='scancel', desc='scancel', **kwargs)
         self._update_queue(cmd='scancel', desc='scancel', **kwargs)
 
         pass
 
     def update(self, **kwargs):
-        """Update jobs in slurm queue and job info in Squeue class."""
+        """Update jobs in slurm queue with scontrol, and update job info in Squeue class.
+        
+        kwargs - that control what can be updated (other kwargs go to Squeue._filter_jobs)
+        ------
+        account - the account to transfer jobs
+        minmemorynode - total memory requested
+        timelimit - total wall time requested
+        """
         def _cmd(account=None, minmemorynode=None, timelimit=None, **kwargs):
             """Create bash command for slurm scontrol update."""
             # base command
@@ -797,6 +803,19 @@ class Squeue():
 
         pass
 
+    def save_default_accounts(self, save_dir=os.environ['HOME']):
+        """Among accounts available, choose which to use during balancing.
+        
+        The chosen accounts will be saved as op.join(save_dir, 'accounts.pkl'), and will be used
+            to balance accounts in the future when setting `parentdir` in Squeue.balance to `save_dir`.
+        """
+        import balance_queue as balq
+        
+        balq.get_avail_accounts(parentdir=save_dir, save=True)
+        
+        pass
+        
+
     def balance(self, parentdir=os.environ['HOME'], **kwargs):
         """Evenly distribute pending jobs across available slurm sbatch accounts.
 
@@ -817,19 +836,17 @@ class Squeue():
 
         TODO
         ----
-        - develop `balance_queue.announceacctlens()` to print flexible job types
-            Currently, balance_queue.py assumes priority jobs are to be balanced. Because the functions are imported,
-            the printouts make it seem like jobs have priority status, even if `priority` is `None` or `False`.
         - balance even if all accounts have jobs
             As of now, if all accounts have jobs (whether filtering for priority status or not),
-            Squeue.balance() will not balance. This behavior is inherited from balance_queue.py
+            Squeue.balance() will not balance. This behavior is inherited from balance_queue.py. The quickest
+            work-around is to use `onaccount` to balance jobs on a specific account (eg the one with the most jobs).
         """
         # 🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁
         # balance_queue.py originated as part of the CoAdapTree project: github.com/CoAdapTree/varscan_pipeline
         # 🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁
         import balance_queue as balq
         os.environ['SQUEUE_FORMAT'] = "%i %u %a %j %t %S %L %D %C %b %m %N (%r)"
-        
+
         if 'priority' in kwargs.keys():
             priority = kwargs['priority']
         else:
