@@ -266,12 +266,6 @@ def getpid(out:str) -> list:
 class SQInfo():
     """Convert each line returned from `squeue -u $USER`.
     
-    Assumes
-    -------
-    export SQUEUE_FORMAT="%i %u %a %j %t %S %L %D %C %b %m %N (%r)"
-    # JOBID USER ACCOUNT NAME ST START_TIME TIME_LEFT NODES CPUS TRES_PER_NODE MIN_MEMORY NODELIST (REASON)
-    #   %i   %u    %a     %j  %t     %S        %L      %D    %C       %b           %m        %N      (%r)
-    
     Example jobinfo    (index number of list)
     ---------------
     ('38768536',       0
@@ -401,7 +395,7 @@ class Squeue():
     For theses jobs, only update jobs with "batch_001" for mem and time.
 
     >>> sq = Squeue(grepping='batch', states='PD')
-    >>> sq.update(match='batch_001', minmemorynode=1000, timelimit=3-00:00:00)
+    >>> sq.update(grepping='batch_001', minmemorynode=1000, timelimit=3-00:00:00)
 
 
     Cancel all jobs in queue.
@@ -417,7 +411,7 @@ class Squeue():
         but not the 'batch_0010' job.
 
     >>> sq = Squeue(grepping='batch', states='PD')
-    >>> sq.cancel(match=['batch_001', '3-00:00:00'], exclude='batch_0010')
+    >>> sq.cancel(grepping=['batch_001', '3-00:00:00'], exclude='batch_0010')
 
 
     Get jobs from a specific user.
@@ -461,8 +455,13 @@ class Squeue():
         # get queue matching grepping
         sq = Squeue._getsq(**kwargs)
         # filter further with kwargs
-        self.sq = Squeue._filter_jobs(sq, **kwargs)
-        self.kwargs = kwargs
+        if len(sq) > 0:
+            self.sq = Squeue._filter_jobs(sq, **kwargs)
+            if len(self.sq) == 0:
+                print('\tno jobs in queue matching query')
+        else:
+            self.sq = sq
+        pass
         
     def _grep_sq(sq, grepping):
         """Get jobs that have any match to anything in `grepping`."""
@@ -665,7 +664,9 @@ class Squeue():
             return _sq
         
         # set up exclude as list
-        if exclude is not None:
+        if exclude is None:
+            exclude = []
+        else:
             if isinstance(exclude, str):
                 exclude = [exclude]
             else:
@@ -732,6 +733,18 @@ class Squeue():
                     assert updated_result is False, '`updated_result` must be one of {True, False, "missing", "running"}'
         else:
             print(pyimp.ColorText('None of the jobs in Squeue class passed criteria.').warn())
+        pass
+
+    def _save_default_accounts(save_dir=os.environ['HOME']):
+        """Among accounts available, choose which to use during balancing.
+        
+        The chosen accounts will be saved as op.join(save_dir, 'accounts.pkl'), and will be used
+            to balance accounts in the future when setting `parentdir` in Squeue.balance to `save_dir`.
+        """
+        import balance_queue as balq
+        
+        balq.get_avail_accounts(parentdir=save_dir, save=True)
+        
         pass
 
     def keys(self):
@@ -801,20 +814,7 @@ class Squeue():
         # update each of the jobs
         Squeue._update_queue(self.sq, cmd, 'update', **kwargs)
 
-        pass
-
-    def save_default_accounts(self, save_dir=os.environ['HOME']):
-        """Among accounts available, choose which to use during balancing.
-        
-        The chosen accounts will be saved as op.join(save_dir, 'accounts.pkl'), and will be used
-            to balance accounts in the future when setting `parentdir` in Squeue.balance to `save_dir`.
-        """
-        import balance_queue as balq
-        
-        balq.get_avail_accounts(parentdir=save_dir, save=True)
-        
-        pass
-        
+        pass        
 
     def balance(self, parentdir=os.environ['HOME'], **kwargs):
         """Evenly distribute pending jobs across available slurm sbatch accounts.
@@ -862,7 +862,7 @@ class Squeue():
             if info.state() != 'PD':
                 _sq.pop(pid)
         if len(_sq) == 0 or _sq is None:
-            print('\tno jobs in queue matching query')
+            print('\tno pending jobs in queue matching query')
             return
 
         # get accounts available for billing
