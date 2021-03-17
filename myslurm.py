@@ -271,7 +271,6 @@ def getpid(out: str) -> str:
 
 class SQInfo:
     """Convert each line returned from `squeue -u $USER`.
-
     Example jobinfo    (index number of list)
     ---------------
     ('38768536',       0
@@ -796,6 +795,18 @@ class Squeue:
 
         pass
 
+    def _save_default_accounts(save_dir=os.environ['HOME']):
+        """Among accounts available, choose which to use during balancing.
+        
+        The chosen accounts will be saved as op.join(save_dir, 'accounts.pkl'), and will be used
+            to balance accounts in the future when setting `parentdir` in Squeue.balance to `save_dir`.
+        """
+        import balance_queue as balq
+        
+        balq.get_avail_accounts(parentdir=save_dir, save=True)
+        
+        pass
+
     def keys(self):
         return list(self.sq.keys())
 
@@ -869,10 +880,9 @@ class Squeue:
 
         # update each of the jobs
         Squeue._update_queue(self, cmd, "update", **kwargs)
-
         pass
 
-    def balance(self, parentdir=os.environ["HOME"], **kwargs):
+    def balance(self, parentdir=os.environ['HOME'], **kwargs):
         """Evenly distribute pending jobs across available slurm sbatch accounts.
 
         Parameters
@@ -919,7 +929,7 @@ class Squeue:
             if info.state() != "PD":
                 _sq.pop(pid)
         if len(_sq) == 0 or _sq is None:
-            print("\tno pending jobs in queue matching query")
+            print('\tno pending jobs in queue matching query')
             return
 
         # get accounts available for billing
