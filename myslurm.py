@@ -9,7 +9,6 @@ from tqdm import tqdm as pbar
 import matplotlib.pyplot as plt
 from os import path as op
 from collections import defaultdict, Counter
-from tqdm import tqdm as pbar
 from typing import Union
 
 import pythonimports as pyimp
@@ -17,10 +16,10 @@ import pythonimports as pyimp
 
 def get_seff(outs: list, desc=None):
     """From a list of .out files (ending in f'_{SLURM_JOB_ID}.out'), get seff output."""
-    infos = {}
+    seffs = {}
     for out in pbar(outs, desc=desc):
-        infos[out] = Seff(getpid(out))
-    return infos
+        seffs[out] = Seff(getpid(out))
+    return seffs
 
 
 def get_mems(seffs: dict, units="MB", plot=True) -> list:
@@ -33,7 +32,7 @@ def get_mems(seffs: dict, units="MB", plot=True) -> list:
 
     """
     mems = []
-    for key, info in seffs.items():
+    for info in seffs.values():
         if "running" in info.state().lower() or "pending" in info.state().lower():
             continue
         mems.append(info.mem(units=units, per_core=False))
