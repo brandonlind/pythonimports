@@ -166,7 +166,7 @@ def plot_pie_freqs(locus, snpinfo, envinfo, saveloc=None, use_popnames=False, po
         #         try:
         try:
             af = round(snpdata[f"{pop}.FREQ"])  # ALT freq
-        except ValueError as e:
+        except ValueError:
             print("passing ", pop)
             continue
         rf = 100 - af  # REF freq

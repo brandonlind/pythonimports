@@ -4,7 +4,7 @@ Distribute priority jobs among accounts. To distribute non-priority jobs see mys
 ###
 # purpose: evenly redistributes jobs across available slurm accounts. Jobs are
 #          found via searching for the keyword among the squeue output fields;
-#          Helps speed up effective run time by spreading out load.
+#          Helps speed up effective run time by spreading out the load.
 ###
 
 ###
