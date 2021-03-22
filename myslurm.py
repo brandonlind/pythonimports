@@ -23,17 +23,17 @@ def get_seff(outs: list, desc=None):
     return infos
 
 
-def get_mems(infos: dict, units="MB", plot=True) -> list:
+def get_mems(seffs: dict, units="MB", plot=True) -> list:
     """From output by `get_seff()`, extract mem in `units` units; histogram if `plot` is True.
 
     Parameters
     ----------
-    - infos : dict of any key with values of class Seff
+    - seffs : dict of any key with values of class Seff
     - units : passed to Seff._convert_mem(). options: GB, MB, KB
 
     """
     mems = []
-    for key, info in infos.items():
+    for key, info in seffs.items():
         if "running" in info.state().lower() or "pending" in info.state().lower():
             continue
         mems.append(info.mem(units=units, per_core=False))
@@ -62,12 +62,12 @@ def clock_hrs(clock: str, unit="hrs") -> float:
     return hrs
 
 
-def get_times(infos: dict, unit="hrs", plot=True) -> list:
-    """From dict(infos) [val = seff output], get times in hours.
+def get_times(seffs: dict, unit="hrs", plot=True) -> list:
+    """From dict(seffs) [val = seff output], get times in hours.
 
     fix: add in other clock units"""
     times = []
-    for key, info in infos.items():
+    for key, info in seffs.items():
         if "running" in info.state().lower() or "pending" in info.state().lower():
             continue
         hrs = info.walltime(unit=unit)
@@ -102,12 +102,10 @@ def sbatch(shfiles: Union[str, list], sleep=0, printing=False) -> list:
         sbatched = False
         while sbatched is False:
             try:
-                pid = (
-                    subprocess.check_output([shutil.which("sbatch"), sh])
-                    .decode("utf-8")
-                    .replace("\n", "")
-                    .split()[-1]
-                )
+                pid = (subprocess.check_output([shutil.which("sbatch"), sh])
+                       .decode("utf-8")
+                       .replace("\n", "")
+                       .split()[-1])
                 sbatched = True
             except subprocess.CalledProcessError as e:
                 failcount += 1
@@ -121,9 +119,10 @@ def sbatch(shfiles: Union[str, list], sleep=0, printing=False) -> list:
                 jobs[q.job()].append(q.pid())
             if job in list(jobs.keys()):
                 sbatched = True
-                pid = jobs[job]
-                if len(jobs[job]) > 1:
-                    sq.cancel(grepping=pid)
+                pids = jobs[job]
+                if len(pids) > 1:
+                    # cancel all but the oldest job in the queue
+                    sq.cancel(grepping=sorted(pids)[:-1])
                 break
         if printing is True:
             print("sbatched %s" % sh)
@@ -131,31 +130,6 @@ def sbatch(shfiles: Union[str, list], sleep=0, printing=False) -> list:
         time.sleep(sleep)
         del pid
     return pids
-
-
-def getpids(user=os.environ["USER"]) -> list:
-    """From squeue -u $USER, return list of queue."""
-    pids = Squeue(user=user).pids()
-    if len(pids) != len(list(set(pids))):
-        print("len !- luni pids")
-    return pids
-
-
-def getjobs(user=os.environ["USER"]) -> list:
-    """From squeue -u $USER, return list of job names, alert if len != unique."""
-    jobs = Squeue(user=user).jobs()
-    if len(jobs) != len(list(set(jobs))):
-        print("len != luni jobs")
-    return jobs
-
-
-def qaccounts(pd=False, user=os.environ["USER"]) -> list:
-    """From squeue -u $USER, return list of billing accounts."""
-    if pd is False:
-        accounts = Squeue(user=user).accounts()
-    else:
-        accounts = Squeue(states=["PD"], user=user).accounts()
-    return accounts
 
 
 class Seff:
@@ -360,9 +334,7 @@ sqinfo = SQInfo  # backwards compatibility
 def adjustjob(acct, jobid):
     """Move job from one account to another."""
     acct = acct.replace("_cpu", "")
-    subprocess.Popen(
-        [shutil.which("scontrol"), "update", f"Account={acct}_cpu", f"JobId={jobid}"]
-    )
+    subprocess.Popen([shutil.which("scontrol"), "update", f"Account={acct}_cpu", f"JobId={jobid}"])
     pass
 
 
@@ -389,7 +361,6 @@ class Squeue:
 
     TODO
     ----
-    TODO: pass .cancel() and .update() a list of pids
     TODO: address Squeue.balance() TODOs
     TODO: update_job needs to handle skipping over jobs that started running or closed after class instantiation
     TODO: update_job needs to skip errors when eg trying to increase time of job beyond initial submission
@@ -555,11 +526,7 @@ class Squeue:
                 found += 1
                 pass
         if found != 10:
-            print(
-                pyimp.ColorText(
-                    "FAIL: Exceeded five subprocess.CalledProcessError errors."
-                ).fail.bold()
-            )
+            print(pyimp.ColorText("FAIL: Exceeded five subprocess.CalledProcessError errors.").fail.bold())
             return []
 
         sq = [s for s in sqout if s != ""]
@@ -647,21 +614,11 @@ class Squeue:
                         return "running"
                     # otherwise count as failure
                     failcount += 1
-        print(
-            pyimp.ColorText(f"FAIL: Update failed for cmd: {job} {jobid}").fail().bold()
-        )
+        print(pyimp.ColorText(f"FAIL: Update failed for cmd: {job} {jobid}").fail().bold())
         return False
 
     @staticmethod
-    def _filter_jobs(
-        sq,
-        grepping=None,
-        exclude=None,
-        onaccount=None,
-        priority=None,
-        states=None,
-        **kwargs,
-    ):
+    def _filter_jobs(sq, grepping=None, exclude=None, onaccount=None, priority=None, states=None, **kwargs):
         """Filter jobs in `Squeue` class object.
         Parameters
         ----------
@@ -714,9 +671,7 @@ class Squeue:
             if isinstance(exclude, str):
                 exclude = [exclude]
             else:
-                assert isinstance(
-                    exclude, list
-                ), "Squeue.balance() only expects `exclude` as `str` or `list`."
+                assert isinstance(exclude, list), "Squeue.balance() only expects `exclude` as `str` or `list`."
 
         # set up grepping as list
         if grepping is None:
@@ -724,9 +679,7 @@ class Squeue:
         elif isinstance(grepping, str):
             grepping = [grepping]
         else:
-            assert isinstance(
-                grepping, list
-            ), "Squeue.balance() only expects `grepping` as `str` or `list`."
+            assert isinstance(grepping, list), "Squeue.balance() only expects `grepping` as `str` or `list`."
 
         # add wanted accounts to `grepping`
         if onaccount is not None:
@@ -736,9 +689,7 @@ class Squeue:
             elif isinstance(onaccount, list):
                 grepping.extend(onaccount)
             else:
-                raise Exception(
-                    "Squeue.balance() only expects `onaccount` as `str` or `list`."
-                )
+                raise Exception("Squeue.balance() only expects `onaccount` as `str` or `list`.")
 
         # determine whether to keep/ignore priority status jobs
         if priority is True:
@@ -798,11 +749,7 @@ class Squeue:
                         updated_result is False
                     ), '`updated_result` must be one of {True, False, "missing", "running"}'
         else:
-            print(
-                pyimp.ColorText(
-                    "None of the jobs in Squeue class passed criteria."
-                ).warn()
-            )
+            print(pyimp.ColorText("None of the jobs in Squeue class passed criteria.").warn())
         pass
 
     @staticmethod
@@ -948,11 +895,9 @@ class Squeue:
 
         if len(user_accts) > 1:
             # get per-account lists of jobs in pending status, return if all accounts have jobs (no need to balance)
-            accts, early_exit_decision = balq.getaccounts(
-                [q.info for q in _sq.values() if "pd" in q.state().lower()],
-                "",
-                user_accts,
-            )
+            accts, early_exit_decision = balq.getaccounts([q.info for q in _sq.values() if "pd" in q.state().lower()],
+                                                          "",
+                                                          user_accts)
             balq.announceacctlens(accts, early_exit_decision, priority=priority)
             if early_exit_decision is True:
                 return
@@ -964,9 +909,7 @@ class Squeue:
             balq.redistribute_jobs(accts, user_accts, balance)
 
             # announce final job counts
-            time.sleep(
-                2
-            )  # give system a little time to update (sometimes it can print original job counts)
+            time.sleep(2)  # give system a little time to update (sometimes it can print original job counts)
             if "priority" in kwargs:
                 # if the job no longer has same priority status, it won't be found in new queue query
                 kwargs.pop("priority")
@@ -974,23 +917,16 @@ class Squeue:
                 # if the job is no longer on the queried account, it won't be found in new queue query
                 kwargs.pop("onaccount")
             sq = self._filter_jobs(Squeue(), **kwargs)  # re-query the queue, filter
-            balq.announceacctlens(
-                *balq.getaccounts(
-                    [q.info for q in sq.values() if "pd" in q.state().lower()],
-                    "final",
-                    user_accts,
-                ),
-                priority=priority,
-            )  # print updated counts
+            balq.announceacctlens(*balq.getaccounts([q.info for q in sq.values() if "pd" in q.state().lower()],
+                                                    "final",
+                                                    user_accts),
+                                  priority=priority)  # print updated counts
             # update self
             for pid, q in _sq.items():
                 account = sq[pid].account()
                 self[q.pid()].info = Squeue._update_self(q.info, account=account)
         else:
-            print(
-                "\tthere is only one account (%s), no more accounts to balance queue."
-                % user_accts[0]
-            )
+            print(f"\tthere is only one account ({user_accts[0]}), no more accounts to balance queue.")
 
         pass
 
@@ -1011,34 +947,13 @@ class Squeue:
             account_counts[q.account()] += 1
 
         # print account stats
-        print(
-            pyimp.ColorText(
-                "There are %s accounts with jobs matching search criteria."
-                % len(stats.keys())
-            ).bold()
-        )
+        print(pyimp.ColorText("There are %s accounts with jobs matching search criteria." % len(stats.keys())).bold())
         for account, acct_stats in stats.items():
-            print(
-                "\t",
-                account,
-                "has",
-                account_counts[account],
-                "total jobs, which include:",
-            )
+            print("\t", account, "has", account_counts[account], "total jobs, which include:")
             for stat, count in acct_stats.items():
-                print(
-                    "\t\t",
-                    count,
-                    "jobs with",
-                    "%s" % "state =" if stat in ["R", "PD"] else "status =",
-                    stat,
-                )
+                print("\t\t", count, "jobs with", "%s" % "state =" if stat in ["R", "PD"] else "status =", stat)
         # print status counts
-        print(
-            pyimp.ColorText(
-                "\nIn total, there are %s jobs:" % sum(statuses.values())
-            ).bold()
-        )
+        print(pyimp.ColorText("\nIn total, there are %s jobs:" % sum(statuses.values())).bold())
         for status, count in statuses.items():
             print("\t", count, "jobs with status =", status)
         # print state counts
@@ -1052,9 +967,7 @@ class Squeue:
 
         for pid, q in pbar(_sq.items()):
             if "pd" in q.state().lower():  # only pending jobs can be held
-                updated_result = Squeue._update_job(
-                    [shutil.which("scontrol"), "hold"], q.job(), pid
-                )
+                updated_result = Squeue._update_job([shutil.which("scontrol"), "hold"], q.job(), pid)
                 if updated_result is True:
                     # update job info in Squeue container
                     self[q.pid()].info = Squeue._update_self(q.info, **kwargs)
@@ -1071,9 +984,7 @@ class Squeue:
         released = 0
         for pid, q in pbar(_sq.items()):
             if "held" in q.status().lower():  # JobHeldUser
-                updated_result = Squeue._update_job(
-                    [shutil.which("scontrol"), "release"], q.job(), pid
-                )
+                updated_result = Squeue._update_job([shutil.which("scontrol"), "release"], q.job(), pid)
                 if updated_result is True:
                     # update job info in Squeue container
                     self[q.pid()].info = Squeue._update_self(q.info, **kwargs)
