@@ -1,9 +1,11 @@
+import numpy as np
+import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 import cartopy.feature as cfeature
+from functools import partial
 from cartopy.io.img_tiles import Stamen
-import cartopy.crs as ccrs
 from cartopy.io.shapereader import Reader
-import numpy as np
+from cartopy.io.img_tiles import GoogleTiles
 from matplotlib.backends.backend_pdf import PdfPages
 
 import pythonimports as pyimp
@@ -33,8 +35,6 @@ def draw_pie_marker(ratios, xcoord, ycoord, sizes, colors, ax, edgecolors="black
     -----
     - thanks stackoverflow! https://stackoverflow.com/questions/56337732/how-to-plot-scatter-pie-chart-using-matplotlib
     """
-    from functools import partial
-
     ratios = [ratio / sum(ratios) for ratio in ratios]
 
     markers = []
@@ -98,11 +98,8 @@ def basemap(extent, shapefiles=None, figsize=(8, 15)):
     extent=[-119.5, -58, 41, 60], figsize=(15,10),
     shapefiles=[('green', '/data/projects/pool_seq/environemental_data/shapefiles/jackpine.shp')]
     """
-    from cartopy.io.img_tiles import GoogleTiles
-
     class _ShadedReliefESRI(GoogleTiles):
         """https://stackoverflow.com/questions/37423997/cartopy-shaded-relief"""
-
         # shaded relief
         def _image_url(self, tile):
             x, y, z = tile
@@ -151,7 +148,7 @@ def basemap(extent, shapefiles=None, figsize=(8, 15)):
     return ax
 
 
-def plot_pie_freqs(locus, snpinfo, envinfo, saveloc=None, use_popnames=False, popcolors=None, bmargs=[], **kwargs):
+def plot_pie_freqs(locus, snpinfo, envinfo, saveloc=None, use_popnames=False, popcolors=None, bmargs={}, **kwargs):
     """Create geographic map, overlay pie graphs (ref/alt allele freqs)."""
     freqcols = [col for col in snpinfo.columns if "FREQ" in col]
     snpdata = (snpinfo.loc[locus, freqcols].str.replace("%", "").astype(float))  # eg change 97.5% to 97.5

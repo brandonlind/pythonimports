@@ -9,25 +9,29 @@ import shutil
 import datetime
 import numpy as np
 import pandas as pd
+import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.gridspec as gridspec
-from typing import Optional, Union
-from collections import OrderedDict, Counter, defaultdict
-from IPython.display import Markdown, display, clear_output
+from sinfo import sinfo
 from tqdm import trange
 from os import path as op
+from PIL import ImageColor
 from os import chdir as cd
 from decimal import Decimal
 from tqdm import tqdm as pbar
-from os import getcwd as cwd
 from shutil import copy as cp
 from shutil import move as mv
 from ipyparallel import Client
 from datetime import timedelta
+from typing import Optional, Union
 from datetime import datetime as dt
 from tqdm.notebook import tqdm as tnb
+from matplotlib.colors import LogNorm
 from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib.colors import rgb2hex, colorConverter
+from collections import OrderedDict, Counter, defaultdict
+from IPython.display import Markdown, display, clear_output
 
 from myslurm import *
 from mymaps import *
@@ -35,7 +39,6 @@ from mymaps import *
 # backwards compatibility
 nb = pbar
 # /backwards compatibility
-
 
 pd.set_option("display.max_columns", 100)
 
@@ -129,7 +132,7 @@ def uni(mylist: list) -> list:
     return list(set(mylist))
 
 
-def luni(mylist: list) -> list:
+def luni(mylist: list) -> int:
     """Return length of unique values from list."""
     return len(uni(mylist))
 
@@ -168,12 +171,12 @@ def pkldump(obj, f: str, protocol=pickle.HIGHEST_PROTOCOL) -> None:
         pickle.dump(obj, o, protocol=protocol)
 
 
-def head(df):
+def head(df: pd.DataFrame) -> pd.DataFrame:
     """Return head of pandas.DataFame."""
     return df.head()
 
 
-def update(args: list):
+def update(args: list) -> None:
     """For jupyter notebook, clear printout and print something new.
 
     Good for for-loops etc.
@@ -182,17 +185,17 @@ def update(args: list):
     [print(x) for x in args]
 
 
-def keys(Dict: dict) -> list:
+def keys(dikt: dict) -> list:
     """Get a list of keys in a dictionary."""
-    return list(Dict.keys())
+    return list(dikt.keys())
 
 
-def values(Dict: dict) -> list:
+def values(dikt: dict) -> list:
     """Get a list of values in a dictionary."""
-    return list(Dict.values())
+    return list(dikt.values())
 
 
-def setindex(df, colname: str):
+def setindex(df, colname: str) -> pd.DataFrame:
     """Set index of pandas.DataFrame to values in a column, remove col."""
     df.index = df[colname].tolist()
     df.index.names = [""]
@@ -206,12 +209,12 @@ def pklload(path: str):
     return pkl
 
 
-def gettimestamp(f: Union[str, list]):
+def gettimestamp(f: Union[str, list]) -> str:
     """Get ctime from a file path."""
     return time.ctime(os.path.getmtime(f))
 
 
-def getmostrecent(files: list, remove=False) -> Optional[str]:
+def getmostrecent(files: list, remove=False) -> Optional[str, None]:
     """From a list of files, determine most recent.
 
     Optional to delete non-most recent files.
@@ -334,12 +337,12 @@ def get_client(profile="default", **kwargs) -> tuple:
     return lview, dview
 
 
-def make_jobs(cmd, inputs: list, lview) -> list:
+def make_jobs(fxn, inputs: list, lview) -> list:
     """Send each arg from inputs to a function command; async."""
-    print(f"making jobs for {cmd.__name__}")
+    print(f"making jobs for {fxn.__name__}")
     jobs = []
     for arg in tnb(inputs):
-        jobs.append(lview.apply_async(cmd, arg))
+        jobs.append(lview.apply_async(fxn, arg))
     return jobs
 
 
@@ -501,9 +504,6 @@ class ColorText:
 
     def custom(self, *color_hex):
         """Print in custom color, `color_hex` - either actual hex, or tuple(r,g,b)"""
-        from matplotlib.colors import rgb2hex, colorConverter
-        from PIL import ImageColor
-
         if len(color_hex) == 1:
             c = rgb2hex(colorConverter.to_rgb(color_hex[0]))
             rgb = ImageColor.getcolor(c, "RGB")
@@ -519,7 +519,7 @@ class ColorText:
     pass
 
 
-def get_skipto_df(f, skipto, nrows, sep="\t", index_col=None, header="infer", **kwargs):
+def get_skipto_df(f: str, skipto: int, nrows: int, sep="\t", index_col=None, header="infer", **kwargs) -> pd.DataFrame:
     """Retrieve dataframe in parallel so that all rows are captured when iterating.
 
     Parameters
@@ -585,8 +585,9 @@ def timer(func):
 
 
 @timer
-def parallel_read(f: str, linenums=None, nrows=None, header=0, lview=None, dview=None, verbose=True, desc=None,
-                  assert_rowcount=True, reset_index=True, maintain_dataframe=True, **kwargs):
+def parallel_read(f: str, linenums=None, nrows=None, header=0, lview=None, dview=None, verbose=True,
+                  desc=None, assert_rowcount=True, reset_index=True, maintain_dataframe=True, **kwargs
+                  ) -> Union[list, pd.DataFrame]:
     """Read in a dataframe file in parallel with ipcluster.
 
     Parameters
@@ -721,7 +722,7 @@ def parallel_read(f: str, linenums=None, nrows=None, header=0, lview=None, dview
 
 
 def makesweetgraph(x=None, y=None, cmap="jet", ylab=None, xlab=None, bins=100, saveloc=None, figsize=(5, 4), snsbins=60,
-                   title=None, xlim=None, ylim=None, vlim=(None, None)):
+                   title=None, xlim=None, ylim=None, vlim=(None, None)) -> None:
     """Make 2D histogram with marginal histograms for each axis.
 
     Parameters
@@ -738,10 +739,6 @@ def makesweetgraph(x=None, y=None, cmap="jet", ylab=None, xlab=None, bins=100, s
     xlim, ylim - tuple with min and max for each axis
     vlim - tuple with min and max for color bar (to standardize across figures)
     """
-    import seaborn as sns
-    from matplotlib.colors import LogNorm
-    from matplotlib.backends.backend_pdf import PdfPages
-
     # plot data
     ax1 = sns.jointplot(x=x, y=y, marginal_kws=dict(bins=snsbins))
     ax1.fig.set_size_inches(figsize[0], figsize[1])
@@ -768,7 +765,7 @@ def makesweetgraph(x=None, y=None, cmap="jet", ylab=None, xlab=None, bins=100, s
     pass
 
 
-def rsync(src, dst, options="-azv", different_basenames=False):
+def rsync(src, dst, options="-azv", different_basenames=False) -> list:
     """Execute rsync command; can execute via ipyparallel engines.
 
     Parameters
@@ -806,7 +803,7 @@ in the name that includes a colon (":") that prepends the path.'
     return output
 
 
-def quick_write(df, dst, sep="\t", header=True, index=False):
+def quick_write(df, dst, sep="\t", header=True, index=False) -> None:
     """Quickly write a pd.DataFrame to file, much faster than .to_csv for large files."""
     from tqdm import tqdm
 
@@ -827,7 +824,7 @@ def quick_write(df, dst, sep="\t", header=True, index=False):
     pass
 
 
-def flatten(list_of_lists, unique=False):
+def flatten(list_of_lists, unique=False) -> list:
     """Return a single list of values from each value in a list of lists.
 
     Parameters
@@ -843,7 +840,7 @@ def flatten(list_of_lists, unique=False):
     return vals
 
 
-def sleeping(counts: int, desc="sleeping", sleep=1):
+def sleeping(counts: int, desc="sleeping", sleep=1) -> None:
     """Basically a sleep timer with a progress bar; counts up to `counts`, interval = 1sec."""
     try:
         for i in trange(counts, desc=desc):
