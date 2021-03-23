@@ -5,6 +5,7 @@ import os
 import time
 import subprocess
 import shutil
+import copy
 from tqdm import tqdm as pbar
 import matplotlib.pyplot as plt
 from os import path as op
@@ -12,6 +13,7 @@ from collections import defaultdict, Counter
 from typing import Union
 
 import pythonimports as pyimp
+import balance_queue as balq
 
 
 def get_seff(outs: list, desc=None):
@@ -87,6 +89,7 @@ def sbatch(shfiles: Union[str, list], sleep=0, printing=False) -> list:
     - assumes that the job name that appears in the queue is the basename of the .sh file
         - eg for job_187.sh, the job name is job_187
         - this convention is used to make sure a job isn't submitted twice
+    - `sbatch` therefore assumes that each job has a unique job name
     """
 
     if isinstance(shfiles, list) is False:
@@ -106,7 +109,7 @@ def sbatch(shfiles: Union[str, list], sleep=0, printing=False) -> list:
                        .replace("\n", "")
                        .split()[-1])
                 sbatched = True
-            except subprocess.CalledProcessError as e:
+            except subprocess.CalledProcessError:
                 failcount += 1
                 if failcount == 10:
                     print("!!!REACHED FAILCOUNT LIMIT OF 10!!!")
@@ -114,14 +117,14 @@ def sbatch(shfiles: Union[str, list], sleep=0, printing=False) -> list:
             # one more failsafe to ensure a job isn't submitted twice
             sq = Squeue()
             jobs = defaultdict(list)
-            for pid, q in sq.items():
-                jobs[q.job()].append(q.pid())
+            for _pid, q in sq.items():
+                jobs[q.job()].append(_pid)
             if job in list(jobs.keys()):
                 sbatched = True
                 pids = jobs[job]
                 if len(pids) > 1:
                     # cancel all but the oldest job in the queue
-                    sq.cancel(grepping=sorted(pids)[:-1])
+                    sq.cancel(grepping=sorted(pids)[1:])
                 break
         if printing is True:
             print("sbatched %s" % sh)
@@ -203,7 +206,7 @@ class Seff:
         """Get the memory efficiency (~ mem / mem_req)"""
         return self.info[-1].split()[2]
 
-    def _convert_mem(self, mem, mem_units, units="MB"):
+    def _convert_mem(self, mem, mem_units, units="MB") -> float:
         """Convert between memory mem_units."""
         # first convert reported mem to MB
         if mem_units == "GB":
@@ -226,12 +229,12 @@ class Seff:
             mem *= 1024
         return mem
 
-    def mem(self, units="MB", per_core=False) -> str:
+    def mem(self, units="MB", per_core=False) -> float:
         """Get memory unitilized by job (across all cores, or per core)."""
         mem, mem_units = self.info[-2].split()[-2:]
         mem = self._convert_mem(mem, mem_units, units)
         if per_core is True:
-            mem = mem / self.info[5].split()[-1]
+            mem = mem / float(self.info[5].split()[-1])
         return mem
 
     pass
@@ -436,12 +439,15 @@ class Squeue:
     def __contains__(self, pid):
         return True if pid in self.keys() else False
 
+    def __cmp__(self, other):
+        return cmp(self.sq, other.sq)
+
     def __init__(self, **kwargs):
         # get queue matching grepping
         self.sq = Squeue._getsq(**kwargs)
         # filter further with kwargs
         if len(self.sq) > 0:
-            self.sq = Squeue._filter_jobs(self.sq, **kwargs)
+            self.sq = self._filter_jobs(self, **kwargs)
             if len(self.sq) == 0:
                 print("\tno jobs in queue matching query")
         pass
@@ -484,24 +490,23 @@ class Squeue:
             Positional arguments:
             sq - list of squeue slurm command jobs, each line is str.split()
             """
-            exitneeded = False
+            exceptionneeded = False
             if not isinstance(sq, list):
                 print("\ttype(sq) != list, exiting Squeue")
-                exitneeded = True
-            for s in sq:
-                if "socket" in s.lower():
-                    print("\tsocket in sq return, exiting Squeue")
-                    exitneeded = True
-                if not int(s.split()[0]) == float(
-                    s.split()[0]
-                ):  # if the jobid isn't a float:
-                    print("\tcould not assert int == float, %s" % (s[0]))
-                    exitneeded = True
-            if exitneeded is True:
-                print("\tslurm screwed something up for Squeue, lame")
-                return None
+                exceptionneeded = True
             else:
-                return sq
+                for s in sq:
+                    if "socket" in s.lower():
+                        print("\tsocket in sq return, exiting Squeue")
+                        exceptionneeded = True
+                    if not int(s.split()[0]) == float(
+                        s.split()[0]
+                    ):  # if the jobid isn't a float:
+                        print("\tcould not assert int == float, %s" % (s[0]))
+                        exceptionneeded = True
+            if exceptionneeded is True:
+                raise Exception(ColorText("FAIL: slurm screwed something up for Squeue, lame").fail().bold())
+            return sq
 
         if user is None:
             user = os.environ["USER"]
@@ -524,21 +529,17 @@ class Squeue:
             except subprocess.CalledProcessError:
                 found += 1
                 pass
-        if found != 10:
-            print(pyimp.ColorText("FAIL: Exceeded five subprocess.CalledProcessError errors.").fail.bold())
-            return []
+        if found == 5:
+            raise Exception(pyimp.ColorText("FAIL: Exceeded five subprocess.CalledProcessError errors.").fail().bold())
 
         sq = [s for s in sqout if s != ""]
-        if _checksq(sq) is None:  # make sure slurm gave me something useful
-            return None
+        _checksq(sq)  # make sure slurm gave me something useful
 
         # look for the things I want to grep
-        if len(sq) > 0:
-            grepped = Squeue._grep_sq(sq, grepping)
-            if len(grepped) > 0:
-                return grepped
-        print("\tno jobs in queue matching query")
-        return []
+        grepped = Squeue._grep_sq(sq, grepping)
+        if len(grepped) == 0:
+            print("\tno jobs in queue matching query")
+        return grepped
 
     @staticmethod
     def _handle_mem(mem):
@@ -623,7 +624,7 @@ class Squeue:
         ----------
         grepping - a string or list of strings to use as queries to select job from queue (case insensitive)
             - strings are converted to a single-element list internally
-            - to keep a job from the queue, all elements of `grepping` must be found in at least one of the squeue columns
+            - to keep a job from the queue, all elements of `grepping` must be found in >= of the squeue columns
                 - the elements of `grepping` can be a subset of the column info (eg `squeue -u $USER | grep match`)
                     - to retrieve specific jobs, make sure elements of grep are not substrings of any other job info
                 - note SQUEUE_FORMAT immediately after Squeue.__doc__
@@ -653,9 +654,9 @@ class Squeue:
                 information = _sq[pid]
                 remove = False
                 if exclude is not None:
-                    for info in information:
+                    for _info in information:
                         for ex in exclude:
-                            if ex.lower() in info.lower():
+                            if ex.lower() in _info.lower():
                                 remove = True
                 #                 if 'pd' not in information.state().lower():  # if a job isn't pending, it can't be updated
                 #                     remove = True
@@ -748,7 +749,7 @@ class Squeue:
                         updated_result is False
                     ), '`updated_result` must be one of {True, False, "missing", "running"}'
         else:
-            print(pyimp.ColorText("None of the jobs in Squeue class passed criteria.").warn())
+            print(pyimp.ColorText("\tNone of the jobs in Squeue class passed criteria.").custom('lightyellow'))
         pass
 
     @staticmethod
@@ -758,8 +759,6 @@ class Squeue:
         The chosen accounts will be saved as op.join(save_dir, 'accounts.pkl'), and will be used
             to balance accounts in the future when setting `parentdir` in Squeue.balance to `save_dir`.
         """
-        import balance_queue as balq
-
         balq.get_avail_accounts(parentdir=save_dir, save=True)
 
         pass
@@ -773,11 +772,20 @@ class Squeue:
     def items(self):
         return self.sq.items()
 
+    def copy(self):
+        obj = type(self).__new__(self.__class__)
+        obj.sq = self.sq.copy()
+        return obj
+
     def running(self):
-        return self._filter_jobs(self, states="R")
+        obj = type(self).__new__(self.__class__)
+        obj.sq = self._filter_jobs(self, states="R").copy()
+        return obj
 
     def pending(self):
-        return self._filter_jobs(self, states="PD")
+        obj = type(self).__new__(self.__class__)
+        obj.sq = self._filter_jobs(self, states="PD").copy()
+        return obj
 
     def states(self, **kwargs):
         """Get a list of job states."""
@@ -867,7 +875,6 @@ class Squeue:
         # 🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁
         # balance_queue.py originated as part of the CoAdapTree project: github.com/CoAdapTree/varscan_pipeline
         # 🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁
-        import balance_queue as balq
 
         os.environ["SQUEUE_FORMAT"] = "%i %u %a %j %t %S %L %D %C %b %m %N (%r)"
 
