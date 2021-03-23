@@ -214,7 +214,7 @@ def gettimestamp(f: Union[str, list]) -> str:
     return time.ctime(os.path.getmtime(f))
 
 
-def getmostrecent(files: list, remove=False) -> Optional[str, None]:
+def getmostrecent(files: list, remove=False) -> Optional[str]:
     """From a list of files, determine most recent.
 
     Optional to delete non-most recent files.
