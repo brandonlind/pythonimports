@@ -9,7 +9,6 @@ import shutil
 import datetime
 import numpy as np
 import pandas as pd
-import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.gridspec as gridspec
@@ -28,13 +27,13 @@ from typing import Optional, Union
 from datetime import datetime as dt
 from tqdm.notebook import tqdm as tnb
 from matplotlib.colors import LogNorm
-from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.colors import rgb2hex, colorConverter
 from collections import OrderedDict, Counter, defaultdict
 from IPython.display import Markdown, display, clear_output
 
 from myslurm import *
 from mymaps import *
+from myfigs import *
 
 # backwards compatibility
 nb = pbar
@@ -719,50 +718,6 @@ def parallel_read(f: str, linenums=None, nrows=None, header=0, lview=None, dview
         df = [j.r for j in jobs]
 
     return df
-
-
-def makesweetgraph(x=None, y=None, cmap="jet", ylab=None, xlab=None, bins=100, saveloc=None, figsize=(5, 4), snsbins=60,
-                   title=None, xlim=None, ylim=None, vlim=(None, None)) -> None:
-    """Make 2D histogram with marginal histograms for each axis.
-
-    Parameters
-    ----------
-    x - data for x-axis
-    y - data for y-axis (sample identity in same order as x)
-    cmap - color map (eg 'jet', 'cool', etc)
-    ylab,xlab - axes labels
-    bins - bins for plt.hist2d - basically how thick points are in figure
-    snsbins - bins for margin histograms
-    saveloc - location to save PDF, or None to skip saving
-    figsize - dimensions of figure in inches (x, y)
-    title - text above figure
-    xlim, ylim - tuple with min and max for each axis
-    vlim - tuple with min and max for color bar (to standardize across figures)
-    """
-    # plot data
-    ax1 = sns.jointplot(x=x, y=y, marginal_kws=dict(bins=snsbins))
-    ax1.fig.set_size_inches(figsize[0], figsize[1])
-    ax1.ax_joint.cla()
-    plt.sca(ax1.ax_joint)
-    plt.hist2d(x, y, bins, norm=LogNorm(*vlim), cmap=cmap, range=None if xlim is None else np.array([xlim, ylim]))
-    # set title and axes labels
-    if title is None:
-        plt.title("%s\nvs\n%s\n" % (xlab, ylab), y=1.2, x=0.6)
-    else:
-        plt.title(title, y=1.2, x=0.6)
-    plt.ylabel(ylab, fontsize=12)
-    plt.xlabel(xlab, fontsize=12)
-    # set up scale bar legend
-    cbar_ax = ax1.fig.add_axes([1, 0.1, 0.03, 0.7])
-    cb = plt.colorbar(cax=cbar_ax)
-    cb.set_label(r"$\log_{10}$ density of points", fontsize=13)
-    # save if prompted
-    if saveloc is not None:
-        with PdfPages(saveloc) as pdf:
-            pdf.savefig(bbox_inches="tight")
-        print(ColorText("Saved to: ").bold(), saveloc)
-    plt.show()
-    pass
 
 
 def rsync(src, dst, options="-azv", different_basenames=False) -> list:
