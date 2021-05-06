@@ -16,7 +16,7 @@ def venn_diagram(a, b, c, set_labels=['A', 'B', 'C'], title=''):
     Notes
     -----
     - thanks stackoverflow! https://stackoverflow.com/questions/19841535/python-matplotlib-venn-diagram
-    """s
+    """
     a = list(set(a))
     b = list(set(b))
     c = list(set(c))
