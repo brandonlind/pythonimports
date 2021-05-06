@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib_venn import venn3, venn3_circles
 import pandas as pd
 import seaborn as sns
+import pythonimports as pyimp
 
 def venn_diagram(a, b, c, set_labels=['A', 'B', 'C'], title=''):
     """Create Venn diagram with three groups.
@@ -141,7 +142,7 @@ def save_pdf(saveloc):
     """After creating a figure in jupyter notebooks, save as PDFs at `saveloc`."""
     with PdfPages(saveloc) as pdf:
         pdf.savefig(bbox_inches="tight")
-    print(ColorText("Saved to: ").bold(), saveloc)
+    print(pyimp.ColorText("Saved to: ").bold(), saveloc)
     pass
 
 
