@@ -1,11 +1,12 @@
 help documentation as of 
 
-commit a4588c3f2190769e6474be9df1d62b59e0bbd6b0  
+commit e279fe5b990acffbce2d005fe062a7399ea838e7  
 Author: Brandon <brandon.lind@ubc.ca>  
-Date:   Fri Jun 11 14:00:43 2021 -0600
+Date:   Fri Jun 11 14:29:44 2021 -0600
 
 ----
 ### Python Library Documentation: module pythonimports
+```
 
 NAME
     pythonimports
@@ -304,9 +305,11 @@ DATA
     Union = typing.Union
     colorConverter = <matplotlib.colors.ColorConverter object>
 
+```
 
 
 ### Python Library Documentation: module mymaps
+```
 
 NAME
     mymaps
@@ -357,9 +360,11 @@ FUNCTIONS
     plot_pie_freqs(locus, snpinfo, envinfo, saveloc=None, use_popnames=False, popcolors=None, bmargs={}, **kwargs)
         Create geographic map, overlay pie graphs (ref/alt allele freqs).
 
+```
 
 
 ### Python Library Documentation: module myfigs
+```
 
 NAME
     myfigs - Personalized functions to build figures.
@@ -411,9 +416,11 @@ FUNCTIONS
 DATA
     colorConverter = <matplotlib.colors.ColorConverter object>
 
+```
 
 
 ### Python Library Documentation: module balance_queue
+```
 
 NAME
     balance_queue - Distribute priority jobs among accounts. To distribute non-priority jobs see myslurm.Squeue.balance.
@@ -510,9 +517,11 @@ FUNCTIONS
         user_accts - list of all available slurm accounts
         balance  - int; ceiling number of jobs each account should have after balancing
 
+```
 
 
 ### Python Library Documentation: module myslurm
+```
 
 NAME
     myslurm - Python commands to interface with slurm queue and seff commands.
@@ -944,4 +953,5 @@ FUNCTIONS
 DATA
     Union = typing.Union
 
+```
 

@@ -820,7 +820,8 @@ def _update_pythonimports_README():
     docs = []
     for mod in [pyimp, mymaps, myfigs, balance_queue, myslurm]:
         doc = pydoc.render_doc(mod, renderer=pydoc.plaintext).split('\n')[:-4]  # exclude file name
-        doc[0] = '### ' + doc[0]  # markdown header for each .py file
+        doc[0] = '### ' + doc[0] + '\n```' # markdown header for each .py file, ticks to print in code block
+        doc.append('```')
         doc.append('\n')
         docs.extend(doc)        
 
