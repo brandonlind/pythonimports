@@ -125,7 +125,10 @@ def sbatch(shfiles: Union[str, list], sleep=0, printing=False) -> list:
                 if len(pids) > 1:
                     # cancel all but the oldest job in the queue
                     sq.cancel(grepping=sorted(pids)[1:])
+                pid = sorted(pids)[0]
                 break
+            else:
+                sbatched = False
         if printing is True:
             print("sbatched %s" % sh)
         pids.append(pid)
