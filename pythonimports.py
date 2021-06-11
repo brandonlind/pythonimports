@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import math
+import pydoc
 import pickle
 import random
 import string
@@ -39,32 +40,6 @@ nb = pbar
 # /backwards compatibility
 
 pd.set_option("display.max_columns", 100)
-
-
-def latest_commit():
-    """Print latest commit upon import."""
-    cwd = os.getcwd()
-    pypaths = os.environ["PYTHONPATH"].split(":")
-    pyimportpath = [path for path in pypaths if "pythonimports" in path][0]
-    os.chdir(pyimportpath)
-    gitout = subprocess.check_output(
-        [shutil.which("git"), "log", "--pretty", "-n1", pyimportpath]
-    ).decode("utf-8")
-    gitout = "\n".join(gitout.split("\n")[:3]) + "\n"
-    current_datetime = "Today:\t" + dt.now().strftime("%B %d, %Y - %H:%M:%S") + "\n"
-    version = "python version: " + sys.version.split()[0] + "\n"
-    hashes = "##################################################################\n"
-    print(
-        hashes
-        + "Current commit of pythonimports:\n"
-        + gitout
-        + current_datetime
-        + version
-        + hashes
-    )
-    os.chdir(cwd)
-    pass
-
 
 def ls(directory: str) -> list:
     """Get a list of file basenames from DIR."""
@@ -801,4 +776,78 @@ def sleeping(counts: int, desc="sleeping", sleep=1) -> None:
             time.sleep(sleep)
     except KeyboardInterrupt:
         print(ColorText(f"KeyboardInterrupt after {i} seconds of sleep.").warn())
+    pass
+
+
+def _git_pretty(repo, split_lines=False):
+    """Get the latest commit hash, author, and date for the repo `repo`."""
+    cwd = os.getcwd()
+    os.chdir(repo)
+
+    gitout = subprocess.check_output(
+        [shutil.which("git"), "log", "--pretty", "-n1", repo]
+    ).decode("utf-8").split("\n")[:3]
+
+    if split_lines is False:
+        gitout = "  \n".join(gitout) + "\n"
+
+    os.chdir(cwd)
+
+    return gitout
+
+
+def _find_pythonimports():
+    """Find the path to the repository directory for my pythonimports repo."""
+    pypaths = os.environ["PYTHONPATH"].split(":")
+    pyimportpath = [path for path in pypaths if "pythonimports" in path][0]
+
+    return pyimportpath
+
+
+def _update_pythonimports_README():
+    """Print out the documentation for all .py files in pythonimports repo."""
+    import balance_queue as balance_queue
+    import myfigs as myfigs
+    import mymaps as mymaps
+    import myslurm as myslurm
+    import pythonimports as pyimp
+
+    # get commit hash
+    pyimportpath = pyimp._find_pythonimports()
+    commit_hash = pyimp._git_pretty(pyimportpath)
+    
+    # get help documentation
+    docs = []
+    for mod in [pyimp, mymaps, myfigs, balance_queue, myslurm]:
+        doc = pydoc.render_doc(mod, renderer=pydoc.plaintext).split('\n')[:-4]  # exclude file name
+        doc[0] = '### ' + doc[0]  # markdown header for each .py file
+        doc.append('\n')
+        docs.extend(doc)        
+
+    # add hash to docs
+    docs.insert(0, f'help documentation as of \n\n{commit_hash}\n----')
+
+    file = op.join(pyimportpath, 'README.md')
+    with open(file, 'w') as o:
+        o.write('\n'.join(docs))
+
+    return file
+
+
+def latest_commit(repopath=_find_pythonimports()):
+    """Print latest commit upon import for git repo in `repopath`."""
+    import pythonimports as pyimp
+
+    gitout = pyimp._git_pretty(repopath)
+    current_datetime = "Today:\t" + dt.now().strftime("%B %d, %Y - %H:%M:%S") + "\n"
+    version = "python version: " + sys.version.split()[0] + "\n"
+    hashes = "##################################################################\n"
+    print(
+        hashes
+        + "Current commit of pythonimports:\n"
+        + gitout
+        + current_datetime
+        + version
+        + hashes
+    )
     pass
