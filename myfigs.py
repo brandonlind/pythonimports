@@ -6,6 +6,8 @@ from matplotlib_venn import venn3, venn3_circles
 import pandas as pd
 import seaborn as sns
 import pythonimports as pyimp
+import numpy as np
+from matplotlib.colors import LogNorm
 
 def venn_diagram(a, b, c, set_labels=['A', 'B', 'C'], title=''):
     """Create Venn diagram with three groups.

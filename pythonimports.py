@@ -26,7 +26,6 @@ from datetime import timedelta
 from typing import Optional, Union
 from datetime import datetime as dt
 from tqdm.notebook import tqdm as tnb
-from matplotlib.colors import LogNorm
 from matplotlib.colors import rgb2hex, colorConverter
 from collections import OrderedDict, Counter, defaultdict
 from IPython.display import Markdown, display, clear_output
