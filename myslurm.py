@@ -850,7 +850,7 @@ class Squeue:
         Squeue._update_queue(self, cmd, "update", **kwargs)
         pass
 
-    def balance(self, parentdir=os.environ["HOME"], **kwargs):
+    def balance(self, parentdir='HOME', **kwargs):
         """Evenly distribute pending jobs across available slurm sbatch accounts.
 
         Parameters
@@ -860,6 +860,7 @@ class Squeue:
             - if `parentdir` is set to `None`, then all available accounts will be used to balance
             - otherwise, `parentdir` can be set to `some_directory` that contains "accounts.pkl" saved from:
                 balance_queue.get_avail_accounts(some_directory, save=True)
+            - default = os.environ['HOME']
         kwargs - see Squeue._filter_jobs.__doc__
 
         Notes
@@ -880,6 +881,9 @@ class Squeue:
         # 🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁
 
         os.environ["SQUEUE_FORMAT"] = "%i %u %a %j %t %S %L %D %C %b %m %N (%r)"
+
+        if parentdir == 'HOME':
+            parentdir = os.environ["HOME"]
 
         if "priority" in kwargs.keys():
             priority = kwargs["priority"]

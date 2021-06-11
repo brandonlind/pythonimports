@@ -1,8 +1,8 @@
 help documentation as of 
 
-commit e279fe5b990acffbce2d005fe062a7399ea838e7  
+commit 572ef7f911fd6c1d6ede14ba5cf3f93a23fbf941  
 Author: Brandon <brandon.lind@ubc.ca>  
-Date:   Fri Jun 11 14:29:44 2021 -0600
+Date:   Fri Jun 11 14:35:47 2021 -0600
 
 ----
 ### Python Library Documentation: module pythonimports
@@ -158,8 +158,8 @@ FUNCTIONS
     keys(dikt: dict) -> list
         Get a list of keys in a dictionary.
     
-    latest_commit(repopath='/lu213/brandon.lind/mypy/pythonimports')
-        Print latest commit upon import for git repo in `repopath`.
+    latest_commit(repopath=None)
+        Print latest commit upon import for git repo in `repopath`, default `_find_pythonimports()`.
     
     ls(directory: str) -> list
         Get a list of file basenames from DIR.
@@ -760,7 +760,7 @@ CLASSES
      |  accounts(self, **kwargs)
      |      Get a list of accounts, subset with kwargs.
      |  
-     |  balance(self, parentdir='/lu213/brandon.lind', **kwargs)
+     |  balance(self, parentdir='HOME', **kwargs)
      |      Evenly distribute pending jobs across available slurm sbatch accounts.
      |      
      |      Parameters
@@ -770,6 +770,7 @@ CLASSES
      |          - if `parentdir` is set to `None`, then all available accounts will be used to balance
      |          - otherwise, `parentdir` can be set to `some_directory` that contains "accounts.pkl" saved from:
      |              balance_queue.get_avail_accounts(some_directory, save=True)
+     |          - default = os.environ['HOME']
      |      kwargs - see Squeue._filter_jobs.__doc__
      |      
      |      Notes

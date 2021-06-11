@@ -835,9 +835,12 @@ def _update_pythonimports_README():
     return file
 
 
-def latest_commit(repopath=_find_pythonimports()):
-    """Print latest commit upon import for git repo in `repopath`."""
+def latest_commit(repopath=None):
+    """Print latest commit upon import for git repo in `repopath`, default `_find_pythonimports()`."""
     import pythonimports as pyimp
+
+    if repopath is None:
+        repopath = _find_pythonimports()
 
     gitout = pyimp._git_pretty(repopath)
     current_datetime = "Today:\t" + dt.now().strftime("%B %d, %Y - %H:%M:%S") + "\n"
@@ -845,7 +848,7 @@ def latest_commit(repopath=_find_pythonimports()):
     hashes = "##################################################################\n"
     print(
         hashes
-        + "Current commit of pythonimports:\n"
+        + f"Current commit of {op.basename(repopath)}:\n"
         + gitout
         + current_datetime
         + version
