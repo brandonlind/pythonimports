@@ -357,7 +357,7 @@ def send_chunks(fxn, elements, thresh, lview, kwargs={}):
 
 
 def watch_async(jobs: list, phase=None, desc=None) -> None:
-    """Wait until jobs are done executing, show progress bar."""
+    """Wait until all ipyparallel jobs `jobs` are done executing, show progress bar."""
     from tqdm import trange
 
     print(
@@ -560,7 +560,12 @@ def get_skipto_df(f: str, skipto: int, nrows: int, sep="\t", index_col=None, hea
 
 
 def create_fundict(function, args={}, kwargs={}):
-    """Create a fundict for `parallel_read()`."""
+    """Create a fundict for `parallel_read()`.
+    
+    For each function `function` that is to be applied during parallel execution of `parallel_read()`, 
+    use a dictionary for `args` and `kwargs` to specify args and kwargs, respectively. These are used
+    to load objects to engines and when function is called.
+    """
     fundict = OrderedDict({function.__name__: dict({function.__name__: function,
                                                     "args": args,
                                                     "kwargs": kwargs})})
@@ -631,11 +636,7 @@ def parallel_read(f: str, linenums=None, nrows=None, header=0, lview=None, dview
                 # function(df, *args, **kwargs)
                 # therefore the value for the `args` and `kwargs` key must have a .__len__() method
 
-    >>> fundict = dict({'function_x': dict({'function_x': function_x,
-                                            'args': [],
-                                            'kwargs': {}
-                                           })
-                       })
+    >>> fundict = create_fundict(function_x, args={}, kwargs={})
 
     # step 3) run parallel_read()
     >>> df = parallel_read(f, lview=lview, dview=dview, assert_rowcount=False, **dict(functions=fundict))
@@ -719,7 +720,7 @@ def parallel_read(f: str, linenums=None, nrows=None, header=0, lview=None, dview
     return df
 
 
-def rsync(src, dst, options="-azv", different_basenames=False) -> list:
+def rsync(src, dst, options="-azv", different_basenames=False, assert_remote_transfer=True) -> list:
     """Execute rsync command; can execute via ipyparallel engines.
 
     Parameters
@@ -728,21 +729,20 @@ def rsync(src, dst, options="-azv", different_basenames=False) -> list:
     dst - destination path, either a directory or full file path name
     options - the flags that should be used with the command; default -azv
     different_basenames - bool; True if src and dst file paths differ in their basenames, False otherwise
+    assert_remote_transfer - bool; True if one of the paths should contain remote server info (eg `server:/path`)
 
     Notes
     -----
     - src and dst basenames can differ.
-
-    TODO : add override kwarg to skip over hacky assertion of destination being a full filepath ...
-           if the src and dst basenames do not match
     """
     import subprocess
     import shutil
     import os
 
-    assertion_msg = 'Either the source or the destination should have a server \
-in the name that includes a colon (":") that prepends the path.'
-    assert any([":" in src, ":" in dst]), assertion_msg
+    if assert_remote_transfer is True:
+        assertion_msg = 'Either the source or the destination should have a server \
+    in the name that includes a colon (":") that prepends the path.'
+        assert any([":" in src, ":" in dst]), assertion_msg
 
     # so I can pass a directory or the actual destination path
     if dst.endswith(os.path.basename(src)) is False and different_basenames is False:
