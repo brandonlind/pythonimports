@@ -33,7 +33,7 @@ from IPython.display import Markdown, display, clear_output
 
 from myslurm import *
 from mymaps import *
-from myfigs import *
+#from myfigs import *
 
 # backwards compatibility
 nb = pbar
