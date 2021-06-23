@@ -124,7 +124,7 @@ dependencies:
     - iniconfig==1.1.1
     - ipykernel==5.4.2
     - ipyparallel==6.3.0
-    - ipython==7.24.1
+    - ipython==7.19.0
     - ipywidgets==7.6.2
     - jedi==0.18.0
     - jinja2==2.11.2
