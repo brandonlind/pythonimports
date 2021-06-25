@@ -624,7 +624,7 @@ def parallel_read(f: str, linenums=None, nrows=None, header=0, lview=None, dview
         print(ColorText("parallel_read()").bold().__str__() + " is:")
 
     # determine how many lines are in the file
-    if linenums is None:
+    if linenums is None and assert_rowcount is True:
         if verbose:
             print("\tdeterming line numbers for ", ColorText(f).gray(), " ...")
         lines = subprocess.check_output([shutil.which("awk"), "{print $1}", f]).split(b"\n")
