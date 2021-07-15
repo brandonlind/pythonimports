@@ -865,6 +865,7 @@ def wrap_defaultdict(instance, times):
     instance - list, dict, Counter
     times - the number of nested keys above `instance`; if `times=3` dd[one][two][three] = instance
     """
+    from collections import defaultdict
     def _dd(x):
         return defaultdict(lambda: x)
 
