@@ -857,17 +857,23 @@ def latest_commit(repopath=None):
     pass
 
 
-def wrap_defaultdict(instance, times):
+def wrap_defaultdict(instance, times=1):
     """Wrap an instance an arbitrary number of `times` to create nested defaultdict.
     
     Parameters
     ----------
-    instance - list, dict, Counter
+    instance - e.g., list, dict, int, collections.Counter
     times - the number of nested keys above `instance`; if `times=3` dd[one][two][three] = instance
+    
+    Notes
+    -----
+    using `x.copy` allows pickling (loading to ipyparallel cluster or pkldump)
+        - thanks https://stackoverflow.com/questions/16439301/cant-pickle-defaultdict
     """
     from collections import defaultdict
+
     def _dd(x):
-        return defaultdict(lambda: x)
+        return defaultdict(x.copy)
 
     dd = defaultdict(instance)
     for i in range(times-1):
