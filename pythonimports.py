@@ -855,3 +855,21 @@ def latest_commit(repopath=None):
         + hashes
     )
     pass
+
+
+def wrap_defaultdict(instance, times):
+    """Wrap an instance an arbitrary number of `times` to create nested defaultdict.
+    
+    Parameters
+    ----------
+    instance - list, dict, Counter
+    times - the number of nested keys above `instance`; if `times=3` dd[one][two][three] = instance
+    """
+    def _dd(x):
+        return defaultdict(lambda: x)
+
+    dd = defaultdict(instance)
+    for i in range(times-1):
+        dd = _dd(dd)
+
+    return dd
