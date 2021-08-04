@@ -46,7 +46,7 @@ def venn_diagram(a, b, c, set_labels=['A', 'B', 'C'], title=''):
 
 
 def histo_box(data, xticks_by=10, title=None, xlab=None, ylab='count', col=None, fontsize=20,
-              y_pad=1.3, histbins='auto', saveloc=None, **kwargs):
+              y_pad=1.3, histbins='auto', saveloc=None, rotation=0, **kwargs):
     """Create histogram with boxplot in top margin.
     
     https://www.python-graph-gallery.com/24-histogram-with-a-boxplot-on-top-seaborn"""
@@ -64,7 +64,7 @@ def histo_box(data, xticks_by=10, title=None, xlab=None, ylab='count', col=None,
     # Remove x axis name for the boxplot
     ax_box.set(xlabel='')
     plt.title(title, y=y_pad, fontdict=dict(fontsize=fontsize))
-    plt.xticks(np.arange(0, max(data[col]), xticks_by))
+    plt.xticks(np.arange(0, max(data[col]), xticks_by), rotation=rotation)
     plt.xlabel(xlab, fontsize=fontsize)
     plt.ylabel(ylab, fontsize=fontsize)
     
