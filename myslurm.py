@@ -97,7 +97,17 @@ def sbatch(shfiles: Union[str, list], sleep=0, printing=False) -> list:
         shfiles = [shfiles]
     pids = []
     for sh in pbar(shfiles):
-        job = op.basename(sh).split(".")[0]
+        # make sure job matches filename
+        filejob = op.basename(sh).split(".")[0]
+        sbatchflag = [line for line in read(sh, lines=True) if '--job-name' in line][0].split("job-name=")[1]
+        if filejob != sbatchflag:
+            exceptiontext = pyimp.ColorText(
+                "The .sh file's basename does not match the job name in the .sh file's SBATCH flags.\n"
+            ).fail().bold().__str__() +\
+            f"\tfile basename = {filejob}\n" +\
+            f"\tsbatchflag = {sbatchflag}\n"
+            raise Exception(exceptiontext)
+        
         os.chdir(os.path.dirname(sh))
         # try and sbatch file 10 times before giving up
         failcount = 0
@@ -119,9 +129,9 @@ def sbatch(shfiles: Union[str, list], sleep=0, printing=False) -> list:
             jobs = defaultdict(list)
             for _pid, q in sq.items():
                 jobs[q.job()].append(_pid)
-            if job in list(jobs.keys()):
+            if filejob in list(jobs.keys()):
                 sbatched = True
-                pids = jobs[job]
+                pids = jobs[filejob]
                 if len(pids) > 1:
                     # cancel all but the oldest job in the queue
                     sq.cancel(grepping=sorted(pids)[1:])
