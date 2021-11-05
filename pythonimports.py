@@ -301,11 +301,11 @@ def getdirs(paths: Union[str, list], verbose=False, **kwargs) -> list:
     return newdirs
 
 
-def get_client(profile="default", **kwargs) -> tuple:
+def get_client(profile="default", targets=None, **kwargs) -> tuple:
     """Get lview,dview from ipcluster."""
     rc = Client(profile=profile, **kwargs)
-    dview = rc[:]
-    lview = rc.load_balanced_view()
+    dview = rc.direct_view(targets=targets)
+    lview = rc.load_balanced_view(targets=targets)
     print(len(lview), len(dview))
     return lview, dview
 
@@ -858,7 +858,7 @@ def latest_commit(repopath=None):
 
 
 def wrap_defaultdict(instance, times=1):
-    """Wrap an instance an arbitrary number of `times` to create nested defaultdict.
+    """Wrap an `instance` an arbitrary number of `times` to create nested defaultdict.
     
     Parameters
     ----------
@@ -880,3 +880,44 @@ def wrap_defaultdict(instance, times=1):
         dd = _dd(dd)
 
     return dd
+
+
+def unwrap_dictionary(nested_dict):
+    """Instead of iterating a nested dict, spit out all keys and the final value.
+    
+    Example
+    -------
+    # pack up a nested dictionary
+    x = wrap_defaultdict(None, 3)
+    for i in range(5):
+        for j in range(5):
+            for k in range(5):
+                x[i][j][k] = random.random()
+                
+    # unwrap the pretty way
+    for (i,j,k),val in upwrap_dictionary(x):
+        # do stuff
+        
+    # unwrap the ugly way
+    for i,jdict in x.items():
+        for j,kdict in jdict.items():
+            for k,val in kdict.items():
+                # do stuffs
+
+    Notes
+    -----
+    - thanks https://stackoverflow.com/questions/68322685/how-do-i-explode-a-nested-dictionary-for-assignment-iteration
+    """
+    # iterate over the top-level dictionary
+    for k, v in nested_dict.items():
+        if isinstance(v, dict):
+            # it's a nested dictionary, so recurse
+            for ks, v2 in unwrap_dictionary(v):
+                # ks is a tuple of keys, and we want to
+                # prepend k, so we convert it into a tuple
+                yield (k,)+ks, v2
+        else:
+            # make sure that in the base case
+            # we're still yielding the keys as a tuple
+            yield (k,), v
+    pass
