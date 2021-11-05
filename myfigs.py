@@ -116,7 +116,7 @@ def slope_graph(x, y, xname, yname, figsize=(3,8), positive_color='black', negat
     # fix the axes and labels
     ax.set_xticks([0])
     _ = ax.set_xticklabels([None], fontsize='x-large')
-    plt.yticks(np.arange(1, nrow(x), 5))
+    plt.yticks(np.arange(1, pyimp.nrow(x), 5))
     plt.ylabel('importance rank', fontsize=15)
 
 
