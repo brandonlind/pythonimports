@@ -7,7 +7,8 @@ import pandas as pd
 import seaborn as sns
 import pythonimports as pyimp
 import numpy as np
-from matplotlib.colors import LogNorm
+import matplotlib.colors as mcolors
+import matplotlib.patches as mpatches
 
 def venn_diagram(a, b, c, set_labels=['A', 'B', 'C'], title=''):
     """Create Venn diagram with three groups.
@@ -100,11 +101,7 @@ def slope_graph(x, *y, labels=['x', 'y'], figsize=(3,8), positive_color='black',
     Notes
     -----
     - thanks https://cduvallet.github.io/posts/2018/03/slopegraphs-in-python
-    """
-    import matplotlib as mpl
-    import matplotlib.colors as mcolors
-    import matplotlib.patches as mpatches
-    
+    """    
     # line colors
     poshex = rgb2hex(colorConverter.to_rgb(positive_color))
     neghex = rgb2hex(colorConverter.to_rgb(negative_color))
@@ -221,7 +218,7 @@ def makesweetgraph(x=None, y=None, cmap="jet", ylab=None, xlab=None, bins=100, s
     ax1.fig.set_size_inches(figsize[0], figsize[1])
     ax1.ax_joint.cla()
     plt.sca(ax1.ax_joint)
-    plt.hist2d(x, y, bins, norm=LogNorm(*vlim), cmap=cmap, range=None if xlim is None else np.array([xlim, ylim]))
+    plt.hist2d(x, y, bins, norm=mcolors.LogNorm(*vlim), cmap=cmap, range=None if xlim is None else np.array([xlim, ylim]))
     # set title and axes labels
     if title is None:
         plt.title("%s\nvs\n%s\n" % (xlab, ylab), y=1.2, x=0.6)
