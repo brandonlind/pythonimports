@@ -75,14 +75,36 @@ def histo_box(data, xticks_by=10, title=None, xlab=None, ylab='count', col=None,
     pass
 
 
-def slope_graph(x, y, xname, yname, figsize=(3,8), positive_color='black', negative_color='tomato', labeldict=None,
-                saveloc=None):
-    """Visually display how rank order of .index changes between two pd.Series, `x` and `y`.
+def slope_graph(x, *y, labels=['x', 'y'], figsize=(3,8), positive_color='black', negative_color='tomato',
+                labeldict=None, saveloc=None, title=None, legloc='center',
+                colors=list(mcolors.TABLEAU_COLORS), markers=None, addtolegend=None, ylabel='importance rank',
+                ascending=False):
+    """Visually display how rank order of .index changes between arbitrary number of pd.Series, `x` and *`y`.
+    
+    Parameters
+    ----------
+    x - pd.Series; shares index with all of `*y`
+    *y - at least one pd.Series with which to visualize rank with `x`
+    labels - list of length = len(y) + 1
+    positive_color & negative_color - color of positive (≥0) rank change between series, color of negative slope
+    labeldict - color of label, label is from pd.Series.index
+    saveloc - location to save figure
+    title - title of figure
+    legloc - location of legend, passed to `ax.legend()`
+    colors - list of colors to apply to each of the set {x, *y} in the order of x+*y
+    markers - the marker shape to apply, one for each of the set {x, *y} in the order of x+*y
+    addtolegend - tuple of (list of marker_type, list of marker_label_for_legend)
+    ylabel - label for the y-axis
+    ascending - bool; if False, lowest value gets lower rank (1 being high rank, and eg 20 being lower rank)
     
     Notes
     -----
     - thanks https://cduvallet.github.io/posts/2018/03/slopegraphs-in-python
     """
+    import matplotlib as mpl
+    import matplotlib.colors as mcolors
+    import matplotlib.patches as mpatches
+    
     # line colors
     poshex = rgb2hex(colorConverter.to_rgb(positive_color))
     neghex = rgb2hex(colorConverter.to_rgb(negative_color))
@@ -92,51 +114,79 @@ def slope_graph(x, y, xname, yname, figsize=(3,8), positive_color='black', negat
     size = 80
     fig, ax = plt.subplots(figsize=figsize)
     
-    xranks = x.rank(ascending=False)
-    yranks = y.rank(ascending=False)
-    for idx in xranks.index:
-        # get the values for each index label from each pd.Series
-        xrank = xranks[idx]
-        yrank = yranks[idx]
+    xranks = x.rank(ascending=ascending)
+    xcolor = colors[0]
+    xname = labels[0]
+    xmarker = 'o' if markers is None else markers[0]
+    
+    for i,other in enumerate(y):
+        yranks = other.rank(ascending=ascending)
+        ycolor = colors[i+1]
+        yname = labels[i+1]
+        ymarker = 'o' if markers is None else markers[i+1]
+        for idx in xranks.index:
+            # get the values for each index label from each pd.Series
+            xrank = xranks[idx]
+            yrank = yranks[idx]
 
-        line_color = neghex if yrank > xrank else poshex
+            line_color = neghex if yrank > xrank else poshex
 
-        # Plot the lines connecting the dots
-        ax.plot([x1, x2], [xrank, yrank], c=line_color, alpha=alpha, zorder=0)
+            # Plot the lines connecting the dots
+            ax.plot([x1, x2], [xrank, yrank], c=line_color, alpha=alpha, zorder=0)
 
-        # annotate
-        plt.annotate(idx, (x1-0.05, xrank), ha='right', c='k' if labeldict is None else labeldict[idx])
-        plt.annotate(idx, (x2+0.05, yrank), ha='left', c='k' if labeldict is None else labeldict[idx])
+            # annotate index labels (next to circles)
+            if i == 0:
+                plt.annotate(idx, (x1-0.1, xrank+0.13), ha='right', c='k' if labeldict is None else labeldict[idx])
+            if (i+1)==len(y):
+                plt.annotate(idx, (x2+0.13, yrank+0.13), ha='left', c='k' if labeldict is None else labeldict[idx])
 
-        # plot the points
-        ax.scatter([x1-0.01], xrank, c='royalblue',
-                   s=size, label=xname, edgecolors='k')
-        ax.scatter([x2+0.01], yrank, c='lightblue',
-                   s=size, label=yname, edgecolors='k')
+            # plot the points
+            ax.scatter([x1], xrank, c=xcolor, s=size, label=xname, edgecolors='k', marker=xmarker)
+            ax.scatter([x2], yrank, c=ycolor, s=size, label=yname, edgecolors='k', marker=ymarker)
+        xranks = yranks.copy()
+        xcolor = ycolor
+        xname = yname
+        xmarker = ymarker
+        x1 += 0.3
+        x2 += 0.3
     # fix the axes and labels
     ax.set_xticks([0])
     _ = ax.set_xticklabels([None], fontsize='x-large')
-    plt.yticks(np.arange(1, pyimp.nrow(x), 5))
-    plt.ylabel('importance rank', fontsize=15)
-
+    plt.yticks(np.arange(1, nrow(x), 5))
+    plt.ylabel(ylabel, fontsize=15)
+    plt.title(title)
 
     # Add legend and fix it to show only the first two elements
     handles, labels = ax.get_legend_handles_labels()
-    lgd = ax.legend(handles[0:2], labels[0:2],   
+    keep_labels = []
+    keep_handles = []
+    for i,label in enumerate(labels):
+        if label not in keep_labels:
+            keep_labels.append(label)
+            keep_handles.append(handles[i])
+    if addtolegend is not None:
+        #mpatches.Patch(color='grey', label='manual patch')   
+        keep_handles = [mpatches.Patch(color=handle.get_facecolor()[0]) for handle in keep_handles]
+        keep_handles.extend(addtolegend[0])
+        keep_labels.extend(addtolegend[1])
+    lgd = ax.legend(keep_handles,
+                    keep_labels,
                     fontsize='large',
-                    loc='upper center',
-                    bbox_to_anchor=(0.5, 1.1),
-                    ncol=2,
+                    loc=legloc,
+                    bbox_to_anchor=(0.5, -0.05),
+                    ncol=len(y)+1,
                     scatterpoints=1)
     lgd.legendHandles[0]._sizes = [size]
     lgd.legendHandles[1]._sizes = [size]
-    plt.xlim(0.5,1.5)
+    low,hi = ax.get_xlim()
+    plt.xlim(0, hi + 0.85)
     ax.invert_yaxis()
     
     if saveloc is not None:
         save_pdf(saveloc)
     
     plt.show()
+
     return None
 
 
@@ -188,4 +238,3 @@ def makesweetgraph(x=None, y=None, cmap="jet", ylab=None, xlab=None, bins=100, s
         save_pdf(saveloc)
     plt.show()
     pass
-
