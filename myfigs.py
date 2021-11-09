@@ -9,6 +9,7 @@ import pythonimports as pyimp
 import numpy as np
 import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
+import pythonimports as pyimp
 
 def venn_diagram(a, b, c, set_labels=['A', 'B', 'C'], title=''):
     """Create Venn diagram with three groups.
@@ -149,7 +150,7 @@ def slope_graph(x, *y, labels=['x', 'y'], figsize=(3,8), positive_color='black',
     # fix the axes and labels
     ax.set_xticks([0])
     _ = ax.set_xticklabels([None], fontsize='x-large')
-    plt.yticks(np.arange(1, nrow(x), 5))
+    plt.yticks(np.arange(1, pyimp.nrow(x), 5))
     plt.ylabel(ylabel, fontsize=15)
     plt.title(title)
 
