@@ -80,7 +80,7 @@ def histo_box(data, xticks_by=10, title=None, xlab=None, ylab='count', col=None,
 def slope_graph(x, *y, labels=['x', 'y'], figsize=(3,8), positive_color='black', negative_color='tomato',
                 labeldict=None, saveloc=None, title=None, legloc='center',
                 colors=list(mcolors.TABLEAU_COLORS), markers=None, addtolegend=None, ylabel='importance rank',
-                ascending=False, legendcols=None):
+                ascending=False, legendcols=None, bbox_to_anchor=(0.5, -0.05)):
     """Visually display how rank order of .index changes between arbitrary number of pd.Series, `x` and *`y`.
     
     Parameters
@@ -171,7 +171,7 @@ def slope_graph(x, *y, labels=['x', 'y'], figsize=(3,8), positive_color='black',
                     keep_labels,
                     fontsize='large',
                     loc=legloc,
-                    bbox_to_anchor=(0.5, -0.05),
+                    bbox_to_anchor=bbox_to_anchor,
                     ncol=len(y)+1 if legendcols is None else legendcols,
                     scatterpoints=1)
     lgd.legendHandles[0]._sizes = [size]
