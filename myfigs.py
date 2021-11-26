@@ -11,42 +11,6 @@ import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
 import pythonimports as pyimp
 
-def venn_diagram(a, b, c, set_labels=['A', 'B', 'C'], title=''):
-    """Create Venn diagram with three groups.
-    
-    Parameters
-    ----------
-    - a,b,c - each are lists of loci to use for overlap calculations
-    
-    Notes
-    -----
-    - thanks stackoverflow! https://stackoverflow.com/questions/19841535/python-matplotlib-venn-diagram
-    """
-    a = list(set(a))
-    b = list(set(b))
-    c = list(set(c))
-    
-    only_a = len(set(a) - set(b+c))
-    only_b = len(set(b) - set(a+c))
-    only_c = len(set(c) - set(a+b))
-
-    a_b = len(set(a).intersection(b))
-    a_c = len(set(a).intersection(c))
-    b_c = len(set(b).intersection(c))
-    
-    a_b_c = len((set(a).intersection(b)).intersection(c))
-    
-    venn_out = venn3(subsets=(only_a, only_b, a_b, only_c, a_c, b_c, a_b_c), set_labels=set_labels)
-    for text in venn_out.set_labels:
-        text.set_fontsize(17)
-    for text in venn_out.subset_labels:
-        text.set_fontsize(10)
-    plt.title(title, fontdict=dict(fontsize=16))
-    plt.show()
-    
-    pass
-
-
 def histo_box(data, xticks_by=10, title=None, xlab=None, ylab='count', col=None, fontsize=20,
               y_pad=1.3, histbins='auto', saveloc=None, rotation=0, **kwargs):
     """Create histogram with boxplot in top margin.
