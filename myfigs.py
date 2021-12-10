@@ -91,7 +91,12 @@ def slope_graph(x, *y, labels=['x', 'y'], figsize=(3,8), positive_color='black',
             xrank = xranks[idx]
             yrank = yranks[idx]
 
-            line_color = neghex if yrank > xrank else poshex
+            if ascending is False:
+                # if large numbers get low ranks (largest is ranked #1)
+                line_color = neghex if yrank > xrank else poshex
+            else:
+                # if large numbers get high ranks (smallest is ranked #1)
+                line_color = neghex if yrank < xrank else poshex
 
             # Plot the lines connecting the dots
             ax.plot([x1, x2], [xrank, yrank], c=line_color, alpha=alpha, zorder=0)
