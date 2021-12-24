@@ -81,7 +81,7 @@ def get_times(seffs: dict, unit="hrs", plot=True) -> list:
     return times
 
 
-def sbatch(shfiles: Union[str, list], sleep=0, printing=False) -> list:
+def sbatch(shfiles: Union[str, list], sleep=0, printing=False, outdir=None) -> list:
     """From a list of .sh shfiles, sbatch them and return associated jobid in a list.
 
     Notes
@@ -107,8 +107,12 @@ def sbatch(shfiles: Union[str, list], sleep=0, printing=False) -> list:
             f"\tfile basename = {filejob}\n" +\
             f"\tsbatchflag = {sbatchflag}\n"
             raise Exception(exceptiontext)
-        
-        os.chdir(os.path.dirname(sh))
+
+        if outdir is None:
+            os.chdir(os.path.dirname(sh))
+        else:
+            os.chdir(outdir)
+
         # try and sbatch file 10 times before giving up
         failcount = 0
         sbatched = False
