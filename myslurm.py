@@ -99,7 +99,7 @@ def sbatch(shfiles: Union[str, list], sleep=0, printing=False, outdir=None) -> l
     for sh in pbar(shfiles):
         # make sure job matches filename
         filejob = op.basename(sh).split(".")[0]
-        sbatchflag = [line for line in read(sh, lines=True) if '--job-name' in line][0].split("job-name=")[1]
+        sbatchflag = [line for line in pyimp.read(sh, lines=True) if '--job-name' in line][0].split("job-name=")[1]
         if filejob != sbatchflag:
             exceptiontext = pyimp.ColorText(
                 "The .sh file's basename does not match the job name in the .sh file's SBATCH flags.\n"
