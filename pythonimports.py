@@ -10,10 +10,10 @@ import shutil
 import datetime
 import numpy as np
 import pandas as pd
+import session_info
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.gridspec as gridspec
-from sinfo import sinfo
 from tqdm import trange
 from os import path as op
 from PIL import ImageColor
@@ -37,6 +37,7 @@ from mymaps import *
 
 # backwards compatibility
 nb = pbar
+sinfo = session_info.show
 # /backwards compatibility
 
 pd.set_option("display.max_columns", 100)
