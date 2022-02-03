@@ -95,6 +95,7 @@ def sbatch(shfiles: Union[str, list], sleep=0, printing=False, outdir=None) -> l
     if isinstance(shfiles, list) is False:
         assert isinstance(shfiles, str)
         shfiles = [shfiles]
+        
     pids = []
     for sh in pbar(shfiles):
         # make sure job matches filename
@@ -135,11 +136,11 @@ def sbatch(shfiles: Union[str, list], sleep=0, printing=False, outdir=None) -> l
                 jobs[q.job()].append(_pid)
             if filejob in list(jobs.keys()):
                 sbatched = True
-                pids = jobs[filejob]
-                if len(pids) > 1:
+                filepids = jobs[filejob]
+                if len(filepids) > 1:
                     # cancel all but the oldest job in the queue
-                    sq.cancel(grepping=sorted(pids)[1:])
-                pid = sorted(pids)[0]
+                    sq.cancel(grepping=sorted(filepids)[1:])
+                pid = sorted(filepids)[0]
                 break
             else:
                 sbatched = False
