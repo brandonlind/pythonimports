@@ -1,8 +1,8 @@
 help documentation as of 
 
-commit 572ef7f911fd6c1d6ede14ba5cf3f93a23fbf941  
-Author: Brandon <brandon.lind@ubc.ca>  
-Date:   Fri Jun 11 14:35:47 2021 -0600
+[33mcommit 2f8a2ee116ec220e0f31e4cb577d158b237cfabb[m  
+Author: Brandon Lind <lind.brandon.m@gmail.com>  
+Date:   Thu Feb 3 07:30:52 2022 -0800
 
 ----
 ### Python Library Documentation: module pythonimports
@@ -121,7 +121,7 @@ FUNCTIONS
         dirs - bool; True if keep only dirs, False if exclude dirs, None if keep files and dirs
         bnames - bool; True if return is file basenames, False if return is full file path
     
-    get_client(profile='default', **kwargs) -> tuple
+    get_client(profile='default', targets=None, **kwargs) -> tuple
         Get lview,dview from ipcluster.
     
     get_skipto_df(f: str, skipto: int, nrows: int, sep='\t', index_col=None, header='infer', **kwargs) -> pandas.core.frame.DataFrame
@@ -289,6 +289,32 @@ FUNCTIONS
     uni(mylist: list) -> list
         Return unique values from list.
     
+    unwrap_dictionary(nested_dict)
+        Instead of iterating a nested dict, spit out all keys and the final value.
+        
+        Example
+        -------
+        # pack up a nested dictionary
+        x = wrap_defaultdict(None, 3)
+        for i in range(5):
+            for j in range(5):
+                for k in range(5):
+                    x[i][j][k] = random.random()
+                    
+        # unwrap the pretty way
+        for (i,j,k),val in upwrap_dictionary(x):
+            # do stuff
+            
+        # unwrap the ugly way
+        for i,jdict in x.items():
+            for j,kdict in jdict.items():
+                for k,val in kdict.items():
+                    # do stuffs
+        
+        Notes
+        -----
+        - thanks https://stackoverflow.com/questions/68322685/how-do-i-explode-a-nested-dictionary-for-assignment-iteration
+    
     update(args: list) -> None
         For jupyter notebook, clear printout and print something new.
         
@@ -299,6 +325,19 @@ FUNCTIONS
     
     watch_async(jobs: list, phase=None, desc=None) -> None
         Wait until all ipyparallel jobs `jobs` are done executing, show progress bar.
+    
+    wrap_defaultdict(instance, times=1)
+        Wrap an `instance` an arbitrary number of `times` to create nested defaultdict.
+        
+        Parameters
+        ----------
+        instance - e.g., list, dict, int, collections.Counter
+        times - the number of nested keys above `instance`; if `times=3` dd[one][two][three] = instance
+        
+        Notes
+        -----
+        using `x.copy` allows pickling (loading to ipyparallel cluster or pkldump)
+            - thanks https://stackoverflow.com/questions/16439301/cant-pickle-defaultdict
 
 DATA
     Optional = typing.Optional
@@ -370,7 +409,7 @@ NAME
     myfigs - Personalized functions to build figures.
 
 FUNCTIONS
-    histo_box(data, xticks_by=10, title=None, xlab=None, ylab='count', col=None, fontsize=20, y_pad=1.3, histbins='auto', saveloc=None, **kwargs)
+    histo_box(data, xticks_by=10, title=None, xlab=None, ylab='count', col=None, fontsize=20, y_pad=1.3, histbins='auto', saveloc=None, rotation=0, **kwargs)
         Create histogram with boxplot in top margin.
         
         https://www.python-graph-gallery.com/24-histogram-with-a-boxplot-on-top-seaborn
@@ -395,23 +434,28 @@ FUNCTIONS
     save_pdf(saveloc)
         After creating a figure in jupyter notebooks, save as PDFs at `saveloc`.
     
-    slope_graph(x, y, xname, yname, figsize=(3, 8), positive_color='black', negative_color='tomato', labeldict=None, saveloc=None)
-        Visually display how rank order of .index changes between two pd.Series, `x` and `y`.
+    slope_graph(x, *y, labels=['x', 'y'], figsize=(3, 8), positive_color='black', negative_color='tomato', labeldict=None, saveloc=None, title=None, legloc='center', colors=['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown', 'tab:pink', 'tab:gray', 'tab:olive', 'tab:cyan'], markers=None, addtolegend=None, ylabel='importance rank', ascending=False, legendcols=None, bbox_to_anchor=(0.5, -0.05))
+        Visually display how rank order of .index changes between arbitrary number of pd.Series, `x` and *`y`.
+        
+        Parameters
+        ----------
+        x - pd.Series; shares index with all of `*y`
+        *y - at least one pd.Series with which to visualize rank with `x`
+        labels - list of length = len(y) + 1
+        positive_color & negative_color - color of positive (≥0) rank change between series, color of negative slope
+        labeldict - color of label, label is from pd.Series.index
+        saveloc - location to save figure
+        title - title of figure
+        legloc - location of legend, passed to `ax.legend()`
+        colors - list of colors to apply to each of the set {x, *y} in the order of x+*y
+        markers - the marker shape to apply, one for each of the set {x, *y} in the order of x+*y
+        addtolegend - tuple of (list of marker_type, list of marker_label_for_legend)
+        ylabel - label for the y-axis
+        ascending - bool; if False, lowest value gets lower rank (1 being high rank, and eg 20 being lower rank)
         
         Notes
         -----
         - thanks https://cduvallet.github.io/posts/2018/03/slopegraphs-in-python
-    
-    venn_diagram(a, b, c, set_labels=['A', 'B', 'C'], title='')
-        Create Venn diagram with three groups.
-        
-        Parameters
-        ----------
-        - a,b,c - each are lists of loci to use for overlap calculations
-        
-        Notes
-        -----
-        - thanks stackoverflow! https://stackoverflow.com/questions/19841535/python-matplotlib-venn-diagram
 
 DATA
     colorConverter = <matplotlib.colors.ColorConverter object>
@@ -941,7 +985,7 @@ FUNCTIONS
     getsq = _getsq(grepping=None, states=[], user=None, **kwargs)
         Get and parse slurm queue according to kwargs criteria.
     
-    sbatch(shfiles: Union[str, list], sleep=0, printing=False) -> list
+    sbatch(shfiles: Union[str, list], sleep=0, printing=False, outdir=None) -> list
         From a list of .sh shfiles, sbatch them and return associated jobid in a list.
         
         Notes
