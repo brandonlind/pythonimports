@@ -14,12 +14,12 @@ import session_info
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.gridspec as gridspec
-from tqdm import trange
+from tqdm import trange as _trange
 from os import path as op
 from PIL import ImageColor
 from os import chdir as cd
 from decimal import Decimal
-from tqdm import tqdm as pbar
+from tqdm import tqdm
 from shutil import copy as cp
 from shutil import move as mv
 from ipyparallel import Client
@@ -36,6 +36,8 @@ from mymaps import *
 #from myfigs import *
 
 # backwards compatibility
+trange = partial(_trange, bar_format='{l_bar}{bar:15}{r_bar}')
+pbar = partial(tqdm, bar_format='{l_bar}{bar:15}{r_bar}')
 nb = pbar
 sinfo = session_info.show
 # /backwards compatibility
@@ -334,7 +336,6 @@ def send_chunks(fxn, elements, thresh, lview, kwargs={}):
 
 def watch_async(jobs: list, phase=None, desc=None) -> None:
     """Wait until all ipyparallel jobs `jobs` are done executing, show progress bar."""
-    from tqdm import trange
 
     print(
         ColorText(
