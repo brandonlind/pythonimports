@@ -1,8 +1,8 @@
 help documentation as of 
 
-[33mcommit 2f8a2ee116ec220e0f31e4cb577d158b237cfabb[m  
+commit 0944645b99e0199b3740ee7b83eab44936ee0829  
 Author: Brandon Lind <lind.brandon.m@gmail.com>  
-Date:   Thu Feb 3 07:30:52 2022 -0800
+Date:   Wed Feb 23 13:59:57 2022 -0500
 
 ----
 ### Python Library Documentation: module pythonimports
@@ -343,6 +343,9 @@ DATA
     Optional = typing.Optional
     Union = typing.Union
     colorConverter = <matplotlib.colors.ColorConverter object>
+    nb = functools.partial(<class 'tqdm.std.tqdm'>, bar_format='{l_bar}{ba...
+    pbar = functools.partial(<class 'tqdm.std.tqdm'>, bar_format='{l_bar}{...
+    trange = functools.partial(<function trange at 0x2ad91c20d310>, bar_fo...
 
 ```
 
@@ -997,6 +1000,63 @@ FUNCTIONS
 
 DATA
     Union = typing.Union
+
+```
+
+
+### Python Library Documentation: module my_r
+```
+
+NAME
+    my_r - Personalized functions to interact with R.
+
+CLASSES
+    builtins.object
+        SetupR
+    
+    class SetupR(builtins.object)
+     |  SetupR(home=None, ld_library_path='')
+     |  
+     |  Set up rpy2 class object for interacting with R.
+     |  
+     |  Methods defined here:
+     |  
+     |  __call__(self, arg)
+     |      Call self as a function.
+     |  
+     |  __cmp__(self, other)
+     |  
+     |  __getattr__(self, attr)
+     |  
+     |  __init__(self, home=None, ld_library_path='')
+     |      Initialize self.  See help(type(self)) for accurate signature.
+     |  
+     |  __repr__(self)
+     |      Return repr(self).
+     |  
+     |  data(self, dataname, _return=False)
+     |      Load data object, `dataname` into R namespace.
+     |  
+     |  library(self, lib)
+     |      Load library into R namespace.
+     |  
+     |  remove(self, *args, all=False)
+     |      Delete objects or functions from namespace.
+     |  
+     |  session_info(self)
+     |      Get R session info.
+     |  
+     |  source(self, path)
+     |      Source R script.
+     |  
+     |  ----------------------------------------------------------------------
+     |  Data descriptors defined here:
+     |  
+     |  __dict__
+     |      dictionary for instance variables (if defined)
+     |  
+     |  __weakref__
+     |      list of weak references to the object (if defined)
 
 ```
 
