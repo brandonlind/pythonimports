@@ -97,7 +97,7 @@ def sbatch(shfiles: Union[str, list], sleep=0, printing=False, outdir=None) -> l
         shfiles = [shfiles]
         
     pids = []
-    for sh in pbar(shfiles):
+    for sh in pbar(shfiles, desc='sbatching'):
         # make sure job matches filename
         filejob = op.basename(sh).split(".")[0]
         sbatchflag = [line for line in pyimp.read(sh, lines=True) if '--job-name' in line][0].split("job-name=")[1]
