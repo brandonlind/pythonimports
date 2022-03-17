@@ -11,6 +11,7 @@ import datetime
 import numpy as np
 import pandas as pd
 import session_info
+import ipyparallel as ipp
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.gridspec as gridspec
@@ -311,6 +312,26 @@ def get_client(profile="default", targets=None, **kwargs) -> tuple:
     lview = rc.load_balanced_view(targets=targets)
     print(len(lview), len(dview))
     return lview, dview
+
+
+def start_engines(targets=None, cluster_id='', n=None, **kwargs):
+    """Start ipcluster engines from within a notebook or python script."""
+    try:
+        # see if engines exist
+        cluster = ipp.Cluster.from_file(cluster_id=cluster_id)
+    except FileNotFoundError as e:
+        print('registering engines')
+        # if not register engines
+        cluster = ipp.Cluster(**kwargs)
+
+    # start engines
+    print(ColorText(str(cluster)).custom('gray'))
+    c = cluster.start_and_connect_sync(n=n)
+    
+    # connect to engines, `c`, indirectly
+    lview,dview = get_client(cluster_id=cluster.cluster_id, targets=targets, **kwargs)
+    
+    return lview, dview, cluster.cluster_id
 
 
 def make_jobs(fxn, inputs: list, lview) -> list:
