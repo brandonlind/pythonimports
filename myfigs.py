@@ -11,6 +11,7 @@ import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
 import pythonimports as pyimp
 
+
 def histo_box(data, xticks_by=10, title=None, xlab=None, ylab='count', col=None, fontsize=20,
               y_pad=1.3, histbins='auto', saveloc=None, rotation=0, **kwargs):
     """Create histogram with boxplot in top margin.
@@ -42,9 +43,9 @@ def histo_box(data, xticks_by=10, title=None, xlab=None, ylab='count', col=None,
 
 
 def slope_graph(x, *y, labels=['x', 'y'], figsize=(3,8), positive_color='black', negative_color='tomato',
-                labeldict=None, saveloc=None, title=None, legloc='center',
+                labeldict=None, shape_color=None, saveloc=None, title=None, legloc='center',
                 colors=list(mcolors.TABLEAU_COLORS), markers=None, addtolegend=None, ylabel='importance rank',
-                ascending=False, legendcols=None, bbox_to_anchor=(0.5, -0.05)):
+                ascending=False, legendcols=None, bbox_to_anchor=(0.5, -0.05), ax=None):
     """Visually display how rank order of .index changes between arbitrary number of pd.Series, `x` and *`y`.
     
     Parameters
@@ -54,14 +55,16 @@ def slope_graph(x, *y, labels=['x', 'y'], figsize=(3,8), positive_color='black',
     labels - list of length = len(y) + 1
     positive_color & negative_color - color of positive (≥0) rank change between series, color of negative slope
     labeldict - color of label, label is from pd.Series.index
+    shape_color - dict; each .index label of x and *y is key, val is color (overrides kwarg `colors`)
     saveloc - location to save figure
     title - title of figure
     legloc - location of legend, passed to `ax.legend()`
-    colors - list of colors to apply to each of the set {x, *y} in the order of x+*y
+    colors - list of colors of len(*y)+1 to apply to all .index labels for each {x, *y} in the order of x+*y (if shape_color is None)
     markers - the marker shape to apply, one for each of the set {x, *y} in the order of x+*y
     addtolegend - tuple of (list of marker_type, list of marker_label_for_legend)
     ylabel - label for the y-axis
     ascending - bool; if False, lowest value gets lower rank (1 being high rank, and eg 20 being lower rank)
+    ax - matplotlib.axes._subplots.AxesSubplot; in case I want a slope graph on an ax within a plt.subplot
     
     Notes
     -----
@@ -74,7 +77,8 @@ def slope_graph(x, *y, labels=['x', 'y'], figsize=(3,8), positive_color='black',
     x1 = 0.85
     x2 = 1.15
     size = 80
-    fig, ax = plt.subplots(figsize=figsize)
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize)
     
     xranks = x.rank(ascending=ascending)
     xcolor = colors[0]
@@ -99,7 +103,7 @@ def slope_graph(x, *y, labels=['x', 'y'], figsize=(3,8), positive_color='black',
                 line_color = neghex if yrank < xrank else poshex
 
             # Plot the lines connecting the dots
-            ax.plot([x1, x2], [xrank, yrank], c=line_color, alpha=alpha, zorder=0)
+            ax.plot([x1, x2], [xrank, yrank], c=line_color, alpha=alpha, zorder=1)
 
             # annotate index labels (next to circles)
             if i == 0:
@@ -108,8 +112,10 @@ def slope_graph(x, *y, labels=['x', 'y'], figsize=(3,8), positive_color='black',
                 plt.annotate(idx, (x2+0.13, yrank+0.13), ha='left', c='k' if labeldict is None else labeldict[idx])
 
             # plot the points
-            ax.scatter([x1], xrank, c=xcolor, s=size, label=xname, edgecolors='k', marker=xmarker)
-            ax.scatter([x2], yrank, c=ycolor, s=size, label=yname, edgecolors='k', marker=ymarker)
+            ax.scatter([x1], xrank, c=xcolor if shape_color is None else shape_color[idx], s=size, label=xname,
+                       edgecolors='k', marker=xmarker, zorder=2)
+            ax.scatter([x2], yrank, c=ycolor if shape_color is None else shape_color[idx], s=size, label=yname, 
+                       dgecolors='k', marker=ymarker, zorder=2)
         xranks = yranks.copy()
         xcolor = ycolor
         xname = yname
@@ -131,6 +137,18 @@ def slope_graph(x, *y, labels=['x', 'y'], figsize=(3,8), positive_color='black',
         if label not in keep_labels:
             keep_labels.append(label)
             keep_handles.append(handles[i])
+
+    if shape_color is not None:  # if color depends on rank level, just use shape with white fill
+        if markers is None:
+            # if markers is None then shapes for x and *y are all circles ('o')
+            raise Exception('combination of shape_color and marker not allowed')
+        keep_handles = []
+        for i,marker in enumerate(markers):
+            keep_handles.append(
+                mlines.Line2D([],[], color='None', marker=marker, linestyle='None',
+                              label=labels[i], markeredgecolor='k')
+            )
+
     if addtolegend is not None:
         #mpatches.Patch(color='grey', label='manual patch')   
         keep_handles = [mpatches.Patch(color=handle.get_facecolor()[0]) for handle in keep_handles]
@@ -140,6 +158,7 @@ def slope_graph(x, *y, labels=['x', 'y'], figsize=(3,8), positive_color='black',
                     keep_labels,
                     fontsize='large',
                     loc=legloc,
+                    borderaxespad=0.5,
                     bbox_to_anchor=bbox_to_anchor,
                     ncol=len(y)+1 if legendcols is None else legendcols,
                     scatterpoints=1)
@@ -152,9 +171,11 @@ def slope_graph(x, *y, labels=['x', 'y'], figsize=(3,8), positive_color='black',
     if saveloc is not None:
         save_pdf(saveloc)
     
-    plt.show()
+    if ax is None:
+        plt.show()
+        return None
 
-    return None
+    return ax
 
 
 def save_pdf(saveloc):
