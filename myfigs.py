@@ -120,7 +120,7 @@ def slope_graph(x, *y, labels=['x', 'y'], figsize=(3,8), positive_color='black',
             ax.scatter([x1], xrank, c=xcolor if shape_color is None else shape_color[idx], s=size, label=xname,
                        edgecolors='k', marker=xmarker, zorder=2)
             ax.scatter([x2], yrank, c=ycolor if shape_color is None else shape_color[idx], s=size, label=yname, 
-                       dgecolors='k', marker=ymarker, zorder=2)
+                       edgecolors='k', marker=ymarker, zorder=2)
         xranks = yranks.copy()
         xcolor = ycolor
         xname = yname
