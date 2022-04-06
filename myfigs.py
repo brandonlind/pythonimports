@@ -1,6 +1,6 @@
 """Personalized functions to build figures."""
 from matplotlib.backends.backend_pdf import PdfPages
-from matplotlib.colors import rgb2hex, colorConverter
+from matplotlib.colors import rgb2hex, colorConverter, LinearSegmentedColormap
 import matplotlib.pyplot as plt
 from matplotlib_venn import venn3, venn3_circles
 import pandas as pd
@@ -10,6 +10,11 @@ import numpy as np
 import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
 import pythonimports as pyimp
+
+
+def create_cmap(list_of_colors, name=None):
+    """Create a custom color map with fine-grain transition."""
+    return LinearSegmentedColormap.from_list(name, list_of_colors, N=100)
 
 
 def histo_box(data, xticks_by=10, title=None, xlab=None, ylab='count', col=None, fontsize=20,
