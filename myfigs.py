@@ -1,6 +1,7 @@
 """Personalized functions to build figures."""
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.colors import rgb2hex, colorConverter, LinearSegmentedColormap
+import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
 from matplotlib_venn import venn3, venn3_circles
 import pandas as pd
@@ -12,9 +13,9 @@ import matplotlib.patches as mpatches
 import pythonimports as pyimp
 
 
-def create_cmap(list_of_colors, name=None):
+def create_cmap(list_of_colors, name=None, grain=500):
     """Create a custom color map with fine-grain transition."""
-    return LinearSegmentedColormap.from_list(name, list_of_colors, N=100)
+    return LinearSegmentedColormap.from_list(name, list_of_colors, N=grain)
 
 
 def histo_box(data, xticks_by=10, title=None, xlab=None, ylab='count', col=None, fontsize=20,
@@ -146,7 +147,7 @@ def slope_graph(x, *y, labels=['x', 'y'], figsize=(3,8), positive_color='black',
     if shape_color is not None:  # if color depends on rank level, just use shape with white fill
         if markers is None:
             # if markers is None then shapes for x and *y are all circles ('o')
-            raise Exception('combination of shape_color and marker not allowed')
+            raise Exception('combination of shape_color and marker kwargs not allowed')
         keep_handles = []
         for i,marker in enumerate(markers):
             keep_handles.append(
@@ -231,3 +232,57 @@ def makesweetgraph(x=None, y=None, cmap="jet", ylab=None, xlab=None, bins=100, s
         save_pdf(saveloc)
     plt.show()
     pass
+
+
+def gradient_image(ax, direction=0.3, cmap_range=(0, 1), extent=(0, 1, 0, 1), **kwargs):
+    """
+    Draw a gradient image based on a colormap.
+
+    Parameters
+    ----------
+    ax : Axes
+        The axes to draw on.
+    extent
+        The extent of the image as (xmin, xmax, ymin, ymax).
+        By default, this is in Axes coordinates but may be
+        changed using the *transform* kwarg.
+    direction : float
+        The direction of the gradient. This is a number in
+        range 0 (=vertical) to 1 (=horizontal).
+    cmap_range : float, float
+        The fraction (cmin, cmax) of the colormap that should be
+        used for the gradient, where the complete colormap is (0, 1).
+    **kwargs
+        Other parameters are passed on to `.Axes.imshow()`.
+        In particular useful is *cmap*.
+        
+    Example
+    -------
+    >> x = # some data
+    >> y = # some data
+    >> fig, ax = plt.subplots()
+    >> ax.scatter(x, y)
+    >> _cmap = create_cmap(['white', 'blue'], grain=1000)
+    >> gradient_image(ax, direction=0.5, transform=ax.transAxes, extent=(0,1,0,1),
+                      cmap=_cmap, cmap_range=(0.0, 0.2))
+        
+    Notes
+    -----
+    thanks https://matplotlib.org/3.2.0/gallery/lines_bars_and_markers/gradient_bar.html
+    """
+    xlim, ylim = ax.get_xlim(), ax.get_ylim()
+    
+    phi = direction * np.pi / 2
+    v = np.array([np.cos(phi), np.sin(phi)])
+    X = np.array([[v @ [1, 0], v @ [1, 1]],
+                  [v @ [0, 0], v @ [0, 1]]])
+    a, b = cmap_range
+    X = a + (b - a) / X.max() * X
+    im = ax.imshow(X, interpolation='bicubic', extent=extent,
+                   vmin=0, vmax=1, **kwargs)
+    
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
+    ax.set_aspect('auto')
+    
+    return im
