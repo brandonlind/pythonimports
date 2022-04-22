@@ -48,10 +48,13 @@ def histo_box(data, xticks_by=10, title=None, xlab=None, ylab='count', col=None,
     pass
 
 
+import matplotlib.lines as mlines
+import matplotlib.colors as mcolors
+# differs from commit because I've moved `marker_size` from being hard-coded (as `size`) to it being a kwarg
 def slope_graph(x, *y, labels=['x', 'y'], figsize=(3,8), positive_color='black', negative_color='tomato',
                 labeldict=None, shape_color=None, saveloc=None, title=None, legloc='center',
                 colors=list(mcolors.TABLEAU_COLORS), markers=None, addtolegend=None, ylabel='importance rank',
-                ascending=False, legendcols=None, bbox_to_anchor=(0.5, -0.05), ax=None):
+                ascending=False, legendcols=None, bbox_to_anchor=(0.5, -0.05), ax=None, marker_size=80):
     """Visually display how rank order of .index changes between arbitrary number of pd.Series, `x` and *`y`.
     
     Parameters
@@ -82,7 +85,6 @@ def slope_graph(x, *y, labels=['x', 'y'], figsize=(3,8), positive_color='black',
     alpha = 0.8
     x1 = 0.85
     x2 = 1.15
-    size = 80
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
     
@@ -118,9 +120,9 @@ def slope_graph(x, *y, labels=['x', 'y'], figsize=(3,8), positive_color='black',
                 plt.annotate(idx, (x2+0.13, yrank+0.13), ha='left', c='k' if labeldict is None else labeldict[idx])
 
             # plot the points
-            ax.scatter([x1], xrank, c=xcolor if shape_color is None else shape_color[idx], s=size, label=xname,
+            ax.scatter([x1], xrank, c=xcolor if shape_color is None else shape_color[idx], s=marker_size, label=xname,
                        edgecolors='k', marker=xmarker, zorder=2)
-            ax.scatter([x2], yrank, c=ycolor if shape_color is None else shape_color[idx], s=size, label=yname, 
+            ax.scatter([x2], yrank, c=ycolor if shape_color is None else shape_color[idx], s=marker_size, label=yname, 
                        edgecolors='k', marker=ymarker, zorder=2)
         xranks = yranks.copy()
         xcolor = ycolor
@@ -168,8 +170,8 @@ def slope_graph(x, *y, labels=['x', 'y'], figsize=(3,8), positive_color='black',
                     bbox_to_anchor=bbox_to_anchor,
                     ncol=len(y)+1 if legendcols is None else legendcols,
                     scatterpoints=1)
-    lgd.legendHandles[0]._sizes = [size]
-    lgd.legendHandles[1]._sizes = [size]
+    lgd.legendHandles[0]._sizes = [marker_size]
+    lgd.legendHandles[1]._sizes = [marker_size]
     low,hi = ax.get_xlim()
     plt.xlim(0, hi + 0.85)
     ax.invert_yaxis()
