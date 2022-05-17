@@ -1030,27 +1030,60 @@ class Squeue:
 getsq = Squeue._getsq  # backwards compatibility
 
 
-def create_watcherfile(
-    pids, directory, watcher_name="watcher", email="brandon.lind@ubc.ca"
-):
-    """From a list of dependency pids, sbatch a file that will email once pids are completed.
+def create_watcherfile(pids, directory, watcher_name="watcher", email="b.lind@northeastern.edu", time='0:00:01', ntasks=1, 
+                       rem_flags=None, mem=25, end_alert=False, fail_alert=True, begin_alert=False, added_text=''):
+    """From a list of dependency `pids`, sbatch a file that will not start until all `pids` have completed.
+    
+    Parameters
+    ----------
+    pids - list of SLURM job IDs
+    directory - where to sbatch the watcher file
+    watcher_name - basename for slurm job queue, and .sh and .outfiles
+    email - where alerts will be sent
+        requires at least of of the following to be True: end_alert, fail_alert, begin_alert
+    time - time requested for job
+    ntasks - number of tasks
+    rem_flags - list of additional SBATCH flags to add (separate with \n)
+        eg - rem_flags=['#SBATCH --cpus-per-task=5', '#SBATCH --nodes=1']
+    mem - requested memory for job
+        default is 25 bytes, but any string will work - eg mem='2500M'
+    end_alert - bool
+        use if wishing to receive an email when the job ends
+    fail_alert - bool
+        use if wishing to receive an email if the job fails
+    begin_alert - bool
+        use if wishing to receive an email when the job begins
+    added text - any text to add within the body of the .sh file
 
     TODO
     ----
-    - incorporate code to save mem and time info
+    - incorporate code to save mem and time info of `pids`
     """
+    if rem_flags is not None:
+        rem_flags = '\n'.join(rem_flags)
+    
+    end_text = '#SBATCH --mail-type=END' if end_alert is True else ''
+    fail_text = '#SBATCH --mail-type=FAIL' if fail_alert is True else ''
+    begin_text = '#SBATCH --mail-type=BEGIN' if begin_alert is True else ''
+    email = f'#SBATCH --mail-user={email}' if any([end_alert, fail_alert, begin_alert]) else ''
+    
     watcherfile = op.join(directory, f"{watcher_name}.sh")
     jpids = ",".join(pids)
     text = f"""#!/bin/bash
 #SBATCH --job-name={watcher_name}
-#SBATCH --time=0:00:01
-#SBATCH --ntasks=1
-#SBATCH --mem=25
-#SBATCH --output=watcher_%j.out
+#SBATCH --time={time}
+#SBATCH --ntasks={ntasks}
+#SBATCH --mem={mem}
+#SBATCH --output={watcher_name}_%j.out
 #SBATCH --dependency=afterok:{jpids}
-#SBATCH --mail-user={email}
-#SBATCH --mail-type=FAIL
-#SBATCH --mail-type=END
+{email}
+{fail_text}
+{end_text}
+{begin_text}
+{rem_flags}
+
+{added_text}
+
 """
 
     with open(watcherfile, "w") as o:
