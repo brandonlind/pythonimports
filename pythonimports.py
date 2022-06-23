@@ -315,7 +315,12 @@ def get_client(profile="default", targets=None, **kwargs) -> tuple:
 
 
 def start_engines(targets=None, cluster_id='', n=None, **kwargs):
-    """Start ipcluster engines from within a notebook or python script."""
+    """Start ipcluster engines from within a python script.
+    
+    Notes
+    -----
+    For some reason, executing this function within a notebook causes fork errors on machines.
+    """
     try:
         # see if engines exist
         cluster = ipp.Cluster.from_file(cluster_id=cluster_id)
