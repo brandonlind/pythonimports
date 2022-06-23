@@ -1059,9 +1059,7 @@ def create_watcherfile(pids, directory, watcher_name="watcher", email="b.lind@no
     ----
     - incorporate code to save mem and time info of `pids`
     """
-    if rem_flags is not None:
-        rem_flags = '\n'.join(rem_flags)
-    
+    rem_flags = '\n'.join(rem_flags) if rem_flags is not None else ''
     end_text = '#SBATCH --mail-type=END' if end_alert is True else ''
     fail_text = '#SBATCH --mail-type=FAIL' if fail_alert is True else ''
     begin_text = '#SBATCH --mail-type=BEGIN' if begin_alert is True else ''
