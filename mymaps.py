@@ -1,3 +1,5 @@
+"""Functions for mapping / GIS."""
+
 import numpy as np
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
@@ -9,6 +11,43 @@ from cartopy.io.img_tiles import GoogleTiles
 from matplotlib.backends.backend_pdf import PdfPages
 
 import pythonimports as pyimp
+
+
+def gdalwarp(infile, netcdf_outfile, proj, gdalwarp_exe=None):
+    """Convert `infile` (eg .tif or .nc) to WGS84 `netcdf_outfile` (.nc).
+    
+    Notes
+    -----
+    conda install -c conda-forge gdal
+    
+    Parameters
+    ----------
+    infile
+        path to input GIS file
+    netcdf_outfile
+        path to where to save converted file in netcdf (.nc) format
+    proj
+        proj string of `infile` - eg
+            proj = '+proj=laea +lat_1=49.0 +lat_2=77.0 +lat_0=45 \
+            +lon_0=-100 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 \
+            +units=m +no_defs'
+    gdalwarp_exe
+        path to gdalwarp executable - eg one created with conda
+            ~/anaconda3/envs/gdal_env/bin/gdalwarp
+    """
+    import subprocess, shutil
+    
+    if gdalwarp_exe is None:
+        gdalwarp_exe = op.join(os.environ['HOME'], 'anaconda3/envs/gdal_env/bin/gdalwarp')
+    
+    output = subprocess.check_output([gdalwarp_exe,
+                                      '-s_srs', proj,
+                                      '-t_srs',  '+proj=longlat +ellps=WGS84',
+                                      '-of', 'netCDF',
+                                      infile,
+                                      netcdf_outfile,
+                                      '-overwrite']).decode('utf-8').split('\n')
+    return output
 
 
 def draw_pie_marker(ratios, xcoord, ycoord, sizes, colors, ax, edgecolors="black", slice_edgecolors="none", alpha=1,
