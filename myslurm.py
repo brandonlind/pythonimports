@@ -35,7 +35,7 @@ def get_mems(seffs: dict, units="MB", plot=True) -> list:
     """
     mems = []
     for info in seffs.values():
-        if "running" in info.state().lower() or "pending" in info.state().lower():
+        if "running" in info.state.lower() or "pending" in info.state.lower():
             continue
         mems.append(info.mem(units=units, per_core=False))
 
@@ -69,7 +69,7 @@ def get_times(seffs: dict, unit="hrs", plot=True) -> list:
     fix: add in other clock units"""
     times = []
     for key, info in seffs.items():
-        if "running" in info.state().lower() or "pending" in info.state().lower():
+        if "running" in info.state.lower() or "pending" in info.state.lower():
             continue
         hrs = info.walltime(unit=unit)
         times.append(hrs)
@@ -133,7 +133,7 @@ def sbatch(shfiles: Union[str, list], sleep=0, printing=False, outdir=None) -> l
             sq = Squeue()
             jobs = defaultdict(list)
             for _pid, q in sq.items():
-                jobs[q.job()].append(_pid)
+                jobs[q.job].append(_pid)
             if filejob in list(jobs.keys()):
                 sbatched = True
                 filepids = jobs[filejob]
@@ -265,70 +265,103 @@ def getpid(out: str) -> str:
 
 class SQInfo:
     """Convert each line returned from `squeue -u $USER`.
+    
+    Assumed
+    -------
+    SQUEUE_FORMAT="%i %u %a %j %t %S %L %D %C %b %m %N (%r) %P"
+    
+    Notes
+    -----
+    - I realized that %N can be blank when pending, and then cause problems with .split()
+        so the attrs now can handle this. But I'm leaving the methods for backwards compatibility.
+    
     Example jobinfo    (index number of list)
     ---------------
-    ('38768536',       0
-     'lindb',          1
-     'def-jonmee_cpu', 2
+    ('29068196',       0
+     'b.lindb',        1
+     'lotterhos',      2
      'batch_0583',     3
-     'PD',             4
+     'R',              4
      'N/A',            5
-     '2-00:00:00',     6
+     '9:52:32',        6
      '1',              7
-     '48',             8
+     '56',             8
      'N/A',            9
-     '50M',            10
-     '(Priority)')     11
+     '2000M',          10
+     'd0036',          11
+     '(Priority)')     12
+     'short'           13
     """
 
     def __init__(self, jobinfo):
         self.info = list(jobinfo)
+        
+        (self.pid,        # 0
+         self.user,       # 1
+         self.account,    # 2
+         self.job,        # 3
+         self.state,      # 4
+         self.start,      # 5
+         self.time,       # 6
+         self.nodes,      # 7
+         self.cpus,       # 8
+         self.tres_p,     # 9
+         self.memory,     # 10
+         *self.nodelist,  # 11
+         self.status,     # 12
+         self.partition   # 13
+        ) = list(jobinfo)
+
         pass
 
     def __repr__(self):
-        return repr(self.info)
+        return repr(self.__dict__)
 
     def __iter__(self):
         return iter(self.info)
 
-    def pid(self):
-        """SLURM_JOB_ID."""
-        return self.info[0]
+#     def pid(self):
+#         """SLURM_JOB_ID."""
+#         return self.info[0]
 
-    def user(self):
-        return self.info[1]
+#     def user(self):
+#         return self.info[1]
 
-    def account(self):
-        return self.info[2]
+#     def account(self):
+#         return self.info[2]
 
-    def job(self):
-        """Job name."""
-        return self.info[3]
+#     def job(self):
+#         """Job name."""
+#         return self.info[3]
 
-    def state(self):
-        """Job state - eg pending, closing, running, failed/completed + exit code."""
-        return self.info[4]
+#     def state(self):
+#         """Job state - eg pending, closing, running, failed/completed + exit code."""
+#         return self.info[4]
 
-    def start(self):
-        """Job start time."""
-        return self.info[5]
+#     def start(self):
+#         """Job start time."""
+#         return self.info[5]
 
-    def time(self):
-        """Remaining time."""
-        return self.info[6]
+#     def time(self):
+#         """Remaining time."""
+#         return self.info[6]
 
-    def nodes(self):
-        """Compute nodes."""
-        return self.info[7]
+#     def nodes(self):
+#         """Number of compute nodes."""
+#         return self.info[7]
+    
+#     def nodelist(self):
+#         """List of compute nodes."""
+#         return self.info[11]
 
-    def cpus(self):
-        return self.info[8]
+#     def cpus(self):
+#         return self.info[8]
 
     def mem(self, units="MB"):
-        memory = self.info[10]
+        memory = self.memory
         if all([memory.endswith("G") is False, memory.endswith("M") is False]):
             print("Unexpected units found in memory: ", memory)
-            raise AssertionError
+            raise Exception
         if memory.endswith("G") and units == "MB":
             memory = memory.replace("G", "")
             memory = int(memory) * 1024
@@ -339,11 +372,14 @@ class SQInfo:
             memory = int(memory.replace("M", ""))
         return memory
 
-    def status(self):
-        return self.info[-1]
+#     def status(self):
+#         return self.info[12]
 
-    def reason(self):
-        return self.status()
+#     def reason(self):
+#         return self.status
+    
+#     def partition(self):
+#         return self.info[13]
 
     pass
 
@@ -432,9 +468,9 @@ class Squeue:
     """
 
     # export SQUEUE_FORMAT
-    # (JOBID USER ACCOUNT NAME ST START_TIME TIME_LEFT NODES CPUS TRES_PER_NODE MIN_MEMORY NODELIST (REASON))
-    #    %i   %u    %a     %j  %t     %S        %L      %D    %C         %b        %m         %N      (%r)
-    os.environ["SQUEUE_FORMAT"] = "%i %u %a %j %t %S %L %D %C %b %m %N (%r)"
+    # (JOBID USER ACCOUNT NAME ST START_TIME TIME_LEFT NODES CPUS TRES_PER_NODE MIN_MEMORY NODELIST (REASON)) PARTITION
+    #    %i   %u    %a     %j  %t     %S        %L      %D    %C         %b        %m         %N      (%r)       %P
+    os.environ["SQUEUE_FORMAT"] = "%i %u %a %j %t %S %L %D %C %b %m %N (%r) %P"
 
     def __repr__(self):
         return repr(self.sq)
@@ -495,7 +531,7 @@ class Squeue:
                                 break
                 if keepit == len(grepping):  # and len(grepping) != 0
                     info = SQInfo(splits)
-                    grepped[info.pid()] = info
+                    grepped[info.pid] = info
         return grepped
 
     @staticmethod
@@ -628,7 +664,7 @@ class Squeue:
                     jobq = Squeue(grepping=jobid)
                     if len(jobq) == 0:
                         return "missing"
-                    elif jobq[jobid].state() == "R":
+                    elif jobq[jobid].state == "R":
                         return "running"
                     # otherwise count as failure
                     failcount += 1
@@ -676,7 +712,7 @@ class Squeue:
                         for ex in exclude:
                             if ex.lower() in _info.lower():
                                 remove = True
-                #                 if 'pd' not in information.state().lower():  # if a job isn't pending, it can't be updated
+                #                 if 'pd' not in information.state.lower():  # if a job isn't pending, it can't be updated
                 #                     remove = True
                 if remove is True:
                     _sq.pop(pid)
@@ -729,7 +765,7 @@ class Squeue:
                 info = _sq[pid]
                 keep = False
                 for state in states:
-                    if state.lower() in info.state().lower():
+                    if state.lower() in info.state.lower():
                         keep = True
                         break
                 if keep is False:
@@ -750,18 +786,18 @@ class Squeue:
         if len(_sq) > 0:
             for q in pbar(list(_sq.values()), desc=desc):
                 # if the job is updated successfully
-                updated_result = Squeue._update_job(cmd, q.job(), q.pid())
+                updated_result = Squeue._update_job(cmd, q.job, q.pid)
                 if updated_result is True:
                     if "scancel" in cmd:
                         # remove job from Squeue container
-                        self.__delitem__(q.pid())
+                        self.__delitem__(q.pid)
                     else:
                         # update job info in Squeue container
-                        self[q.pid()].info = Squeue._update_self(q.info, **kwargs)
+                        self[q.pid].info = Squeue._update_self(q.info, **kwargs)
                 elif updated_result == "running":
-                    self[q.pid()].info = updated_result[1]
+                    self[q.pid].info = updated_result[1]
                 elif updated_result == "missing":
-                    self.__delitem__(q.pid())
+                    self.__delitem__(q.pid)
                 else:
                     assert (
                         updated_result is False
@@ -808,22 +844,22 @@ class Squeue:
     def states(self, **kwargs):
         """Get a list of job states."""
         _sq = self._filter_jobs(self, **kwargs)
-        return [info.state() for q, info in _sq.items()]
+        return [info.state for q, info in _sq.items()]
 
     def pids(self, **kwargs):
         """Get a list of pids, subset with kwargs."""
         _sq = self._filter_jobs(self, **kwargs)
-        return [info.pid() for q, info in _sq.items()]
+        return [info.pid for q, info in _sq.items()]
 
     def jobs(self, **kwargs):
         """Get a list of job names, subset with kwargs."""
         _sq = self._filter_jobs(self, **kwargs)
-        return [info.job() for q, info in _sq.items()]
+        return [info.job for q, info in _sq.items()]
 
     def accounts(self, **kwargs):
         """Get a list of accounts, subset with kwargs."""
         _sq = self._filter_jobs(self, **kwargs)
-        return [info.account() for q, info in _sq.items()]
+        return [info.account for q, info in _sq.items()]
 
     def cancel(self, **kwargs):
         """Cancel jobs in slurm queue, remove job info from Squeue class."""
@@ -912,7 +948,7 @@ class Squeue:
         for pid in list(_sq.keys()):
             # remove non-pending jobs, since these cannot be balanced
             info = _sq[pid]
-            if info.state() != "PD":
+            if info.state != "PD":
                 _sq.pop(pid)
         if len(_sq) == 0 or _sq is None:
             print("\tno pending jobs in queue matching query")
@@ -923,7 +959,7 @@ class Squeue:
 
         if len(user_accts) > 1:
             # get per-account lists of jobs in pending status, return if all accounts have jobs (no need to balance)
-            accts, early_exit_decision = balq.getaccounts([q.info for q in _sq.values() if "pd" in q.state().lower()],
+            accts, early_exit_decision = balq.getaccounts([q.info for q in _sq.values() if "pd" in q.state.lower()],
                                                           "",
                                                           user_accts)
             balq.announceacctlens(accts, early_exit_decision, priority=priority)
@@ -945,14 +981,14 @@ class Squeue:
                 # if the job is no longer on the queried account, it won't be found in new queue query
                 kwargs.pop("onaccount")
             sq = self._filter_jobs(Squeue(), **kwargs)  # re-query the queue, filter
-            balq.announceacctlens(*balq.getaccounts([q.info for q in sq.values() if "pd" in q.state().lower()],
+            balq.announceacctlens(*balq.getaccounts([q.info for q in sq.values() if "pd" in q.state.lower()],
                                                     "final",
                                                     user_accts),
                                   priority=priority)  # print updated counts
             # update self
             for pid, q in _sq.items():
-                account = sq[pid].account()
-                self[q.pid()].info = Squeue._update_self(q.info, account=account)
+                account = sq[pid].account
+                self[q.pid].info = Squeue._update_self(q.info, account=account)
         else:
             print(f"\tthere is only one account ({user_accts[0]}), no more accounts to balance queue.")
 
@@ -968,11 +1004,11 @@ class Squeue:
         states = Counter()
         account_counts = Counter()
         for pid, q in _sq.items():
-            stats[q.account()][q.status()] += 1
-            stats[q.account()][q.state()] += 1
-            statuses[q.status()] += 1
-            states[q.state()] += 1
-            account_counts[q.account()] += 1
+            stats[q.account][q.status] += 1
+            stats[q.account][q.state] += 1
+            statuses[q.status] += 1
+            states[q.state] += 1
+            account_counts[q.account] += 1
 
         # print account stats
         print(pyimp.ColorText("There are %s accounts with jobs matching search criteria." % len(stats.keys())).bold())
@@ -994,15 +1030,15 @@ class Squeue:
         _sq = self._filter_jobs(self, **kwargs)
 
         for pid, q in pbar(_sq.items()):
-            if "pd" in q.state().lower():  # only pending jobs can be held
-                updated_result = Squeue._update_job([shutil.which("scontrol"), "hold"], q.job(), pid)
+            if "pd" in q.state.lower():  # only pending jobs can be held
+                updated_result = Squeue._update_job([shutil.which("scontrol"), "hold"], q.job, pid)
                 if updated_result is True:
                     # update job info in Squeue container
-                    self[q.pid()].info = Squeue._update_self(q.info, **kwargs)
+                    self[q.pid].info = Squeue._update_self(q.info, **kwargs)
                 elif updated_result == "running":
-                    self[q.pid()].info = updated_result[1]
+                    self[q.pid].info = updated_result[1]
                 elif updated_result == "missing":
-                    self.__delitem__(q.pid())
+                    self.__delitem__(q.pid)
         pass
 
     def release(self, **kwargs):
@@ -1011,15 +1047,15 @@ class Squeue:
 
         released = 0
         for pid, q in pbar(_sq.items()):
-            if "held" in q.status().lower():  # JobHeldUser
-                updated_result = Squeue._update_job([shutil.which("scontrol"), "release"], q.job(), pid)
+            if "held" in q.status.lower():  # JobHeldUser
+                updated_result = Squeue._update_job([shutil.which("scontrol"), "release"], q.job, pid)
                 if updated_result is True:
                     # update job info in Squeue container
-                    self[q.pid()].info = Squeue._update_self(q.info, **kwargs)
+                    self[q.pid].info = Squeue._update_self(q.info, **kwargs)
                 elif updated_result == "running":
-                    self[q.pid()].info = updated_result[1]
+                    self[q.pid].info = updated_result[1]
                 elif updated_result == "missing":
-                    self.__delitem__(q.pid())
+                    self.__delitem__(q.pid)
                 released += 1
         print(pyimp.ColorText(f"\tReleased {released} jobs").gray())
         pass
@@ -1090,3 +1126,4 @@ def create_watcherfile(pids, directory, watcher_name="watcher", email="b.lind@no
     print(sbatch(watcherfile))
 
     return watcherfile
+
