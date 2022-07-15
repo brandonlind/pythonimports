@@ -11,6 +11,7 @@ import numpy as np
 import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
 import pythonimports as pyimp
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 def create_cmap(list_of_colors, name=None, grain=500):
@@ -18,34 +19,86 @@ def create_cmap(list_of_colors, name=None, grain=500):
     return LinearSegmentedColormap.from_list(name, list_of_colors, N=grain)
 
 
-def histo_box(data, xticks_by=10, title=None, xlab=None, ylab='count', col=None, fontsize=20,
-              y_pad=1.3, histbins='auto', saveloc=None, rotation=0, **kwargs):
+def histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, fontsize=12,
+              y_pad=1.3, histbins='auto', saveloc=None, rotation=0, ax=None, histplot_kws={},
+              boxplot_kws={}, **kwargs):
     """Create histogram with boxplot in top margin.
     
-    https://www.python-graph-gallery.com/24-histogram-with-a-boxplot-on-top-seaborn"""
+    Parameters
+    ----------
+    data
+        data from which histogram and boxplot are to be made
+    xticks_by - [float, int]
+        interval by which xticks are made on x-axis
+    title - str
+        figure/ax title
+    xlab - str
+        label for x-axis
+    ylab - str
+        label for y-axis
+    col - str
+        column name if pandas.DataFrame is passed to `data`
+    fontsize - int
+        fontsize of ax text
+    y_pad - [float, int]
+        padding for title
+    histobins - int
+        number of bins for histogram
+    saveloc - str
+        where to save - note if `ax` is not None, then `ax` will be saved to `saveloc`
+    rotation - int
+        rotation for x-axis tick labels
+    ax - [matplotlib.axes.Axes, matplotlib.axes._subplots.AxesSubplot]
+        axis canvas upon which to create the histo boxplot
+    boxplot_kws - dict
+        kwargs pass to seaborn.boxplot
+    histplot_kws - dict
+        kwargs passed to seaborn.histplot
+    kwargs
+        passed to plt.subplots
+    
+    Notes
+    ------
+        thanks https://www.python-graph-gallery.com/24-histogram-with-a-boxplot-on-top-seaborn
+    """
     col = 'data' if col is None else col
     if isinstance(data, pd.DataFrame) is False:
         data = pd.DataFrame(data, columns=[col])
 
     # creating a figure composed of two matplotlib.Axes objects (ax_box and ax_hist)
-    f, (ax_box, ax_hist) = plt.subplots(2, sharex=True, gridspec_kw={"height_ratios": (.15, .85)}, **kwargs)
-
+    if ax is None:
+        f, (ax_box, ax_hist) = plt.subplots(2, sharex=True, gridspec_kw={"height_ratios": (.15, .85)}, **kwargs)
+    else:
+        ax_hist = ax
+        divider = make_axes_locatable(ax_hist)
+        ax_box = divider.append_axes("top", size="15%", pad=0.1, sharex=ax_hist)
+        
     # assigning a graph to each ax
-    sns.boxplot(x=data[col], ax=ax_box)
-    sns.histplot(data=data, x=col, ax=ax_hist, bins=histbins)
+    sns.boxplot(x=data[col], ax=ax_box, **boxplot_kws)
+    sns.histplot(data=data, x=col, ax=ax_hist, bins=histbins, **histplot_kws)
 
-    # Remove x axis name for the boxplot
-    ax_box.set(xlabel='')
-    plt.title(title, y=y_pad, fontdict=dict(fontsize=fontsize))
-    plt.xticks(np.arange(0, max(data[col]), xticks_by), rotation=rotation)
-    plt.xlabel(xlab, fontsize=fontsize)
-    plt.ylabel(ylab, fontsize=fontsize)
+    # Remove xlabel and xticks from the boxplot
+    xticklabels = ax_hist.get_xticklabels()
+    ax_box.tick_params(labelbottom=False)
+    ax_box.set_xlabel(None)
+    
+    if title is not None:
+        ax_hist.set_title(title, y=y_pad, fontdict=dict(fontsize=fontsize))
+        
+    if xticks_by is not None:
+        ax_hist.set_xticks(np.arange(0, max(data[col]), xticks_by), rotation=rotation)
+
+    ax_hist.set_xlabel(xlab, fontsize=fontsize)
+        
+    ax_hist.set_ylabel(ylab, fontsize=fontsize)
     
     if saveloc is not None:
         save_pdf(saveloc)
     
-    plt.show()
-    pass
+    if ax is None:
+        plt.show()
+        
+    return ax_box, ax_hist
 
 
 import matplotlib.lines as mlines
