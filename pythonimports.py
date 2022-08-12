@@ -31,6 +31,7 @@ from tqdm.notebook import tqdm as tnb
 from matplotlib.colors import rgb2hex, colorConverter
 from collections import OrderedDict, Counter, defaultdict
 from IPython.display import Markdown, display, clear_output
+from functools import partial
 
 from myslurm import *
 from mymaps import *
