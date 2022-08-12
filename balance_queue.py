@@ -53,7 +53,7 @@ def announceacctlens(accounts, fin, priority=True):
     """How many priority jobs does each account have?
 
     Positional arguments:
-    accounts - dictionary with key = account_name, val = list of jobs (squeue output)
+    accounts - dictionary with key = account_name, val = dict with key = pid and val = job info (squeue output)
     fin - True if this is the final job announcement, otherwise the first announcement
     """
     print("\t%s job announcement" % ("final" if fin is True else "first"))
@@ -86,13 +86,12 @@ def getaccounts(sq, stage, user_accts):
     user_accts - list of slurm accounts to use in balancing
     """
     # get accounts with low priority
-    accounts = {}
-    for q in sq:
-        pid = q[0]
-        account = q[2].split("_")[0]
+    accounts = defaultdict(dict)
+    for pid, info in sq.items():
+        account = info.account
         if account not in accounts and account in user_accts:
             accounts[account] = {}
-        accounts[account][pid] = q
+        accounts[account][pid] = info
 
     # if all user_accts have low priority, exit()
     if len(accounts.keys()) == len(user_accts) and stage != "final":
@@ -109,7 +108,7 @@ def getbalance(accounts, num):
     """Determine how many jobs should be given from one account to another.
 
     Positional arguments:
-    accounts - dictionary with key = account_name, val = list of jobs (squeue output)
+    accounts - dictionary with key = account_name, val = dict with key = pid and val = job info (squeue output)
     num - number of accounts to balance among (this needs to be changed to object not number)
     """
     sums = 0
