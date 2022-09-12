@@ -15,7 +15,7 @@ Distribute priority jobs among accounts. To distribute non-priority jobs see mys
 #    or is set to 'choose' so the user can run from command line
 #    and manually choose which accounts are used
 #
-# accounts are those slurm accounts with '_cpu' returned from the command:
+# accounts are those slurm accounts that do not end with '_gpu' returned from the command:
 #    sshare -U --user $USER --format=Account
 #
 # to manually balance queue using all available accounts:
@@ -45,9 +45,9 @@ Distribute priority jobs among accounts. To distribute non-priority jobs see mys
 import os, shutil, sys, math, subprocess, time
 from random import shuffle
 from collections import Counter
+from collections import defaultdict
 import pythonimports as pyimp
 import myslurm
-
 
 def announceacctlens(accounts, fin, priority=True):
     """How many priority jobs does each account have?
@@ -70,7 +70,7 @@ def adjustjob(acct, jobid):
     """Move job from one account to another."""
     subprocess.Popen([shutil.which("scontrol"),
                       "update",
-                      "Account=%s_cpu" % acct,
+                      "Account=%s" % acct,
                       "JobId=%s" % str(jobid)])
     pass
 
@@ -176,7 +176,7 @@ def get_avail_accounts(parentdir=None, save=False):
                                         "--user",
                                         os.environ["USER"],
                                         "--format=Account"]).decode("utf-8").split("\n"))
-    accts = [acct.split()[0].split("_")[0] for acct in acctout if "_cpu" in acct]
+    accts = [acct.split()[0] for acct in acctout if "_gpu" not in acct]
 
     # for running outside of the pipeline:
     if parentdir is None:
