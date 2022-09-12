@@ -283,8 +283,9 @@ def makedir(directory: str) -> str:
 
     Return directory.
     """
-    if not op.exists(directory):
-        os.makedirs(directory)
+#     if not op.exists(directory):
+    os.makedirs(directory, exist_ok=True)
+    
     return directory
 
 
