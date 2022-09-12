@@ -35,7 +35,7 @@ def get_mems(seffs: dict, units="MB", plot=True) -> list:
     """
     mems = []
     for info in seffs.values():
-        if "running" in info.state.lower() or "pending" in info.state.lower():
+        if "running" in info.state().lower() or "pending" in info.state().lower():
             continue
         mems.append(info.mem(units=units, per_core=False))
 
@@ -69,7 +69,7 @@ def get_times(seffs: dict, unit="hrs", plot=True) -> list:
     fix: add in other clock units"""
     times = []
     for key, info in seffs.items():
-        if "running" in info.state.lower() or "pending" in info.state.lower():
+        if "running" in info.state().lower() or "pending" in info.state().lower():
             continue
         hrs = info.walltime(unit=unit)
         times.append(hrs)
@@ -81,7 +81,7 @@ def get_times(seffs: dict, unit="hrs", plot=True) -> list:
     return times
 
 
-def sbatch(shfiles: Union[str, list], sleep=0, printing=False, outdir=None) -> list:
+def sbatch(shfiles: Union[str, list], sleep=0, printing=False, outdir=None, progress_bar=True) -> list:
     """From a list of .sh shfiles, sbatch them and return associated jobid in a list.
 
     Notes
@@ -96,8 +96,13 @@ def sbatch(shfiles: Union[str, list], sleep=0, printing=False, outdir=None) -> l
         assert isinstance(shfiles, str)
         shfiles = [shfiles]
         
+    if progress_bar is True:
+        iterator = pbar(shfiles, desc='sbatching')
+    else:
+        iterator = shfiles
+        
     pids = []
-    for sh in pbar(shfiles, desc='sbatching'):
+    for sh in iterator:
         # make sure job matches filename
         filejob = op.basename(sh).split(".")[0]
         sbatchflag = [line for line in pyimp.read(sh, lines=True) if '--job-name' in line][0].split("job-name=")[1]
@@ -387,11 +392,11 @@ class SQInfo:
 sqinfo = SQInfo  # backwards compatibility
 
 
-def adjustjob(acct, jobid):
-    """Move job from one account to another."""
-    acct = acct.replace("_cpu", "")
-    subprocess.Popen([shutil.which("scontrol"), "update", f"Account={acct}_cpu", f"JobId={jobid}"])
-    pass
+# def adjustjob(acct, jobid):
+#     """Move job from one account to another."""
+#     acct = acct.replace("_cpu", "")
+#     subprocess.Popen([shutil.which("scontrol"), "update", f"Account={acct}_cpu", f"JobId={jobid}"])
+#     pass
 
 
 class Squeue:
@@ -931,7 +936,7 @@ class Squeue:
         # balance_queue.py originated as part of the CoAdapTree project: github.com/CoAdapTree/varscan_pipeline
         # 🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁🇨🇦🍁
 
-        os.environ["SQUEUE_FORMAT"] = "%i %u %a %j %t %S %L %D %C %b %m %N (%r)"
+        os.environ["SQUEUE_FORMAT"] = "%i %u %a %j %t %S %L %D %C %b %m %N (%r) %P"
 
         if parentdir == 'HOME':
             parentdir = os.environ["HOME"]
@@ -959,7 +964,7 @@ class Squeue:
 
         if len(user_accts) > 1:
             # get per-account lists of jobs in pending status, return if all accounts have jobs (no need to balance)
-            accts, early_exit_decision = balq.getaccounts([q.info for q in _sq.values() if "pd" in q.state.lower()],
+            accts, early_exit_decision = balq.getaccounts(_sq,
                                                           "",
                                                           user_accts)
             balq.announceacctlens(accts, early_exit_decision, priority=priority)
@@ -981,7 +986,7 @@ class Squeue:
                 # if the job is no longer on the queried account, it won't be found in new queue query
                 kwargs.pop("onaccount")
             sq = self._filter_jobs(Squeue(), **kwargs)  # re-query the queue, filter
-            balq.announceacctlens(*balq.getaccounts([q.info for q in sq.values() if "pd" in q.state.lower()],
+            balq.announceacctlens(*balq.getaccounts(sq,
                                                     "final",
                                                     user_accts),
                                   priority=priority)  # print updated counts
