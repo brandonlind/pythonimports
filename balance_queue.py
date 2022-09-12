@@ -80,8 +80,7 @@ def getaccounts(sq, stage, user_accts):
     Count the number of priority jobs assigned to each account.
 
     Positional arguments:
-    sq - list of squeue slurm command jobs, each line is str.split()
-       - slurm_job_id is zeroth element of str.split()
+    sq - Squeue class object, dict-like: keys for slurm_job_ids, values=info
     stage - stage of pipeline, used as keyword to filter jobs in queue
     user_accts - list of slurm accounts to use in balancing
     """
