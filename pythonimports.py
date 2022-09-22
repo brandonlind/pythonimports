@@ -290,10 +290,19 @@ def makedir(directory: str) -> str:
 
 
 def getdirs(paths: Union[str, list], verbose=False, **kwargs) -> list:
-    """Recursively get a list of all subdirs from given path."""
+    """Recursively get a list of all subdirs from given path.
+    
+    Parameters
+    ----------
+    paths - a path (str) or list of paths to explore
+    verbose - whether to print all directories when found
+    kwargs - same kwargs used in `fs` to filter directories that are found    
+    """
     if isinstance(paths, str):
         print("converting to list")
         paths = [paths]
+        
+    # get all subdirectories
     newdirs = []
     for path in paths:
         if op.isdir(path):
@@ -301,10 +310,48 @@ def getdirs(paths: Union[str, list], verbose=False, **kwargs) -> list:
                 print(path)
             newdirs.append(path)
             newestdirs = getdirs(
-                fs(path, dirs=True, **kwargs), verbose=verbose, **kwargs
+                fs(path, dirs=True), verbose=verbose
             )
             newdirs.extend(newestdirs)
-    return newdirs
+
+    # filter for kwargs
+    keeping = []
+    for d in newdirs:
+        keep = []
+        
+        basename = op.basename(d)
+        if 'pattern' in kwargs:
+            if kwargs['pattern'] in basename:
+                keep.append(True)
+            else:
+                keep.append(False)
+                
+        if 'startswith' in kwargs:
+            if basename.startswith(kwargs['startswith']):
+                keep.append(True)
+            else:
+                keep.append(False)
+                
+        if 'endswith' in kwargs:
+            if basename.endswith(kwargs['endswith']):
+                keep.append(True)
+            else:
+                keep.append(False)
+                
+        if 'exclude' in kwargs:
+            if all([excl not in f for excl in kwargs['exclude']]):
+                keep.append(True)
+            else:
+                keep.append(False)
+                
+        if all(keep):
+            if 'bnames' in kwargs and kwargs['bnames'] is True:
+                dname = basename
+            else:
+                dname = d
+            keeping.append(dname)
+            
+    return keeping
 
 
 def get_client(profile="default", targets=None, **kwargs) -> tuple:
@@ -540,12 +587,17 @@ def get_skipto_df(f: str, skipto: int, nrows: int, sep="\t", index_col=None, hea
     df - pandas.DataFrame
     """
     import pandas
+    import pandas._libs.lib as lib
 
     # isolate functions that are wanted to be applied to df chunk after being read in
     if "functions" in list(kwargs.keys()):
         func_dict = kwargs.pop("functions")
     else:
         func_dict = {}
+    
+    # avoid error
+    if 'delim_whitespace' in kwargs.keys():
+        sep=lib.no_default
 
     # read in the appropriate chunk of the file
     if skipto == 0:
