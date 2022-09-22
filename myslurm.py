@@ -320,7 +320,7 @@ class SQInfo:
         pass
 
     def __repr__(self):
-        return repr(self.__dict__)
+        return repr(dict((k, v) for (k, v) in self.__dict__.items() if k!='info'))
 
     def __iter__(self):
         return iter(self.info)
@@ -479,6 +479,30 @@ class Squeue:
 
     def __repr__(self):
         return repr(self.sq)
+    
+    def __add__(self, sq2):
+        assert isinstance(sq2, Squeue)
+        newself = copy.deepcopy(self)
+        newself.sq.update(sq2)
+        return newself
+    
+    def __iadd__(self, sq2):
+        assert isinstance(sq2, Squeue)
+        self.sq.update(sq2)
+        return self
+    
+    def __sub__(self, sq2):
+        assert any([isinstance(sq2, Squeue), isinstance(sq2, list)])
+        newself = copy.deepcopy(self)
+        for pid in sq2:
+            newself.sq.pop(pid)
+        return newself
+    
+    def __isub__(self, sq2):
+        assert any([isinstance(sq2, Squeue), isinstance(sq2, list)])
+        for pid in sq2:
+            self.sq.pop(pid)
+        return self                
 
     def __len__(self):
         return len(self.sq)
@@ -540,8 +564,8 @@ class Squeue:
         return grepped
 
     @staticmethod
-    def _getsq(grepping=None, states=[], user=None, **kwargs):
-        """Get and parse slurm queue according to kwargs criteria."""
+    def _getsq(grepping=None, states=[], user=None, partition=None, **kwargs):
+        """Get and parse slurm queue according to criteria. kwargs is not used."""
 
         def _checksq(sq):
             """Make sure queue slurm command worked. Sometimes it doesn't.
@@ -578,6 +602,8 @@ class Squeue:
             cmd.extend(["-t", "RUNNING"])
         if any(["pending" in states, "PD" in states, "pd" in states]):
             cmd.extend(["-t", "PD"])
+        if partition is not None:
+            cmd.extend(["-p", partition])
 
         # execute command
         found = 0
