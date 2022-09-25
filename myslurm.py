@@ -1,19 +1,22 @@
 """Python commands to interface with slurm queue and seff commands."""
-
-
 import os
 import time
 import subprocess
 import shutil
 import copy
-from tqdm import tqdm as pbar
+from tqdm import tqdm
+from tqdm import trange as _trange
 import matplotlib.pyplot as plt
 from os import path as op
 from collections import defaultdict, Counter
 from typing import Union
+from functools import partial
 
 import pythonimports as pyimp
 import balance_queue as balq
+
+trange = partial(_trange, bar_format='{l_bar}{bar:15}{r_bar}')
+pbar = partial(tqdm, bar_format='{l_bar}{bar:15}{r_bar}')
 
 
 def get_seff(outs: list, desc=None):
@@ -135,7 +138,7 @@ def sbatch(shfiles: Union[str, list], sleep=0, printing=False, outdir=None, prog
                     print("!!!REACHED FAILCOUNT LIMIT OF 10!!!")
                     return pids
             # one more failsafe to ensure a job isn't submitted twice
-            sq = Squeue()
+            sq = Squeue(verbose=False)
             jobs = defaultdict(list)
             for _pid, q in sq.items():
                 jobs[q.job].append(_pid)
@@ -525,13 +528,13 @@ class Squeue:
     def __cmp__(self, other):
         return cmp(self.sq, other.sq)
 
-    def __init__(self, **kwargs):
+    def __init__(self, verbose=True, **kwargs):
         # get queue matching grepping
         self.sq = Squeue._getsq(**kwargs)
         # filter further with kwargs
         if len(self.sq) > 0:
             self.sq = self._filter_jobs(self, **kwargs)
-            if len(self.sq) == 0:
+            if len(self.sq) == 0 and verbose is True:
                 print("\tno jobs in queue matching query")
         pass
 
@@ -686,13 +689,13 @@ class Squeue:
                 # see if job is running or still in queue
                 if all([job is None, jobid is None, "scancel" in "".join(cmd)]):
                     # for scancel -u $USER
-                    sq = Squeue()
+                    sq = Squeue(verbose=False)
                     if len(sq) > 0:
                         failcount += 1
                     else:
                         return True
                 else:
-                    jobq = Squeue(grepping=jobid)
+                    jobq = Squeue(grepping=jobid, verbose=False)
                     if len(jobq) == 0:
                         return "missing"
                     elif jobq[jobid].state == "R":
@@ -804,7 +807,7 @@ class Squeue:
 
         return _sq
 
-    def _update_queue(self, cmd, desc, user=False, **kwargs):
+    def _update_queue(self, cmd, desc, user=False, num_jobs=None, **kwargs):
         """Update jobs in queue and job info in Squeue class object."""
 
         if user is False:  # scontrol commands
@@ -815,7 +818,9 @@ class Squeue:
         _sq = self._filter_jobs(self, **kwargs)
         # update each of the jobs
         if len(_sq) > 0:
-            for q in pbar(list(_sq.values()), desc=desc):
+            if num_jobs is None:
+                num_jobs = len(_sq)
+            for q in pbar(list(_sq.values())[:num_jobs], desc=desc):
                 # if the job is updated successfully
                 updated_result = Squeue._update_job(cmd, q.job, q.pid)
                 if updated_result is True:
@@ -899,7 +904,7 @@ class Squeue:
 
         pass
 
-    def update(self, **kwargs):
+    def update(self, num_jobs=None, **kwargs):
         """Update jobs in slurm queue with scontrol, and update job info in Squeue class.
 
         kwargs - that control what can be updated (other kwargs go to Squeue._filter_jobs)
@@ -909,7 +914,7 @@ class Squeue:
         timelimit - total wall time requested
         """
 
-        def _cmd(account=None, minmemorynode=None, timelimit=None, **kwargs):
+        def _cmd(account=None, minmemorynode=None, timelimit=None, to_partition=None, to_reservation=None, **kwargs):
             """Create bash command for slurm scontrol update."""
             # base command
             cmd_ = "scontrol update"
@@ -923,13 +928,17 @@ class Squeue:
             if timelimit is not None:
                 timelimit = Squeue._handle_clock(timelimit)
                 cmd_ = f"{cmd_} TimeLimit={timelimit}"
+            if to_partition is not None:
+                cmd_ = f"{cmd_} partition={to_partition}"
+            if to_reservation is not None:
+                cmd_ = f"{cmd_} reservation={to_reservation}"
             return cmd_
 
         # get scontrol update command
         cmd = _cmd(**kwargs)
 
         # update each of the jobs
-        Squeue._update_queue(self, cmd, "update", **kwargs)
+        Squeue._update_queue(self, cmd, "update", num_jobs=num_jobs, **kwargs)
         pass
 
     def balance(self, parentdir='HOME', **kwargs):
@@ -1054,6 +1063,7 @@ class Squeue:
         # print state counts
         for state, count in states.items():
             print("\t", count, "jobs with state =", state)
+
         pass
 
     def hold(self, **kwargs):
