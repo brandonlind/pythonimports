@@ -409,13 +409,13 @@ def send_chunks(fxn, elements, thresh, lview, kwargs={}):
     return jobs
 
 
-def watch_async(jobs: list, phase=None, desc=None) -> None:
+def watch_async(jobs: list, phase=None, desc=None, color=None) -> None:
     """Wait until all ipyparallel jobs `jobs` are done executing, show progress bar."""
 
     print(
         ColorText(
             f"\nWatching {len(jobs)} {f'{phase} ' if phase is not None else ''}jobs ..."
-        ).bold()
+        ).bold().custom(color)
     )
     time.sleep(1)
 
@@ -554,16 +554,17 @@ class ColorText:
 
     def custom(self, *color_hex):
         """Print in custom color, `color_hex` - either actual hex, or tuple(r,g,b)"""
-        if len(color_hex) == 1:
-            c = rgb2hex(colorConverter.to_rgb(color_hex[0]))
-            rgb = ImageColor.getcolor(c, "RGB")
-        else:
-            assert (
-                len(color_hex) == 3
-            ), "If not a color hex, ColorText.custom should have R,G,B as input"
-            rgb = color_hex
-        self.text = "\033[{};2;{};{};{}m".format(38, *rgb) + self.text + self.ending
-        self.colors.append(rgb)
+        if color_hex != (None, ):  # allows printing white on black background, black otherwise
+            if len(color_hex) == 1:
+                c = rgb2hex(colorConverter.to_rgb(color_hex[0]))
+                rgb = ImageColor.getcolor(c, "RGB")
+            else:
+                assert (
+                    len(color_hex) == 3
+                ), "If not a color hex, ColorText.custom should have R,G,B as input"
+                rgb = color_hex
+            self.text = "\033[{};2;{};{};{}m".format(38, *rgb) + self.text + self.ending
+            self.colors.append(rgb)
         return self
 
     pass
