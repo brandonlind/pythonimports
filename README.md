@@ -1,8 +1,8 @@
 help documentation as of 
 
-commit 0944645b99e0199b3740ee7b83eab44936ee0829  
+commit b8615a1b82326eedc3141147c0e83c6a099d9994  
 Author: Brandon Lind <lind.brandon.m@gmail.com>  
-Date:   Wed Feb 23 13:59:57 2022 -0500
+Date:   Sun Sep 25 15:03:17 2022 -0400
 
 ----
 ### Python Library Documentation: module pythonimports
@@ -10,74 +10,6 @@ Date:   Wed Feb 23 13:59:57 2022 -0500
 
 NAME
     pythonimports
-
-CLASSES
-    builtins.object
-        ColorText
-    
-    class ColorText(builtins.object)
-     |  ColorText(text: str = '')
-     |  
-     |  Use ANSI escape sequences to print colors +/- bold/underline to bash terminal.
-     |  
-     |  Notes
-     |  -----
-     |  execute ColorText.demo() for a printout of colors.
-     |  
-     |  Methods defined here:
-     |  
-     |  __init__(self, text: str = '')
-     |      Initialize self.  See help(type(self)) for accurate signature.
-     |  
-     |  __repr__(self)
-     |      Return repr(self).
-     |  
-     |  __str__(self)
-     |      Return str(self).
-     |  
-     |  blue(self)
-     |  
-     |  bold(self)
-     |  
-     |  custom(self, *color_hex)
-     |      Print in custom color, `color_hex` - either actual hex, or tuple(r,g,b)
-     |  
-     |  cyan(self)
-     |  
-     |  fail(self)
-     |  
-     |  gray(self)
-     |  
-     |  green(self)
-     |  
-     |  ltblue(self)
-     |  
-     |  ltgray(self)
-     |  
-     |  ltred(self)
-     |  
-     |  pink(self)
-     |  
-     |  purple(self)
-     |  
-     |  underline(self)
-     |  
-     |  warn(self)
-     |  
-     |  ----------------------------------------------------------------------
-     |  Class methods defined here:
-     |  
-     |  demo() from builtins.type
-     |      Prints examples of all colors in normal, bold, underline, bold+underline.
-     |  
-     |  ----------------------------------------------------------------------
-     |  Data descriptors defined here:
-     |  
-     |  __dict__
-     |      dictionary for instance variables (if defined)
-     |  
-     |  __weakref__
-     |      list of weak references to the object (if defined)
 
 FUNCTIONS
     cd = chdir(path)
@@ -143,6 +75,12 @@ FUNCTIONS
     
     getdirs(paths: Union[str, list], verbose=False, **kwargs) -> list
         Recursively get a list of all subdirs from given path.
+        
+        Parameters
+        ----------
+        paths - a path (str) or list of paths to explore
+        verbose - whether to print all directories when found
+        kwargs - same kwargs used in `fs` to filter directories that are found
     
     getmostrecent(files: list, remove=False) -> Union[str, NoneType]
         From a list of files, determine most recent.
@@ -275,6 +213,13 @@ FUNCTIONS
     sleeping(counts: int, desc='sleeping', sleep=1) -> None
         Basically a sleep timer with a progress bar; counts up to `counts`, interval = 1sec.
     
+    start_engines(targets=None, cluster_id='', n=None, **kwargs)
+        Start ipcluster engines from within a python script.
+        
+        Notes
+        -----
+        For some reason, executing this function within a notebook causes fork errors on machines.
+    
     suni(mylist: list) -> list
         Retrun sorted unique values from list.
     
@@ -323,7 +268,7 @@ FUNCTIONS
     values(dikt: dict) -> list
         Get a list of values in a dictionary.
     
-    watch_async(jobs: list, phase=None, desc=None) -> None
+    watch_async(jobs: list, phase=None, desc=None, color=None) -> None
         Wait until all ipyparallel jobs `jobs` are done executing, show progress bar.
     
     wrap_defaultdict(instance, times=1)
@@ -342,10 +287,9 @@ FUNCTIONS
 DATA
     Optional = typing.Optional
     Union = typing.Union
-    colorConverter = <matplotlib.colors.ColorConverter object>
     nb = functools.partial(<class 'tqdm.std.tqdm'>, bar_format='{l_bar}{ba...
     pbar = functools.partial(<class 'tqdm.std.tqdm'>, bar_format='{l_bar}{...
-    trange = functools.partial(<function trange at 0x2ad91c20d310>, bar_fo...
+    trange = functools.partial(<function trange at 0x2ad466b509d0>, bar_fo...
 
 ```
 
@@ -354,7 +298,7 @@ DATA
 ```
 
 NAME
-    mymaps
+    mymaps - Functions for mapping / GIS.
 
 FUNCTIONS
     basemap(extent, shapefiles=None, figsize=(8, 15))
@@ -399,6 +343,26 @@ FUNCTIONS
         -----
         - thanks stackoverflow! https://stackoverflow.com/questions/56337732/how-to-plot-scatter-pie-chart-using-matplotlib
     
+    gdalwarp(infile, netcdf_outfile, proj, gdalwarp_exe=None)
+        Convert `infile` (eg .tif or .nc) to WGS84 `netcdf_outfile` (.nc).
+        
+        Notes
+        -----
+        conda install -c conda-forge gdal
+        
+        Parameters
+        ----------
+        infile
+            path to input GIS file
+        netcdf_outfile
+            path to where to save converted file in netcdf (.nc) format
+        proj
+            proj string of `infile` - eg
+                proj = '+proj=laea +lat_1=49.0 +lat_2=77.0 +lat_0=45             +lon_0=-100 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84             +units=m +no_defs'
+        gdalwarp_exe
+            path to gdalwarp executable - eg one created with conda
+                ~/anaconda3/envs/gdal_env/bin/gdalwarp
+    
     plot_pie_freqs(locus, snpinfo, envinfo, saveloc=None, use_popnames=False, popcolors=None, bmargs={}, **kwargs)
         Create geographic map, overlay pie graphs (ref/alt allele freqs).
 
@@ -412,10 +376,90 @@ NAME
     myfigs - Personalized functions to build figures.
 
 FUNCTIONS
-    histo_box(data, xticks_by=10, title=None, xlab=None, ylab='count', col=None, fontsize=20, y_pad=1.3, histbins='auto', saveloc=None, rotation=0, **kwargs)
+    adjust_box_widths(axes, fac=0.9)
+        Adjust the widths of a seaborn-generated boxplot.
+        
+        Notes
+        -----
+        - thanks https://github.com/mwaskom/seaborn/issues/1076
+    
+    create_cmap(list_of_colors, name=None, grain=500)
+        Create a custom color map with fine-grain transition.
+    
+    gradient_image(ax, direction=0.3, cmap_range=(0, 1), extent=(0, 1, 0, 1), **kwargs)
+        Draw a gradient image based on a colormap.
+        
+        Parameters
+        ----------
+        ax : Axes
+            The axes to draw on.
+        extent
+            The extent of the image as (xmin, xmax, ymin, ymax).
+            By default, this is in Axes coordinates but may be
+            changed using the *transform* kwarg.
+        direction : float
+            The direction of the gradient. This is a number in
+            range 0 (=vertical) to 1 (=horizontal).
+        cmap_range : float, float
+            The fraction (cmin, cmax) of the colormap that should be
+            used for the gradient, where the complete colormap is (0, 1).
+        **kwargs
+            Other parameters are passed on to `.Axes.imshow()`.
+            In particular useful is *cmap*.
+            
+        Example
+        -------
+        >> x = # some data
+        >> y = # some data
+        >> fig, ax = plt.subplots()
+        >> ax.scatter(x, y)
+        >> _cmap = create_cmap(['white', 'blue'], grain=1000)
+        >> gradient_image(ax, direction=0.5, transform=ax.transAxes, extent=(0,1,0,1),
+                          cmap=_cmap, cmap_range=(0.0, 0.2))
+            
+        Notes
+        -----
+        thanks https://matplotlib.org/3.2.0/gallery/lines_bars_and_markers/gradient_bar.html
+    
+    histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, fontsize=12, y_pad=1.3, histbins='auto', saveloc=None, rotation=0, ax=None, histplot_kws={}, boxplot_kws={}, **kwargs)
         Create histogram with boxplot in top margin.
         
-        https://www.python-graph-gallery.com/24-histogram-with-a-boxplot-on-top-seaborn
+        Parameters
+        ----------
+        data
+            data from which histogram and boxplot are to be made
+        xticks_by - [float, int]
+            interval by which xticks are made on x-axis
+        title - str
+            figure/ax title
+        xlab - str
+            label for x-axis
+        ylab - str
+            label for y-axis
+        col - str
+            column name if pandas.DataFrame is passed to `data`
+        fontsize - int
+            fontsize of ax text
+        y_pad - [float, int]
+            padding for title
+        histobins - int
+            number of bins for histogram
+        saveloc - str
+            where to save - note if `ax` is not None, then `ax` will be saved to `saveloc`
+        rotation - int
+            rotation for x-axis tick labels
+        ax - [matplotlib.axes.Axes, matplotlib.axes._subplots.AxesSubplot]
+            axis canvas upon which to create the histo boxplot
+        boxplot_kws - dict
+            kwargs pass to seaborn.boxplot
+        histplot_kws - dict
+            kwargs passed to seaborn.histplot
+        kwargs
+            passed to plt.subplots
+        
+        Notes
+        ------
+            thanks https://www.python-graph-gallery.com/24-histogram-with-a-boxplot-on-top-seaborn
     
     makesweetgraph(x=None, y=None, cmap='jet', ylab=None, xlab=None, bins=100, saveloc=None, figsize=(5, 4), snsbins=60, title=None, xlim=None, ylim=None, vlim=(None, None)) -> None
         Make 2D histogram with marginal histograms for each axis.
@@ -437,7 +481,7 @@ FUNCTIONS
     save_pdf(saveloc)
         After creating a figure in jupyter notebooks, save as PDFs at `saveloc`.
     
-    slope_graph(x, *y, labels=['x', 'y'], figsize=(3, 8), positive_color='black', negative_color='tomato', labeldict=None, saveloc=None, title=None, legloc='center', colors=['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown', 'tab:pink', 'tab:gray', 'tab:olive', 'tab:cyan'], markers=None, addtolegend=None, ylabel='importance rank', ascending=False, legendcols=None, bbox_to_anchor=(0.5, -0.05))
+    slope_graph(x, *y, labels=['x', 'y'], figsize=(3, 8), positive_color='black', negative_color='tomato', labeldict=None, shape_color=None, saveloc=None, title=None, legloc='center', colors=['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown', 'tab:pink', 'tab:gray', 'tab:olive', 'tab:cyan'], markers=None, addtolegend=None, ylabel='importance rank', ascending=False, legendcols=None, bbox_to_anchor=(0.5, -0.05), ax=None, marker_size=80)
         Visually display how rank order of .index changes between arbitrary number of pd.Series, `x` and *`y`.
         
         Parameters
@@ -447,14 +491,16 @@ FUNCTIONS
         labels - list of length = len(y) + 1
         positive_color & negative_color - color of positive (≥0) rank change between series, color of negative slope
         labeldict - color of label, label is from pd.Series.index
+        shape_color - dict; each .index label of x and *y is key, val is color (overrides kwarg `colors`)
         saveloc - location to save figure
         title - title of figure
         legloc - location of legend, passed to `ax.legend()`
-        colors - list of colors to apply to each of the set {x, *y} in the order of x+*y
+        colors - list of colors of len(*y)+1 to apply to all .index labels for each {x, *y} in the order of x+*y (if shape_color is None)
         markers - the marker shape to apply, one for each of the set {x, *y} in the order of x+*y
         addtolegend - tuple of (list of marker_type, list of marker_label_for_legend)
         ylabel - label for the y-axis
         ascending - bool; if False, lowest value gets lower rank (1 being high rank, and eg 20 being lower rank)
+        ax - matplotlib.axes._subplots.AxesSubplot; in case I want a slope graph on an ax within a plt.subplot
         
         Notes
         -----
@@ -487,7 +533,7 @@ DESCRIPTION
     #    or is set to 'choose' so the user can run from command line
     #    and manually choose which accounts are used
     #
-    # accounts are those slurm accounts with '_cpu' returned from the command:
+    # accounts are those slurm accounts that do not end with '_gpu' returned from the command:
     #    sshare -U --user $USER --format=Account
     #
     # to manually balance queue using all available accounts:
@@ -521,7 +567,7 @@ FUNCTIONS
         How many priority jobs does each account have?
         
         Positional arguments:
-        accounts - dictionary with key = account_name, val = list of jobs (squeue output)
+        accounts - dictionary with key = account_name, val = dict with key = pid and val = job info (squeue output)
         fin - True if this is the final job announcement, otherwise the first announcement
     
     choose_accounts(accts)
@@ -542,8 +588,7 @@ FUNCTIONS
         Count the number of priority jobs assigned to each account.
         
         Positional arguments:
-        sq - list of squeue slurm command jobs, each line is str.split()
-           - slurm_job_id is zeroth element of str.split()
+        sq - Squeue class object, dict-like: keys for slurm_job_ids, values=info
         stage - stage of pipeline, used as keyword to filter jobs in queue
         user_accts - list of slurm accounts to use in balancing
     
@@ -551,7 +596,7 @@ FUNCTIONS
         Determine how many jobs should be given from one account to another.
         
         Positional arguments:
-        accounts - dictionary with key = account_name, val = list of jobs (squeue output)
+        accounts - dictionary with key = account_name, val = dict with key = pid and val = job info (squeue output)
         num - number of accounts to balance among (this needs to be changed to object not number)
     
     main(keyword, parentdir)
@@ -577,26 +622,39 @@ CLASSES
     builtins.object
         SQInfo
         Seff
+        Seffs
         Squeue
     
     class SQInfo(builtins.object)
      |  SQInfo(jobinfo)
      |  
      |  Convert each line returned from `squeue -u $USER`.
+     |  
+     |  Assumed
+     |  -------
+     |  SQUEUE_FORMAT="%i %u %a %j %t %S %L %D %C %b %m %N (%r) %P"
+     |  
+     |  Notes
+     |  -----
+     |  - I realized that %N can be blank when pending, and then cause problems with .split()
+     |      so the attrs now can handle this. But I'm leaving the methods for backwards compatibility.
+     |  
      |  Example jobinfo    (index number of list)
      |  ---------------
-     |  ('38768536',       0
-     |   'lindb',          1
-     |   'def-jonmee_cpu', 2
+     |  ('29068196',       0
+     |   'b.lindb',        1
+     |   'lotterhos',      2
      |   'batch_0583',     3
-     |   'PD',             4
+     |   'R',              4
      |   'N/A',            5
-     |   '2-00:00:00',     6
+     |   '9:52:32',        6
      |   '1',              7
-     |   '48',             8
+     |   '56',             8
      |   'N/A',            9
-     |   '50M',            10
-     |   '(Priority)')     11
+     |   '2000M',          10
+     |   'd0036',          11
+     |   '(Priority)')     12
+     |   'short'           13
      |  
      |  Methods defined here:
      |  
@@ -608,35 +666,7 @@ CLASSES
      |  __repr__(self)
      |      Return repr(self).
      |  
-     |  account(self)
-     |  
-     |  cpus(self)
-     |  
-     |  job(self)
-     |      Job name.
-     |  
      |  mem(self, units='MB')
-     |  
-     |  nodes(self)
-     |      Compute nodes.
-     |  
-     |  pid(self)
-     |      SLURM_JOB_ID.
-     |  
-     |  reason(self)
-     |  
-     |  start(self)
-     |      Job start time.
-     |  
-     |  state(self)
-     |      Job state - eg pending, closing, running, failed/completed + exit code.
-     |  
-     |  status(self)
-     |  
-     |  time(self)
-     |      Remaining time.
-     |  
-     |  user(self)
      |  
      |  ----------------------------------------------------------------------
      |  Data descriptors defined here:
@@ -646,6 +676,11 @@ CLASSES
      |  
      |  __weakref__
      |      list of weak references to the object (if defined)
+     |  
+     |  ----------------------------------------------------------------------
+     |  Data and other attributes defined here:
+     |  
+     |  __slotnames__ = []
     
     class Seff(builtins.object)
      |  Seff(slurm_job_id)
@@ -654,17 +689,17 @@ CLASSES
      |  
      |  example output from os.popen __init__ call
      |  
-     |  ['Job ID: 38771990',
-     |  'Cluster: cedar',
-     |  'User/Group: lindb/lindb',
-     |  'State: COMPLETED (exit code 0)',
-     |  'Nodes: 1',
-     |  'Cores per node: 48',
-     |  'CPU Utilized: 56-18:58:40',
-     |  'CPU Efficiency: 88.71% of 64-00:26:24 core-walltime',
-     |  'Job Wall-clock time: 1-08:00:33',
-     |  'Memory Utilized: 828.22 MB',
-     |  'Memory Efficiency: 34.51% of 2.34 GB']
+     |  ['Job ID: 38771990',                                      0
+     |  'Cluster: cedar',                                         1
+     |  'User/Group: lindb/lindb',                                2
+     |  'State: COMPLETED (exit code 0)',                         3
+     |  'Nodes: 1',                                               4  # won't always show up
+     |  'Cores per node: 48',                                     5 -6
+     |  'CPU Utilized: 56-18:58:40',                              6 -5
+     |  'CPU Efficiency: 88.71% of 64-00:26:24 core-walltime',    7 -4
+     |  'Job Wall-clock time: 1-08:00:33',                        8 -3
+     |  'Memory Utilized: 828.22 MB',                             9 -2
+     |  'Memory Efficiency: 34.51% of 2.34 GB']                  10 -1
      |  
      |  Methods defined here:
      |  
@@ -673,6 +708,8 @@ CLASSES
      |  
      |  __repr__(self)
      |      Return repr(self).
+     |  
+     |  copy(self)
      |  
      |  core_walltime(self, unit='clock') -> str
      |      Get time that CPUs were active (across all cores).
@@ -710,8 +747,121 @@ CLASSES
      |  __weakref__
      |      list of weak references to the object (if defined)
     
+    class Seffs(builtins.object)
+     |  Seffs(outs=None, seffs=None, pids=None, pids_as_keys=True, units='MB', unit='clock', plot=False, progress_bar=True)
+     |  
+     |  dict-like container with arbitrary keys and values for multiple `Seff` class objects.
+     |  
+     |  Notes
+     |  -----
+     |  - __isub__ and __iadd__ do not Seffs.check_shfiles for duplicates (but __add__ and __sub__ do)
+     |  
+     |  Methods defined here:
+     |  
+     |  __add__(self, seffs2)
+     |  
+     |  __contains__(self, key)
+     |  
+     |  __delitem__(self, key)
+     |  
+     |  __getitem__(self, key)
+     |  
+     |  __iadd__(self, seffs2)
+     |  
+     |  __init__(self, outs=None, seffs=None, pids=None, pids_as_keys=True, units='MB', unit='clock', plot=False, progress_bar=True)
+     |      Initialize self.  See help(type(self)) for accurate signature.
+     |  
+     |  __isub__(self, seffs2)
+     |  
+     |  __iter__(self)
+     |  
+     |  __len__(self)
+     |  
+     |  __repr__(self)
+     |      Return repr(self).
+     |  
+     |  __setattr__(self, key, value)
+     |      Implement setattr(self, name, value).
+     |  
+     |  __setitem__(self, key, item)
+     |  
+     |  __sub__(self, seffs2)
+     |  
+     |  cancelled(self)
+     |      Return Seffs object for any cancelled job.
+     |  
+     |  completed(self)
+     |      Return Seffs object for any *successfully* completed job (compare to Seffs.finished()).
+     |  
+     |  copy(self)
+     |  
+     |  failed(self)
+     |      Return Seffs object for any failed job.
+     |  
+     |  finished(self)
+     |      Return non-running and non-pending jobs.
+     |  
+     |  items(self)
+     |  
+     |  keys(self)
+     |  
+     |  len(self)
+     |  
+     |  out_sh(self)
+     |      key = out, val = sh.
+     |  
+     |  pending(self)
+     |      Return pending jobs.
+     |  
+     |  plot_mems(self, **kwargs)
+     |  
+     |  plot_times(self, **kwargs)
+     |  
+     |  running(self)
+     |      Return Seffs object for any running job.
+     |  
+     |  sh_out(self, most_recent=True)
+     |      key = sh, val = list of outs or most_recent out.
+     |      
+     |      TODO
+     |      ----
+     |      - add `remove` kwarg and pass to pyimp.getmostrecent
+     |          - but do I care that any outfiles removed could have elements within the Seff?
+     |              - eg a pid or out as a key
+     |  
+     |  timeouts(self)
+     |      Return Seffs object for any timeout jobs.
+     |  
+     |  uncompleted(self)
+     |      Return Seffs object for any uncompleted job.
+     |      
+     |      Notes
+     |      -----
+     |      - if most recent .out failed but an early .out completed, this code will miss that
+     |  
+     |  values(self)
+     |  
+     |  ----------------------------------------------------------------------
+     |  Class methods defined here:
+     |  
+     |  check_shfiles(shfiles) from builtins.type
+     |  
+     |  ----------------------------------------------------------------------
+     |  Static methods defined here:
+     |  
+     |  filter_states(seffs, state)
+     |  
+     |  ----------------------------------------------------------------------
+     |  Data descriptors defined here:
+     |  
+     |  __dict__
+     |      dictionary for instance variables (if defined)
+     |  
+     |  __weakref__
+     |      list of weak references to the object (if defined)
+    
     class Squeue(builtins.object)
-     |  Squeue(**kwargs)
+     |  Squeue(verbose=True, **kwargs)
      |  
      |  dict-like container class for holding and updating slurm squeue information.
      |  
@@ -784,6 +934,8 @@ CLASSES
      |  
      |  Methods defined here:
      |  
+     |  __add__(self, sq2)
+     |  
      |  __cmp__(self, other)
      |  
      |  __contains__(self, pid)
@@ -792,8 +944,12 @@ CLASSES
      |  
      |  __getitem__(self, key)
      |  
-     |  __init__(self, **kwargs)
+     |  __iadd__(self, sq2)
+     |  
+     |  __init__(self, verbose=True, **kwargs)
      |      Initialize self.  See help(type(self)) for accurate signature.
+     |  
+     |  __isub__(self, sq2)
      |  
      |  __iter__(self)
      |  
@@ -803,6 +959,8 @@ CLASSES
      |      Return repr(self).
      |  
      |  __setitem__(self, key, item)
+     |  
+     |  __sub__(self, sq2)
      |  
      |  accounts(self, **kwargs)
      |      Get a list of accounts, subset with kwargs.
@@ -848,6 +1006,9 @@ CLASSES
      |  
      |  keys(self)
      |  
+     |  partitions(self)
+     |      Get counts of job states across partitions.
+     |  
      |  pending(self)
      |  
      |  pids(self, **kwargs)
@@ -864,7 +1025,7 @@ CLASSES
      |  summary(self, **kwargs)
      |      Print counts of states and statuses of the queue.
      |  
-     |  update(self, **kwargs)
+     |  update(self, num_jobs=None, **kwargs)
      |      Update jobs in slurm queue with scontrol, and update job info in Squeue class.
      |      
      |      kwargs - that control what can be updated (other kwargs go to Squeue._filter_jobs)
@@ -883,25 +1044,42 @@ CLASSES
      |  
      |  __weakref__
      |      list of weak references to the object (if defined)
+     |  
+     |  ----------------------------------------------------------------------
+     |  Data and other attributes defined here:
+     |  
+     |  __slotnames__ = []
     
     sqinfo = class SQInfo(builtins.object)
      |  sqinfo(jobinfo)
      |  
      |  Convert each line returned from `squeue -u $USER`.
+     |  
+     |  Assumed
+     |  -------
+     |  SQUEUE_FORMAT="%i %u %a %j %t %S %L %D %C %b %m %N (%r) %P"
+     |  
+     |  Notes
+     |  -----
+     |  - I realized that %N can be blank when pending, and then cause problems with .split()
+     |      so the attrs now can handle this. But I'm leaving the methods for backwards compatibility.
+     |  
      |  Example jobinfo    (index number of list)
      |  ---------------
-     |  ('38768536',       0
-     |   'lindb',          1
-     |   'def-jonmee_cpu', 2
+     |  ('29068196',       0
+     |   'b.lindb',        1
+     |   'lotterhos',      2
      |   'batch_0583',     3
-     |   'PD',             4
+     |   'R',              4
      |   'N/A',            5
-     |   '2-00:00:00',     6
+     |   '9:52:32',        6
      |   '1',              7
-     |   '48',             8
+     |   '56',             8
      |   'N/A',            9
-     |   '50M',            10
-     |   '(Priority)')     11
+     |   '2000M',          10
+     |   'd0036',          11
+     |   '(Priority)')     12
+     |   'short'           13
      |  
      |  Methods defined here:
      |  
@@ -913,35 +1091,7 @@ CLASSES
      |  __repr__(self)
      |      Return repr(self).
      |  
-     |  account(self)
-     |  
-     |  cpus(self)
-     |  
-     |  job(self)
-     |      Job name.
-     |  
      |  mem(self, units='MB')
-     |  
-     |  nodes(self)
-     |      Compute nodes.
-     |  
-     |  pid(self)
-     |      SLURM_JOB_ID.
-     |  
-     |  reason(self)
-     |  
-     |  start(self)
-     |      Job start time.
-     |  
-     |  state(self)
-     |      Job state - eg pending, closing, running, failed/completed + exit code.
-     |  
-     |  status(self)
-     |  
-     |  time(self)
-     |      Remaining time.
-     |  
-     |  user(self)
      |  
      |  ----------------------------------------------------------------------
      |  Data descriptors defined here:
@@ -951,20 +1101,44 @@ CLASSES
      |  
      |  __weakref__
      |      list of weak references to the object (if defined)
+     |  
+     |  ----------------------------------------------------------------------
+     |  Data and other attributes defined here:
+     |  
+     |  __slotnames__ = []
 
 FUNCTIONS
-    adjustjob(acct, jobid)
-        Move job from one account to another.
-    
     clock_hrs(clock: str, unit='hrs') -> float
         From a clock (days-hrs:min:sec) extract hrs or days as float.
     
-    create_watcherfile(pids, directory, watcher_name='watcher', email='brandon.lind@ubc.ca')
-        From a list of dependency pids, sbatch a file that will email once pids are completed.
+    create_watcherfile(pids, directory, watcher_name='watcher', email='b.lind@northeastern.edu', time='0:00:01', ntasks=1, rem_flags=None, mem=25, end_alert=False, fail_alert=True, begin_alert=False, added_text='')
+        From a list of dependency `pids`, sbatch a file that will not start until all `pids` have completed.
+            
+            Parameters
+            ----------
+            pids - list of SLURM job IDs
+            directory - where to sbatch the watcher file
+            watcher_name - basename for slurm job queue, and .sh and .outfiles
+            email - where alerts will be sent
+                requires at least of of the following to be True: end_alert, fail_alert, begin_alert
+            time - time requested for job
+            ntasks - number of tasks
+            rem_flags - list of additional SBATCH flags to add (separate with 
+        )
+                eg - rem_flags=['#SBATCH --cpus-per-task=5', '#SBATCH --nodes=1']
+            mem - requested memory for job
+                default is 25 bytes, but any string will work - eg mem='2500M'
+            end_alert - bool
+                use if wishing to receive an email when the job ends
+            fail_alert - bool
+                use if wishing to receive an email if the job fails
+            begin_alert - bool
+                use if wishing to receive an email when the job begins
+            added text - any text to add within the body of the .sh file
         
-        TODO
-        ----
-        - incorporate code to save mem and time info
+            TODO
+            ----
+            - incorporate code to save mem and time info of `pids`
     
     get_mems(seffs: dict, units='MB', plot=True) -> list
         From output by `get_seff()`, extract mem in `units` units; histogram if `plot` is True.
@@ -974,8 +1148,25 @@ FUNCTIONS
         - seffs : dict of any key with values of class Seff
         - units : passed to Seff._convert_mem(). options: GB, MB, KB
     
-    get_seff(outs: list, desc=None)
-        From a list of .out files (ending in f'_{SLURM_JOB_ID}.out'), get seff output.
+    get_seff(outs=None, pids=None, desc='executing seff commands', progress_bar=True, pids_as_keys=False)
+        From a list of outs or pids, get seff output.
+        
+        Parameters
+        ----------
+        outs : list
+            .out files (ending in f'_{SLURM_JOB_ID}.out')
+        pids : list
+            a list of slurm_job_ids
+        desc
+            description for progress bar
+        progress_bar : bool
+            whether to use a progress bar when querying seff
+        pids_as_keys : bool
+            if outs is not None, retrieve pid from each outfile to use as the key
+            
+        Notes
+        -----
+        - assumes f'{job}_{slurm_job_id}.out' and f'{job}.sh' underly slurm jobs
     
     get_times(seffs: dict, unit='hrs', plot=True) -> list
         From dict(seffs) [val = seff output], get times in hours.
@@ -985,10 +1176,10 @@ FUNCTIONS
     getpid(out: str) -> str
         From an .out file with structure <anytext_JOBID.out>, return JOBID.
     
-    getsq = _getsq(grepping=None, states=[], user=None, **kwargs)
-        Get and parse slurm queue according to kwargs criteria.
+    getsq = _getsq(grepping=None, states=[], user=None, partition=None, **kwargs)
+        Get and parse slurm queue according to criteria. kwargs is not used.
     
-    sbatch(shfiles: Union[str, list], sleep=0, printing=False, outdir=None) -> list
+    sbatch(shfiles: Union[str, list], sleep=0, printing=False, outdir=None, progress_bar=True) -> list
         From a list of .sh shfiles, sbatch them and return associated jobid in a list.
         
         Notes
@@ -1000,6 +1191,9 @@ FUNCTIONS
 
 DATA
     Union = typing.Union
+    __warningregistry__ = {'version': 110, ('There are multiple shfiles as...
+    pbar = functools.partial(<class 'tqdm.std.tqdm'>, bar_format='{l_bar}{...
+    trange = functools.partial(<function trange at 0x2ad466b509d0>, bar_fo...
 
 ```
 
@@ -1009,6 +1203,11 @@ DATA
 
 NAME
     my_r - Personalized functions to interact with R.
+
+DESCRIPTION
+    TODO
+    ----
+    - R.plot save/show pdf - right now it will save/show png etc but if pdf only can save but not show
 
 CLASSES
     builtins.object
@@ -1037,8 +1236,26 @@ CLASSES
      |  data(self, dataname, _return=False)
      |      Load data object, `dataname` into R namespace.
      |  
+     |  help(self, obj)
+     |      Get help documentation for an object, `obj`.
+     |  
      |  library(self, lib)
      |      Load library into R namespace.
+     |  
+     |  plot(self, obj, kind='plot', width=600, height=600, dpi=100, saveloc=None, **kwargs)
+     |      Plot in line with jupyter notebook.
+     |      
+     |      Parameters
+     |      ----------
+     |      obj - rpy2 object, or string - if string then look for unstrung string in R environment
+     |      kind - eg plot, barplot, boxplot
+     |      width/height/dpi - figure qualities; dpi applies to non-pdf
+     |      saveloc - path to save figure - must contain suffix (eg .png, .jpeg, .pdf)
+     |      
+     |      Notes
+     |      -----
+     |      - this is a bit hacky (tmp files, inner()) so that I can save and show pdfs in the same process
+     |          - without this, I can create and display non-pdfs
      |  
      |  remove(self, *args, all=False)
      |      Delete objects or functions from namespace.
