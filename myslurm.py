@@ -7,23 +7,85 @@ import copy
 from tqdm import tqdm
 from tqdm import trange as _trange
 import matplotlib.pyplot as plt
+import pandas as pd
 from os import path as op
 from collections import defaultdict, Counter
 from typing import Union
 from functools import partial
+import warnings
 
 import pythonimports as pyimp
 import balance_queue as balq
+import myfigs
+from myclasses import MySeries
 
 trange = partial(_trange, bar_format='{l_bar}{bar:15}{r_bar}')
 pbar = partial(tqdm, bar_format='{l_bar}{bar:15}{r_bar}')
 
 
-def get_seff(outs: list, desc=None):
-    """From a list of .out files (ending in f'_{SLURM_JOB_ID}.out'), get seff output."""
+def getpid(out: str) -> str:
+    """From an .out file with structure <anytext_JOBID.out>, return JOBID."""
+    return out.split("_")[-1].replace(".out", "")
+
+
+def get_seff(outs=None, pids=None, desc='executing seff commands', progress_bar=True, pids_as_keys=False):
+    """From a list of outs or pids, get seff output.
+    
+    Parameters
+    ----------
+    outs : list
+        .out files (ending in f'_{SLURM_JOB_ID}.out')
+    pids : list
+        a list of slurm_job_ids
+    desc
+        description for progress bar
+    progress_bar : bool
+        whether to use a progress bar when querying seff
+    pids_as_keys : bool
+        if outs is not None, retrieve pid from each outfile to use as the key
+        
+    Notes
+    -----
+    - assumes f'{job}_{slurm_job_id}.out' and f'{job}.sh' underly slurm jobs
+    """
+    jobs = outs if outs is not None else pids
+
+    exception_text = None
+    if outs is not None:
+        if type(outs) in [dict().keys().__class__, dict().values().__class__]:
+            outs = list(outs)
+        if isinstance(outs[0], str) is False:
+            exception_text = f'out is not a string: {type(outs[0]) = }'
+        elif outs[0].endswith('.out') is False:
+            exception_text = f'outs files must end with ".out": {outs[0] = }'
+        if exception_text is not None:
+            raise(Exception(exception_text))
+
+    if progress_bar is True and len(jobs) > 0:
+        iterator = pbar(jobs, desc=desc)
+    else:
+        iterator = jobs
+
     seffs = {}
-    for out in pbar(outs, desc=desc):
-        seffs[out] = Seff(getpid(out))
+    for job in iterator:
+        pid = getpid(job)
+
+        if pids_as_keys is True:
+            key = pid
+        else:
+            key = job
+
+        seffs[key] = Seff(pid)
+
+        if outs is not None:
+            seffs[key].out = job
+            seffs[key].job = '_'.join(op.basename(job).split("_")[:-1])
+            seffs[key].sh = op.join(op.dirname(job), f'{seffs[key].job}.sh')
+        else:
+            seffs[key].out = None
+            seffs[key].job = None
+            seffs[key].sh = None
+
     return seffs
 
 
@@ -43,8 +105,8 @@ def get_mems(seffs: dict, units="MB", plot=True) -> list:
         mems.append(info.mem(units=units, per_core=False))
 
     if plot is True:
-        plt.hist(mems)
-        plt.xlabel(units)
+        fig, ax = plt.subplots(figsize=(6, 4))
+        ax_box, ax_hist = myfigs.histo_box(mems, xlab=units, ylab='count', title=f'n_mems = {len(mems)}', ax=ax)
         plt.show()
 
     return mems
@@ -52,7 +114,7 @@ def get_mems(seffs: dict, units="MB", plot=True) -> list:
 
 def clock_hrs(clock: str, unit="hrs") -> float:
     """From a clock (days-hrs:min:sec) extract hrs or days as float."""
-    assert unit in ["hrs", "days"]
+    assert unit in ["hrs", "days", 'mins', 'minutes']
     hrs = 0
     if "-" in clock:
         days, clock = clock.split("-")
@@ -62,7 +124,9 @@ def clock_hrs(clock: str, unit="hrs") -> float:
     hrs += float(m) / 60
     hrs += float(s) / 3600
     if unit == "days":
-        hrs = hrs / 24
+        hrs /= 24
+    elif unit == 'mins' or unit=='minutes':
+        hrs *= 60
     return hrs
 
 
@@ -78,9 +142,10 @@ def get_times(seffs: dict, unit="hrs", plot=True) -> list:
         times.append(hrs)
 
     if plot is True:
-        plt.hist(times)
-        plt.xlabel(unit.title() if unit == "days" else "Hours")
+        fig, ax = plt.subplots(figsize=(6, 4))
+        ax_box, ax_hist = myfigs.histo_box(times, xlab=unit, ylab='count', title=f'n_times = {len(times)}', ax=ax)
         plt.show()
+
     return times
 
 
@@ -98,12 +163,12 @@ def sbatch(shfiles: Union[str, list], sleep=0, printing=False, outdir=None, prog
     if isinstance(shfiles, list) is False:
         assert isinstance(shfiles, str)
         shfiles = [shfiles]
-        
+
     if progress_bar is True:
         iterator = pbar(shfiles, desc='sbatching')
     else:
         iterator = shfiles
-        
+
     pids = []
     for sh in iterator:
         # make sure job matches filename
@@ -157,7 +222,70 @@ def sbatch(shfiles: Union[str, list], sleep=0, printing=False, outdir=None, prog
         pids.append(pid)
         time.sleep(sleep)
         del pid
+
     return pids
+
+
+def create_watcherfile(pids, directory, watcher_name="watcher", email="b.lind@northeastern.edu", time='0:00:01', ntasks=1, 
+                       rem_flags=None, mem=25, end_alert=False, fail_alert=True, begin_alert=False, added_text=''):
+    """From a list of dependency `pids`, sbatch a file that will not start until all `pids` have completed.
+    
+    Parameters
+    ----------
+    pids - list of SLURM job IDs
+    directory - where to sbatch the watcher file
+    watcher_name - basename for slurm job queue, and .sh and .outfiles
+    email - where alerts will be sent
+        requires at least of of the following to be True: end_alert, fail_alert, begin_alert
+    time - time requested for job
+    ntasks - number of tasks
+    rem_flags - list of additional SBATCH flags to add (separate with \n)
+        eg - rem_flags=['#SBATCH --cpus-per-task=5', '#SBATCH --nodes=1']
+    mem - requested memory for job
+        default is 25 bytes, but any string will work - eg mem='2500M'
+    end_alert - bool
+        use if wishing to receive an email when the job ends
+    fail_alert - bool
+        use if wishing to receive an email if the job fails
+    begin_alert - bool
+        use if wishing to receive an email when the job begins
+    added text - any text to add within the body of the .sh file
+
+    TODO
+    ----
+    - incorporate code to save mem and time info of `pids`
+    """
+    rem_flags = '\n'.join(rem_flags) if rem_flags is not None else ''
+    end_text = '#SBATCH --mail-type=END' if end_alert is True else ''
+    fail_text = '#SBATCH --mail-type=FAIL' if fail_alert is True else ''
+    begin_text = '#SBATCH --mail-type=BEGIN' if begin_alert is True else ''
+    email = f'#SBATCH --mail-user={email}' if any([end_alert, fail_alert, begin_alert]) else ''
+
+    watcherfile = op.join(directory, f"{watcher_name}.sh")
+    jpids = ",".join(pids)
+    text = f"""#!/bin/bash
+#SBATCH --job-name={watcher_name}
+#SBATCH --time={time}
+#SBATCH --ntasks={ntasks}
+#SBATCH --mem={mem}
+#SBATCH --output={watcher_name}_%j.out
+#SBATCH --dependency=afterok:{jpids}
+{email}
+{fail_text}
+{end_text}
+{begin_text}
+{rem_flags}
+
+{added_text}
+
+"""
+
+    with open(watcherfile, "w") as o:
+        o.write(text)
+
+    print(sbatch(watcherfile))
+
+    return watcherfile
 
 
 class Seff:
@@ -165,27 +293,33 @@ class Seff:
 
     example output from os.popen __init__ call
 
-    ['Job ID: 38771990',
-    'Cluster: cedar',
-    'User/Group: lindb/lindb',
-    'State: COMPLETED (exit code 0)',
-    'Nodes: 1',
-    'Cores per node: 48',
-    'CPU Utilized: 56-18:58:40',
-    'CPU Efficiency: 88.71% of 64-00:26:24 core-walltime',
-    'Job Wall-clock time: 1-08:00:33',
-    'Memory Utilized: 828.22 MB',
-    'Memory Efficiency: 34.51% of 2.34 GB']
+    ['Job ID: 38771990',                                      0
+    'Cluster: cedar',                                         1
+    'User/Group: lindb/lindb',                                2
+    'State: COMPLETED (exit code 0)',                         3
+    'Nodes: 1',                                               4  # won't always show up
+    'Cores per node: 48',                                     5 -6
+    'CPU Utilized: 56-18:58:40',                              6 -5
+    'CPU Efficiency: 88.71% of 64-00:26:24 core-walltime',    7 -4
+    'Job Wall-clock time: 1-08:00:33',                        8 -3
+    'Memory Utilized: 828.22 MB',                             9 -2
+    'Memory Efficiency: 34.51% of 2.34 GB']                  10 -1
 
     """
-
     def __init__(self, slurm_job_id):
         """Get return from seff command."""
         info = os.popen("seff %s" % str(slurm_job_id)).read().split("\n")
         info.remove("")
-        self.info = info
+        self.info = [i for i in info[:11] if 'WARNING' not in i]
         self.info[-2] = self.info[-2].split("(estimated")[0]
         self.slurm_job_id = str(slurm_job_id)
+        if len(self.info) == 11:
+            self.nodes = int(self.info[4].split()[-1])
+            self.cpus = self.info[5].split()[-1]
+        else:
+            self.nodes = 1
+            self.cpus = 1
+        pass
 
     def __repr__(self):
         return repr(self.info)
@@ -200,18 +334,18 @@ class Seff:
 
     def cpu_u(self, unit="clock") -> str:
         """Get CPU time utilized by job (actual time CPUs were active across all cores)."""
-        utilized = self.info[6].split()[-1]
+        utilized = self.info[-5].split()[-1]
         if unit != "clock":
             utilized = clock_hrs(utilized, unit)
         return utilized
 
     def cpu_e(self) -> str:
         """Get CPU efficiency (cpu_u() / core_walltime())"""
-        return self.info[7].split()[2]
+        return self.info[-4].split()[2]
 
     def core_walltime(self, unit="clock") -> str:
         """Get time that CPUs were active (across all cores)."""
-        walltime = self.info[7].split()[-2]
+        walltime = self.info[-4].split()[-2]
         if unit != "clock":
             walltime = clock_hrs(walltime, unit)
         return walltime
@@ -225,7 +359,7 @@ class Seff:
 
     def mem_req(self, units="MB") -> Union[float, int]:
         """Get the requested memory for job."""
-        mem, mem_units = self.info[-1].split()[-2:]
+        mem, mem_units = self.info[-1].split('(')[0].split()[-2:]
         return self._convert_mem(mem, mem_units, units)
 
     def mem_e(self) -> str:
@@ -242,11 +376,7 @@ class Seff:
         elif mem_units == "EB":
             mem = 0
         else:
-            try:
-                assert mem_units == "MB"
-            except AssertionError as e:
-                print("info = ", self.info)
-                raise e
+            assert mem_units == "MB", ("info = ", mem_units, self.info)
             mem = float(mem)
         # then convert to requested mem
         if units == "GB":
@@ -260,29 +390,434 @@ class Seff:
         mem, mem_units = self.info[-2].split()[-2:]
         mem = self._convert_mem(mem, mem_units, units)
         if per_core is True:
-            mem = mem / float(self.info[5].split()[-1])
+            mem = mem / float(self.info[-6].split()[-1])
         return mem
+
+    def copy(self):
+        seff = type(self).__new__(self.__class__)
+        
+        seff.info = self.info.copy()
+        seff.slurm_job_id = str(self.slurm_job_id)
+        seff.nodes = self.nodes
+        seff.cpus = self.cpus
+        for attr in ['job', 'out', 'sh']:
+            if attr in self.__dict__:
+                seff.__dict__[attr] = self.__dict__[attr]
+            else:
+                seff.__dict__[attr] = None
+        
+        return seff
 
     pass
 
 
-def getpid(out: str) -> str:
-    """From an .out file with structure <anytext_JOBID.out>, return JOBID."""
-    return out.split("_")[-1].replace(".out", "")
+class Seffs:
+    """dict-like container with arbitrary keys and values for multiple `Seff` class objects.
+    
+    Notes
+    -----
+    - __isub__ and __iadd__ do not Seffs.check_shfiles for duplicates (but __add__ and __sub__ do)
+
+    """
+    def __init__(self, outs=None, seffs=None, pids=None, pids_as_keys=True, units="MB", unit="clock", plot=False, progress_bar=True):
+        if any([outs is not None, seffs is not None, pids is not None]):
+            if outs is not None or pids is not None:
+                seffs = get_seff(outs=outs, pids=pids, pids_as_keys=pids_as_keys, progress_bar=progress_bar)
+            else:
+                for key, seff in seffs.items():
+                    if 'out' not in seff.__dict__:
+                        seff.out = None
+                    if 'job' not in seff.__dict__:
+                        seff.job = None
+                    if 'sh' not in seff.__dict__:
+                        seff.sh = None
+        else:
+            raise Exception('one of `outs` or `pids` or `seffs` kwargs needs to be provided.')
+
+        self.seffs = seffs
+
+        self.unit = unit
+
+        self.units = units
+
+        self.outs = [seff.out for seff in self.seffs.values()]
+
+        self.jobs = [seff.job for seff in self.seffs.values()]
+
+        self.shfiles = [seff.sh for seff in self.seffs.values()]
+
+        self.pids = [seff.slurm_job_id for seff in self.seffs.values()]
+
+        self.slurm_job_ids = self.pids
+
+        self.states = MySeries([seff.state() for seff in self.seffs.values()],
+                               index=pyimp.keys(seffs))
+
+        self.mems = MySeries(
+            get_mems(self.seffs, units=units, plot=plot),
+            dtype=float,  # f "running" in info.state().lower() or "pending" in info.state().lower(
+            name=units,
+            index = [key for (key, seff) in self.items()
+                     if 'running' not in seff.state().lower()
+                     and 'pending' not in seff.state().lower()]
+        )
+
+        self.times = MySeries(
+            get_times(self.seffs,
+                      unit=unit if unit != 'clock' else 'hrs',
+                      plot=plot),
+            dtype=float,
+            name=unit if unit != 'clock' else 'hrs',
+            index = [key for (key, seff) in self.items()
+                     if 'running' not in seff.state().lower()
+                     and 'pending' not in seff.state().lower()]
+        )
+
+        self.walltimes = self.times
+
+        self.cpu_us = MySeries([seff.cpu_u(unit=unit) for seff in seffs.values()],
+                               index=pyimp.keys(seffs),
+                               name=unit)
+
+        self.cpu_es = MySeries([seff.cpu_e() for seff in seffs.values()],
+                               index=pyimp.keys(seffs))
+
+        self.core_walltimes = MySeries([seff.core_walltime(unit=unit) for seff in seffs.values()],
+                                       index=pyimp.keys(seffs), name=unit)
+
+        self.mem_reqs = MySeries([seff.mem_req(units=units) for seff in seffs.values()],
+                                 index=pyimp.keys(seffs), name=units)
+
+        self.mem_es = MySeries([seff.mem_e() for seff in seffs.values()],
+                               index=pyimp.keys(seffs))
+        
+        self.cpus = MySeries([seff.cpus for seff in seffs.values()],
+                             index=pyimp.keys(seffs))
+        
+        self.nodes = MySeries([seff.nodes for seff in seffs.values()],
+                              index=pyimp.keys(seffs))
+        
+        Seffs.check_shfiles(self.shfiles)
+
+        pass
+    
+    @classmethod
+    def check_shfiles(cls, shfiles):
+        if len(shfiles) != pyimp.luni(shfiles) and shfiles[0] is not None:
+            # perhaps a given shfile was run more than once, or duplicate job names?
+            text = 'There are multiple shfiles associated with outfiles.'
+            text += f' len={len(shfiles)}'
+            text += f' luni={pyimp.luni(shfiles)}'
+            warnings.warn(text)
+        pass
+
+    def __repr__(self):
+        return repr(self.seffs)
+
+    def __add__(self, seffs2):
+        assert isinstance(seffs2, Seffs)
+        seffs = copy.deepcopy(self.seffs)
+        seffs.update(seffs2.seffs)
+        
+        newseffs = Seffs(seffs=seffs, units=self.units, unit=self.unit)
+        Seffs.check_shfiles(newseffs.shfiles)
+
+        return newseffs
+
+    def __iadd__(self, seffs2):
+        assert isinstance(seffs2, Seffs)
+        self.seffs.update(seffs2.seffs)
+
+        self.outs = [seff.out for seff in self.seffs.values()]
+
+        self.jobs = [seff.job for seff in self.seffs.values()]
+
+        self.shfiles = [seff.sh for seff in self.seffs.values()]
+
+        self.pids = [seff.slurm_job_id for seff in self.seffs.values()]
+
+        self.slurm_job_ids = self.pids
+
+        self.states = Seffs._update(self.states, seffs2.states)
+
+        self.mems = Seffs._update(
+            self.mems,
+            MySeries(
+                get_mems(seffs2.finished().seffs, units=self.units, plot=False),
+                name=self.units,
+                index=pyimp.keys(seffs2.finished().seffs)
+            )  # TODO: add index?
+        )
+
+        self.times = Seffs._update(
+            self.times,
+            MySeries(
+                get_times(seffs2.finished().seffs, unit=self.unit if self.unit != 'clock' else 'hrs', plot=False),
+                index=pyimp.keys(seffs2.finished()),
+                name=self.unit if self.unit != 'clock' else 'hrs'
+            )
+        )
+
+        self.walltimes = self.times
+
+        self.cpu_us = Seffs._update(
+            self.cpu_us,
+            MySeries([seff.cpu_u(unit=self.unit) for seff in seffs2.values()],
+                     index=pyimp.keys(seffs2),
+                     name=self.unit)
+        )
+
+        self.cpu_es = Seffs._update(self.cpu_es, seffs2.cpu_es)
+
+        self.core_walltimes = Seffs._update(
+            self.core_walltimes,
+            MySeries([seff.core_walltime(unit=self.unit) for seff in seffs2.values()],
+                     index=pyimp.keys(seffs2),
+                     name=self.unit)
+        )
+
+        self.mem_reqs = Seffs._update(
+            self.mem_reqs,
+            MySeries([seff.mem_req(units=self.units) for seff in seffs2.values()],
+                     index=pyimp.keys(seffs2),
+                     name=self.units)
+        )
+
+        self.mem_es = Seffs._update(self.mem_es, seffs2.mem_es)
+        
+        self.cpus = Seffs._update(self.cpus, seffs2.cpus)
+        
+        self.nodes = Seffs._update(self.nodes, seffs2.nodes)
+
+        return self
+
+    def __sub__(self, seffs2):
+        assert any([isinstance(seffs2, Seffs), isinstance(seffs2, list)])
+        oldseffs = copy.deepcopy(self.seffs)
+        for key in seffs2:
+            try:
+                oldseffs.pop(key)
+            except KeyError as e:
+                pass
+
+        newseffs = Seffs(seffs=oldseffs)
+        Seffs.check_shfiles(newseffs.shfiles)
+
+        return newseffs
+
+    def __isub__(self, seffs2):
+        assert any([isinstance(seffs2, Seffs), isinstance(seffs2, list)])
+        for key, seff in seffs2.items():
+            for i in range(16):  # i want to do all of these things below even if any preceding fails
+                try:
+                    if i == 0:
+                        self.seffs.pop(key)
+                    elif i == 1:
+                        self.pids.remove(seff.pid)  # self.slurm_job_ids is same as self.pids
+                    elif i == 2:
+                        self.states.pop(key)
+                    elif i == 3:
+                        self.mems.pop(key)
+                    elif i == 4:
+                        self.times.pop(key)  # self.walltimes is same as self.times
+                    elif i == 5:
+                        self.cpu_us.pop(key)
+                    elif i == 6:
+                        self.cpu_es.pop(key)
+                    elif i == 7:
+                        self.core_walltimes.pop(key)
+                    elif i == 8:
+                        self.mem_reqs.pop(key)
+                    elif i == 9:
+                        self.mem_es.pop(key)
+                    elif i == 10:
+                        self.outs.remove(seff.out)
+                    elif i == 11:
+                        self.jobs.remove(seff.job)
+                    elif i == 12:
+                        self.shfiles.remove(seff.sh)
+                    elif i == 13:
+                        self.nodes.remove(seff.nodes)
+                    elif i == 14:
+                        self.cpus.remove(seff.cpus)
+                except KeyError as e:
+                    pass
+                except ValueError as e:
+                    print(pid, len(self.pids), len(self.slurm_job_ids))
+                    raise e
+
+        return self                
+
+    def __len__(self):
+        return len(self.seffs)
+
+    def __iter__(self):
+        return iter(self.seffs.keys())
+
+    def __getitem__(self, key):
+        return self.seffs[key]
+
+    def __setitem__(self, key, item):
+        self.seffs[key] = item
+
+    def __delitem__(self, key):
+        del self.seffs[key]
+
+    def __contains__(self, key):
+        return True if key in pyimp.keys(self) else False
+
+    def __setattr__(self, key, value):
+        self.__dict__[key] = value
+
+    @staticmethod
+    def _update(attr1, attr2):
+        name = attr1.name
+        attr1 = attr1.to_dict()
+        attr1.update(attr2.to_dict())
+        return MySeries(attr1, name=name)
+
+    def plot_mems(self, **kwargs):
+        _ = get_mems(self.seffs, **kwargs)
+        pass
+
+    def plot_times(self, **kwargs):
+        _ = get_times(self.finished().seffs, **kwargs)
+        pass
+
+    def keys(self):
+        return self.seffs.keys()
+
+    def values(self):
+        return self.seffs.values()
+
+    def items(self):
+        return self.seffs.items()
+
+    def copy(self):
+        return Seffs(seffs=self.seffs.copy(), unit=self.unit, units=self.units)
+    
+    def len(self):
+        return len(self)
+
+    def out_sh(self):
+        """key = out, val = sh."""
+        outdict = {}
+        for key, seff in self.seffs.items():
+            outdict[seff.out] = seff.sh
+
+        return outdict
+    
+    @staticmethod
+    def filter_states(seffs, state):
+        newseffs = {}
+        for key, seff in seffs.items():
+            if state.lower() in seff.state().lower():
+                newseffs[key] = seff.copy()
+        return newseffs
+    
+    def running(self):
+        """Return Seffs object for any running job."""
+        seffs = Seffs.filter_states(self.seffs, 'running')
+        return Seffs(seffs=seffs.copy(), unit=self.unit, units=self.units)
+    
+    def pending(self):
+        """Return pending jobs."""
+        seffs = Seffs.filter_states(self.seffs, 'pending')
+        return Seffs(seffs=seffs.copy(), unit=self.unit, units=self.units)
+
+    def completed(self):
+        """Return Seffs object for any *successfully* completed job (compare to Seffs.finished())."""
+        seffs = Seffs.filter_states(self.seffs, 'completed')
+        return Seffs(seffs=seffs.copy(), unit=self.unit, units=self.units)
+
+    def failed(self):
+        """Return Seffs object for any failed job."""
+        seffs = Seffs.filter_states(self.seffs, 'failed')
+        return Seffs(seffs=seffs.copy(), unit=self.unit, units=self.units)
+
+    def cancelled(self):
+        """Return Seffs object for any cancelled job."""
+        seffs = Seffs.filter_states(self.seffs, 'cancelled')
+        return Seffs(seffs=seffs.copy(), unit=self.unit, units=self.units)
+    
+    def timeouts(self):
+        """Return Seffs object for any timeout jobs."""
+        seffs = Seffs.filter_states(self.seffs, 'timeout')
+        return Seffs(seffs=seffs.copy(), unit=self.unit, units=self.units)
+    
+    def sh_outs(self, sh_as_key=True, internal=False):
+        """key = sh, val = list of outfiles."""
+        shdict = defaultdict(list)
+        for seffkey, seff in self.items():
+            if sh_as_key is True:
+                shdict[seff.sh].append(seff.out)
+            else:
+                shdict[seffkey].append(seff.out)
+
+        return shdict
+
+    def sh_out(seffs, sh_as_key=True):
+        """key = sh, val = most_recent outfile.
+
+        TODO
+        ----
+        - add `remove` kwarg and pass to pyimp.getmostrecent
+            - but do I care that any outfiles removed could have elements within the Seff?
+                - eg a pid or out as a key
+        """
+        shdict = self.sh_outs(sh_as_key=sh_as_key, internal=True)
+
+        for key in pyimp.keys(shdict):            
+            shdict[key] = pyimp.getmostrecent(shdict[key])
+
+        shdict = dict(shdict)
+
+        return shdict
+    
+    def finished(self):
+        """Return non-running and non-pending jobs."""
+        seffs = {}
+        for key, seff in self.items():
+            if "running" in seff.state().lower() or "pending" in seff.state().lower():
+                continue
+            seffs[key] = seff.copy()
+        
+        return Seffs(seffs=seffs.copy(), unit=self.unit, units=self.units)
+    
+    def uncompleted(self):
+        """Return Seffs object for any uncompleted job.
+        
+        Notes
+        -----
+        - if most recent .out failed but an early .out completed, this code will miss that
+        """
+        recent_outs = self.sh_out()
+        
+        seffs = {}
+        for key, out in recent_outs.items():
+            seff = self[key].copy()
+            state = seff.state().lower()
+            if 'completed' not in state and 'pending' not in state and 'running' not in state:
+                seffs[key] = seff
+                assert 'sh' in seff.__dict__, seff.__dict__
+
+        return Seffs(seffs=seffs.copy(), unit=self.unit, units=self.units)
+
+    pass
 
 
 class SQInfo:
     """Convert each line returned from `squeue -u $USER`.
-    
+
     Assumed
     -------
     SQUEUE_FORMAT="%i %u %a %j %t %S %L %D %C %b %m %N (%r) %P"
-    
+
     Notes
     -----
     - I realized that %N can be blank when pending, and then cause problems with .split()
         so the attrs now can handle this. But I'm leaving the methods for backwards compatibility.
-    
+
     Example jobinfo    (index number of list)
     ---------------
     ('29068196',       0
@@ -323,47 +858,10 @@ class SQInfo:
         pass
 
     def __repr__(self):
-        return repr(dict((k, v) for (k, v) in self.__dict__.items() if k!='info'))
+        return repr(dict((k, v) for (k, v) in self.__dict__.items() if k != 'info'))
 
     def __iter__(self):
         return iter(self.info)
-
-#     def pid(self):
-#         """SLURM_JOB_ID."""
-#         return self.info[0]
-
-#     def user(self):
-#         return self.info[1]
-
-#     def account(self):
-#         return self.info[2]
-
-#     def job(self):
-#         """Job name."""
-#         return self.info[3]
-
-#     def state(self):
-#         """Job state - eg pending, closing, running, failed/completed + exit code."""
-#         return self.info[4]
-
-#     def start(self):
-#         """Job start time."""
-#         return self.info[5]
-
-#     def time(self):
-#         """Remaining time."""
-#         return self.info[6]
-
-#     def nodes(self):
-#         """Number of compute nodes."""
-#         return self.info[7]
-    
-#     def nodelist(self):
-#         """List of compute nodes."""
-#         return self.info[11]
-
-#     def cpus(self):
-#         return self.info[8]
 
     def mem(self, units="MB"):
         memory = self.memory
@@ -380,26 +878,10 @@ class SQInfo:
             memory = int(memory.replace("M", ""))
         return memory
 
-#     def status(self):
-#         return self.info[12]
-
-#     def reason(self):
-#         return self.status
-    
-#     def partition(self):
-#         return self.info[13]
-
     pass
 
 
 sqinfo = SQInfo  # backwards compatibility
-
-
-# def adjustjob(acct, jobid):
-#     """Move job from one account to another."""
-#     acct = acct.replace("_cpu", "")
-#     subprocess.Popen([shutil.which("scontrol"), "update", f"Account={acct}_cpu", f"JobId={jobid}"])
-#     pass
 
 
 class Squeue:
@@ -474,33 +956,45 @@ class Squeue:
 
 
     """
-
     # export SQUEUE_FORMAT
     # (JOBID USER ACCOUNT NAME ST START_TIME TIME_LEFT NODES CPUS TRES_PER_NODE MIN_MEMORY NODELIST (REASON)) PARTITION
     #    %i   %u    %a     %j  %t     %S        %L      %D    %C         %b        %m         %N      (%r)       %P
     os.environ["SQUEUE_FORMAT"] = "%i %u %a %j %t %S %L %D %C %b %m %N (%r) %P"
+    
+    def __init__(self, verbose=True, **kwargs):
+        # get queue matching grepping
+        self.sq = Squeue._getsq(**kwargs)
+        # filter further with kwargs
+        if len(self.sq) > 0:
+            self.sq = self._filter_jobs(self, **kwargs)
+            if len(self.sq) == 0 and verbose is True:
+                print("\tno jobs in queue matching query")
+        pass
 
     def __repr__(self):
         return repr(self.sq)
-    
+
     def __add__(self, sq2):
         assert isinstance(sq2, Squeue)
         newself = copy.deepcopy(self)
         newself.sq.update(sq2)
         return newself
-    
+
     def __iadd__(self, sq2):
         assert isinstance(sq2, Squeue)
         self.sq.update(sq2)
         return self
-    
+
     def __sub__(self, sq2):
         assert any([isinstance(sq2, Squeue), isinstance(sq2, list)])
         newself = copy.deepcopy(self)
         for pid in sq2:
-            newself.sq.pop(pid)
+            try:
+                newself.sq.pop(pid)
+            except KeyError as e:
+                pass
         return newself
-    
+
     def __isub__(self, sq2):
         assert any([isinstance(sq2, Squeue), isinstance(sq2, list)])
         for pid in sq2:
@@ -527,16 +1021,6 @@ class Squeue:
 
     def __cmp__(self, other):
         return cmp(self.sq, other.sq)
-
-    def __init__(self, verbose=True, **kwargs):
-        # get queue matching grepping
-        self.sq = Squeue._getsq(**kwargs)
-        # filter further with kwargs
-        if len(self.sq) > 0:
-            self.sq = self._filter_jobs(self, **kwargs)
-            if len(self.sq) == 0 and verbose is True:
-                print("\tno jobs in queue matching query")
-        pass
 
     @staticmethod
     def _grep_sq(sq, grepping):
@@ -591,7 +1075,7 @@ class Squeue:
                         print("\tcould not assert int == float, %s" % (s[0]))
                         exceptionneeded = True
             if exceptionneeded is True:
-                raise Exception(ColorText("FAIL: slurm screwed something up for Squeue, lame").fail().bold())
+                raise Exception(pyimp.ColorText("FAIL: slurm screwed something up for Squeue, lame").fail().bold())
             return sq
 
         if user is None:
@@ -735,7 +1219,6 @@ class Squeue:
         ----
         - use SQInfo.account after queue query to filter jobs based on account
         """
-
         def _exclude_jobs(_sq, exclude=None):
             """Remove anything that needs to be excluded (including non-pending jobs)."""
             for pid in list(_sq.keys()):
@@ -896,6 +1379,14 @@ class Squeue:
         """Get a list of accounts, subset with kwargs."""
         _sq = self._filter_jobs(self, **kwargs)
         return [info.account for q, info in _sq.items()]
+    
+    def partitions(self):
+        """Get counts of job states across partitions."""
+        partitions = defaultdict(Counter)
+        for pid, info in self.sq.items():
+            partitions[info.partition][info.state] += 1
+
+        return dict(partitions)
 
     def cancel(self, **kwargs):
         """Cancel jobs in slurm queue, remove job info from Squeue class."""
@@ -913,7 +1404,6 @@ class Squeue:
         minmemorynode - total memory requested
         timelimit - total wall time requested
         """
-
         def _cmd(account=None, minmemorynode=None, timelimit=None, to_partition=None, to_reservation=None, **kwargs):
             """Create bash command for slurm scontrol update."""
             # base command
@@ -1105,66 +1595,3 @@ class Squeue:
 
 
 getsq = Squeue._getsq  # backwards compatibility
-
-
-def create_watcherfile(pids, directory, watcher_name="watcher", email="b.lind@northeastern.edu", time='0:00:01', ntasks=1, 
-                       rem_flags=None, mem=25, end_alert=False, fail_alert=True, begin_alert=False, added_text=''):
-    """From a list of dependency `pids`, sbatch a file that will not start until all `pids` have completed.
-    
-    Parameters
-    ----------
-    pids - list of SLURM job IDs
-    directory - where to sbatch the watcher file
-    watcher_name - basename for slurm job queue, and .sh and .outfiles
-    email - where alerts will be sent
-        requires at least of of the following to be True: end_alert, fail_alert, begin_alert
-    time - time requested for job
-    ntasks - number of tasks
-    rem_flags - list of additional SBATCH flags to add (separate with \n)
-        eg - rem_flags=['#SBATCH --cpus-per-task=5', '#SBATCH --nodes=1']
-    mem - requested memory for job
-        default is 25 bytes, but any string will work - eg mem='2500M'
-    end_alert - bool
-        use if wishing to receive an email when the job ends
-    fail_alert - bool
-        use if wishing to receive an email if the job fails
-    begin_alert - bool
-        use if wishing to receive an email when the job begins
-    added text - any text to add within the body of the .sh file
-
-    TODO
-    ----
-    - incorporate code to save mem and time info of `pids`
-    """
-    rem_flags = '\n'.join(rem_flags) if rem_flags is not None else ''
-    end_text = '#SBATCH --mail-type=END' if end_alert is True else ''
-    fail_text = '#SBATCH --mail-type=FAIL' if fail_alert is True else ''
-    begin_text = '#SBATCH --mail-type=BEGIN' if begin_alert is True else ''
-    email = f'#SBATCH --mail-user={email}' if any([end_alert, fail_alert, begin_alert]) else ''
-    
-    watcherfile = op.join(directory, f"{watcher_name}.sh")
-    jpids = ",".join(pids)
-    text = f"""#!/bin/bash
-#SBATCH --job-name={watcher_name}
-#SBATCH --time={time}
-#SBATCH --ntasks={ntasks}
-#SBATCH --mem={mem}
-#SBATCH --output={watcher_name}_%j.out
-#SBATCH --dependency=afterok:{jpids}
-{email}
-{fail_text}
-{end_text}
-{begin_text}
-{rem_flags}
-
-{added_text}
-
-"""
-
-    with open(watcherfile, "w") as o:
-        o.write(text)
-
-    print(sbatch(watcherfile))
-
-    return watcherfile
-
