@@ -756,7 +756,7 @@ class Seffs:
 
         return shdict
 
-    def sh_out(seffs, sh_as_key=True):
+    def sh_out(self, sh_as_key=True):
         """key = sh, val = most_recent outfile.
 
         TODO
@@ -791,7 +791,7 @@ class Seffs:
         -----
         - if most recent .out failed but an early .out completed, this code will miss that
         """
-        recent_outs = self.sh_out()
+        recent_outs = self.sh_out(sh_as_key=False)
         
         seffs = {}
         for key, out in recent_outs.items():
@@ -854,6 +854,12 @@ class SQInfo:
          self.status,     # 12
          self.partition   # 13
         ) = list(jobinfo)
+        
+        if len(self.nodelist) > 0 and self.nodelist[0].startswith('('):
+            # sometimes status can have spaces in between parentheses which is passed to nodelist when nodelist is blank
+                # nodelist is blank when eg job is not running
+            self.status = ' '.join(self.nodelist) + ' ' + self.status
+            self.nodelist = []
 
         pass
 
