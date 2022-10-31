@@ -17,7 +17,6 @@ import matplotlib.dates as mdates
 import matplotlib.gridspec as gridspec
 from tqdm import trange as _trange
 from os import path as op
-from PIL import ImageColor
 from os import chdir as cd
 from decimal import Decimal
 from tqdm import tqdm
@@ -28,13 +27,13 @@ from datetime import timedelta
 from typing import Optional, Union
 from datetime import datetime as dt
 from tqdm.notebook import tqdm as tnb
-from matplotlib.colors import rgb2hex, colorConverter
 from collections import OrderedDict, Counter, defaultdict
 from IPython.display import Markdown, display, clear_output
 from functools import partial
 
 from myslurm import *
 from mymaps import *
+from myclasses import ColorText
 #from myfigs import *
 
 # backwards compatibility
@@ -339,7 +338,7 @@ def getdirs(paths: Union[str, list], verbose=False, **kwargs) -> list:
                 keep.append(False)
                 
         if 'exclude' in kwargs:
-            if all([excl not in f for excl in kwargs['exclude']]):
+            if all([excl not in d for excl in kwargs['exclude']]):
                 keep.append(True)
             else:
                 keep.append(False)
@@ -449,125 +448,6 @@ def read(file: str, lines=True, ignore_blank=True) -> Union[str, list]:
         return text
     else:
         return text
-
-
-class ColorText:
-    """
-    Use ANSI escape sequences to print colors +/- bold/underline to bash terminal.
-
-    Notes
-    -----
-    execute ColorText.demo() for a printout of colors.
-    """
-
-    @classmethod
-    def demo(cls):
-        """Prints examples of all colors in normal, bold, underline, bold+underline."""
-        for color in dir(ColorText):
-            if all([color.startswith("_") is False,
-                    color not in ["bold", "underline", "demo", "custom"],
-                    callable(getattr(ColorText, color))]):
-                print(getattr(ColorText(color), color)(),
-                      "\t",
-                      getattr(ColorText(f"bold {color}").bold(), color)(),
-                      "\t",
-                      getattr(ColorText(f"underline {color}").underline(), color)(),
-                      "\t",
-                      getattr(ColorText(f"bold underline {color}").underline().bold(), color)())
-        print(ColorText("Input can also be color hex or R,G,B with ColorText.custom()").bold())
-        pass
-
-    def __init__(self, text: str = ""):
-        self.text = text
-        self.ending = "\033[0m"
-        self.colors = []
-        pass
-
-    def __repr__(self):
-        return self.text
-
-    def __str__(self):
-        return self.text
-
-    def bold(self):
-        self.text = "\033[1m" + self.text + self.ending
-        return self
-
-    def underline(self):
-        self.text = "\033[4m" + self.text + self.ending
-        return self
-
-    def green(self):
-        self.text = "\033[92m" + self.text + self.ending
-        self.colors.append("green")
-        return self
-
-    def purple(self):
-        self.text = "\033[95m" + self.text + self.ending
-        self.colors.append("purple")
-        return self
-
-    def blue(self):
-        self.text = "\033[94m" + self.text + self.ending
-        self.colors.append("blue")
-        return self
-
-    def ltblue(self):
-        self.text = "\033[34m" + self.text + self.ending
-        self.colors.append("lightblue")
-        return self
-
-    def pink(self):
-        self.text = "\033[35m" + self.text + self.ending
-        self.colors.append("pink")
-        return self
-
-    def gray(self):
-        self.text = "\033[30m" + self.text + self.ending
-        self.colors.append("gray")
-        return self
-
-    def ltgray(self):
-        self.text = "\033[37m" + self.text + self.ending
-        self.colors.append("ltgray")
-        return self
-
-    def warn(self):
-        self.text = "\033[93m" + self.text + self.ending
-        self.colors.append("yellow")
-        return self
-
-    def fail(self):
-        self.text = "\033[91m" + self.text + self.ending
-        self.colors.append("red")
-        return self
-
-    def ltred(self):
-        self.text = "\033[31m" + self.text + self.ending
-        self.colors.append("lightred")
-        return self
-
-    def cyan(self):
-        self.text = "\033[36m" + self.text + self.ending
-        self.colors.append("cyan")
-        return self
-
-    def custom(self, *color_hex):
-        """Print in custom color, `color_hex` - either actual hex, or tuple(r,g,b)"""
-        if color_hex != (None, ):  # allows printing white on black background, black otherwise
-            if len(color_hex) == 1:
-                c = rgb2hex(colorConverter.to_rgb(color_hex[0]))
-                rgb = ImageColor.getcolor(c, "RGB")
-            else:
-                assert (
-                    len(color_hex) == 3
-                ), "If not a color hex, ColorText.custom should have R,G,B as input"
-                rgb = color_hex
-            self.text = "\033[{};2;{};{};{}m".format(38, *rgb) + self.text + self.ending
-            self.colors.append(rgb)
-        return self
-
-    pass
 
 
 def get_skipto_df(f: str, skipto: int, nrows: int, sep="\t", index_col=None, header="infer", **kwargs) -> pd.DataFrame:
