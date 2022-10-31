@@ -1,4 +1,5 @@
 """Personalized functions to build figures."""
+from matplotlib.patches import PathPatch
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.colors import rgb2hex, colorConverter, LinearSegmentedColormap
 import matplotlib.lines as mlines
@@ -341,3 +342,50 @@ def gradient_image(ax, direction=0.3, cmap_range=(0, 1), extent=(0, 1, 0, 1), **
     ax.set_aspect('auto')
     
     return im
+
+
+def adjust_box_widths(axes, fac=0.9):
+    """
+    Adjust the widths of a seaborn-generated boxplot.
+    
+    Notes
+    -----
+    - thanks https://github.com/mwaskom/seaborn/issues/1076
+    """
+    if isinstance(axes, list) is False:
+        axes = [axes]
+    
+    # iterating through Axes instances
+    for ax in axes:
+
+        # iterating through axes artists:
+        for c in ax.get_children():
+
+            # searching for PathPatches
+            if isinstance(c, PathPatch):
+                # getting current width of box:
+                p = c.get_path()
+                verts = p.vertices
+                verts_sub = verts[:-1]
+                xmin = np.min(verts_sub[:, 0])
+                xmax = np.max(verts_sub[:, 0])
+                xmid = 0.5 * (xmin + xmax)
+                xhalf = 0.5 * (xmax - xmin)
+
+                # setting new width of box
+                xmin_new = xmid - fac * xhalf
+                xmax_new = xmid + fac * xhalf
+                verts_sub[verts_sub[:, 0] == xmin, 0] = xmin_new
+                verts_sub[verts_sub[:, 0] == xmax, 0] = xmax_new
+
+                # setting new width of median line
+                for l in ax.lines:
+                    try:
+                        if np.all(l.get_xdata() == [xmin, xmax]):
+                            l.set_xdata([xmin_new, xmax_new])
+                    except:
+                        # /tmp/ipykernel_138835/916607433.py:32: DeprecationWarning: elementwise comparison failed;
+                            # this will raise an error in the future.
+                                # if np.all(l.get_xdata() == [xmin, xmax]):
+                        pass
+    pass
