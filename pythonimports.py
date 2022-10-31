@@ -775,6 +775,7 @@ def _update_pythonimports_README():
     import myslurm as myslurm
     import pythonimports as pyimp
     import my_r as my_r
+    import myclasses as myclasses
 
     # get commit hash
     pyimportpath = pyimp._find_pythonimports()
@@ -782,7 +783,7 @@ def _update_pythonimports_README():
     
     # get help documentation
     docs = []
-    for mod in [pyimp, mymaps, myfigs, balance_queue, myslurm, my_r]:
+    for mod in [pyimp, mymaps, myfigs, balance_queue, myslurm, my_r, myclasses]:
         doc = pydoc.render_doc(mod, renderer=pydoc.plaintext).split('\n')[:-4]  # exclude file name
         doc[0] = '### ' + doc[0] + '\n```' # markdown header for each .py file, ticks to print in code block
         doc.append('```')
