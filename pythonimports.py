@@ -288,7 +288,7 @@ def makedir(directory: str) -> str:
     return directory
 
 
-def getdirs(paths: Union[str, list], verbose=False, **kwargs) -> list:
+def getdirs(paths: Union[str, list], verbose=False, exclude=None, **kwargs) -> list:
     """Recursively get a list of all subdirs from given path.
     
     Parameters
@@ -307,18 +307,26 @@ def getdirs(paths: Union[str, list], verbose=False, **kwargs) -> list:
         if op.isdir(path):
             if verbose is True:
                 print(path)
-            newdirs.append(path)
+
+            if exclude is not None and all([excl not in op.basename(path) for excl in exclude]):
+                newdirs.append(path)
+            elif exclude is None:
+                newdirs.append(path)
+
             newestdirs = getdirs(
-                fs(path, dirs=True), verbose=verbose
+                fs(path, dirs=True, exclude=exclude),
+                verbose=verbose,
+                exclude=exclude
             )
+
             newdirs.extend(newestdirs)
 
-    # filter for kwargs
+    # filter for kwargs (faster than passing to `fs`)
     keeping = []
     for d in newdirs:
-        keep = []
-        
         basename = op.basename(d)
+        
+        keep = []
         if 'pattern' in kwargs:
             if kwargs['pattern'] in basename:
                 keep.append(True)
@@ -337,13 +345,13 @@ def getdirs(paths: Union[str, list], verbose=False, **kwargs) -> list:
             else:
                 keep.append(False)
                 
-        if 'exclude' in kwargs:
-            if all([excl not in d for excl in kwargs['exclude']]):
-                keep.append(True)
-            else:
-                keep.append(False)
+#         if exclude is not None:
+#             if all([excl not in basename for excl in exclude]):
+#                 keep.append(True)
+#             else:
+#                 keep.append(False)
                 
-        if all(keep):
+        if all(keep):  # note `all([])` is True
             if 'bnames' in kwargs and kwargs['bnames'] is True:
                 dname = basename
             else:
