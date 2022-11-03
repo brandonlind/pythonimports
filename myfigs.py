@@ -67,7 +67,8 @@ def histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, 
         col = data.name
     elif 'columns' in dir(data):
         col = data.columns[0]
-    elif col is None:
+
+    if col is None:
         col = 'data'
 
     if isinstance(data, pd.DataFrame) is False:
