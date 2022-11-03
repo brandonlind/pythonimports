@@ -89,7 +89,7 @@ def get_seff(outs=None, pids=None, desc='executing seff commands', progress_bar=
     return seffs
 
 
-def get_mems(seffs: dict, units="MB", plot=True) -> list:
+def get_mems(seffs: dict, units="MB", plot=True, **kwargs) -> list:
     """From output by `get_seff()`, extract mem in `units` units; histogram if `plot` is True.
 
     Parameters
@@ -106,7 +106,12 @@ def get_mems(seffs: dict, units="MB", plot=True) -> list:
 
     if plot is True:
         fig, ax = plt.subplots(figsize=(6, 4))
-        ax_box, ax_hist = myfigs.histo_box(mems, xlab=units, ylab='count', title=f'n_mems = {len(mems)}', ax=ax)
+        ax_box, ax_hist = myfigs.histo_box(mems,
+                                           xlab=units,
+                                           ylab='count',
+                                           title=f'n_mems = {len(mems)}',
+                                           ax=ax,
+                                           **kwargs)
         plt.show()
 
     return mems
