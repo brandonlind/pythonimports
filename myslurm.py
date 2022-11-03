@@ -57,7 +57,7 @@ def get_seff(outs=None, pids=None, desc='executing seff commands', progress_bar=
         if isinstance(outs[0], str) is False:
             exception_text = f'out is not a string: {type(outs[0]) = }'
         elif outs[0].endswith('.out') is False:
-            exception_text = f'outs files must end with ".out": {outs[0] = }'
+            exception_text = f'outs files must end with ".out": outs[0] = {outs[0]}'
         if exception_text is not None:
             raise(Exception(exception_text))
 
