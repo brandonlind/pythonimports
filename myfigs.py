@@ -62,10 +62,17 @@ def histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, 
     ------
         thanks https://www.python-graph-gallery.com/24-histogram-with-a-boxplot-on-top-seaborn
     """
-    col = 'data' if col is None else col
+#     col = 'data' if col is None else col
+    if 'name' in dir(data):
+        col = data.name
+    elif 'columns' in dir(data):
+        col = data.columns[0]
+    elif col is None:
+        col = 'data'
+
     if isinstance(data, pd.DataFrame) is False:
         data = pd.DataFrame(data, columns=[col])
-
+    
     # creating a figure composed of two matplotlib.Axes objects (ax_box and ax_hist)
     if ax is None:
         f, (ax_box, ax_hist) = plt.subplots(2, sharex=True, gridspec_kw={"height_ratios": (.15, .85)}, **kwargs)
