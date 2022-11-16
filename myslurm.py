@@ -48,26 +48,37 @@ def get_seff(outs=None, pids=None, desc='executing seff commands', progress_bar=
     -----
     - assumes f'{job}_{slurm_job_id}.out' and f'{job}.sh' underly slurm jobs
     """
-    jobs = outs if outs is not None else pids
-
     exception_text = None
     if outs is not None:
         if type(outs) in [dict().keys().__class__, dict().values().__class__]:
             outs = list(outs)
+        elif isinstance(outs, str):
+            outs = [outs]
+
         if isinstance(outs[0], str) is False:
             exception_text = f'out is not a string: {type(outs[0]) = }'
         elif outs[0].endswith('.out') is False:
             exception_text = f'outs files must end with ".out": outs[0] = {outs[0]}'
+
         if exception_text is not None:
             raise(Exception(exception_text))
+    elif pids is not None and (isinstance(pids, str) or isinstance(pids, int)):
+        pids = [pids]
+        
+    if outs is not None and pids is not None:
+        jobs = outs + pids
+    elif outs is not None:
+        jobs = outs
+    else:
+        jobs = pids
 
-    if progress_bar is True and len(jobs) > 0:
+    if progress_bar is True and len(jobs) > 0:  # I don't want progress bars for zero jobs
         iterator = pbar(jobs, desc=desc)
     else:
         iterator = jobs
 
     seffs = {}
-    for job in iterator:
+    for job in map(str, iterator):  # map in case PIDs are ints
         pid = getpid(job)
 
         if pids_as_keys is True:
@@ -77,7 +88,7 @@ def get_seff(outs=None, pids=None, desc='executing seff commands', progress_bar=
 
         seffs[key] = Seff(pid)
 
-        if outs is not None:
+        if job.endswith('.out'):
             seffs[key].out = job
             seffs[key].job = '_'.join(op.basename(job).split("_")[:-1])
             seffs[key].sh = op.join(op.dirname(job), f'{seffs[key].job}.sh')
@@ -135,7 +146,7 @@ def clock_hrs(clock: str, unit="hrs") -> float:
     return hrs
 
 
-def get_times(seffs: dict, unit="hrs", plot=True) -> list:
+def get_times(seffs: dict, unit="hrs", plot=True, **kwargs) -> list:
     """From dict(seffs) [val = seff output], get times in hours.
 
     fix: add in other clock units"""
@@ -148,7 +159,12 @@ def get_times(seffs: dict, unit="hrs", plot=True) -> list:
 
     if plot is True:
         fig, ax = plt.subplots(figsize=(6, 4))
-        ax_box, ax_hist = myfigs.histo_box(times, xlab=unit, ylab='count', title=f'n_times = {len(times)}', ax=ax)
+        ax_box, ax_hist = myfigs.histo_box(times,
+                                           xlab=unit,
+                                           ylab='count',
+                                           title=f'n_times = {len(times)}',
+                                           ax=ax,
+                                           **kwargs)
         plt.show()
 
     return times
@@ -506,8 +522,8 @@ class Seffs:
 
         pass
     
-    @classmethod
-    def check_shfiles(cls, shfiles):
+    @staticmethod
+    def check_shfiles(shfiles):
         if len(shfiles) != pyimp.luni(shfiles) and shfiles[0] is not None:
             # perhaps a given shfile was run more than once, or duplicate job names?
             text = 'There are multiple shfiles associated with outfiles.'
@@ -589,9 +605,9 @@ class Seffs:
         )
 
         self.mem_es = Seffs._update(self.mem_es, seffs2.mem_es)
-        
+
         self.cpus = Seffs._update(self.cpus, seffs2.cpus)
-        
+
         self.nodes = Seffs._update(self.nodes, seffs2.nodes)
 
         return self
@@ -700,7 +716,7 @@ class Seffs:
 
     def copy(self):
         return Seffs(seffs=self.seffs.copy(), unit=self.unit, units=self.units)
-    
+
     def len(self):
         return len(self)
 
@@ -711,7 +727,50 @@ class Seffs:
             outdict[seff.out] = seff.sh
 
         return outdict
-    
+
+    @staticmethod
+    def parallel(lview, outs=None, pids=None, units="MB", unit="clock"):
+        """Execute Seffs in parallel using `lview`.
+
+        lview = ipyparallel.client.view.LoadBalancedView
+        """
+        if any([outs is not None, pids is not None]):
+            if isinstance(outs, str):
+                outs = [outs]
+            if isinstance(pids, str) or isinstance(pids, int):
+                pids = [pids]
+
+            jobs = []
+            if outs is not None and pids is not None:
+                for out in outs:
+                    jobs.append(lview.apply_async(Seffs, **dict(outs=[out])))
+                for pid in pids:
+                    jobs.append(lview.apply_async(Seffs, **dict(pids=[pid])))
+
+            elif outs is not None:
+                for out in outs:
+                    jobs.append(lview.apply_async(Seffs, **dict(outs=[out])))
+
+            else:                
+                for pid in pids:
+                    jobs.append(lview.apply_async(Seffs, **dict(pids=[pid])))
+
+            pyimp.watch_async(jobs, desc='requesting seffs', phase='parallel Seffs')
+
+            seffs = {}
+            for i, j in enumerate(pbar(jobs, desc='retrieving seffs')):
+                if i == 0:
+                    seffs = j.r
+                else:
+                    try:
+                        seffs += j.r
+                    except:
+                        seffs += Seffs(outs=[iterator[i]], progress_bar=False)
+        else:
+            raise Exception('one of `outs` or `pids` kwargs needs to be provided.')
+
+        return Seffs(seffs=seffs, units=units, unit=unit)
+
     @staticmethod
     def filter_states(seffs, state):
         newseffs = {}
@@ -817,28 +876,24 @@ class SQInfo:
     Assumed
     -------
     SQUEUE_FORMAT="%i %u %a %j %t %S %L %D %C %b %m %N (%r) %P"
+                    0  1  2  3  4  5  6  7  8  9 10 11  12  13
 
-    Notes
-    -----
-    - I realized that %N can be blank when pending, and then cause problems with .split()
-        so the attrs now can handle this. But I'm leaving the methods for backwards compatibility.
-
-    Example jobinfo    (index number of list)
-    ---------------
-    ('29068196',       0
-     'b.lindb',        1
-     'lotterhos',      2
-     'batch_0583',     3
-     'R',              4
-     'N/A',            5
-     '9:52:32',        6
-     '1',              7
-     '56',             8
-     'N/A',            9
-     '2000M',          10
-     'd0036',          11
-     '(Priority)')     12
-     'short'           13
+    Example jobinfo    index
+    ---------------    -----
+    ('29068196',         0
+     'b.lindb',          1
+     'lotterhos',        2
+     'batch_0583',       3
+     'R',                4
+     'N/A',              5
+     '9:52:32',          6
+     '1',                7
+     '56',               8
+     'N/A',              9
+     '2000M',           10
+     'd0036',           11
+     '(Priority)')      12
+     'short'            13
     """
 
     def __init__(self, jobinfo):
@@ -1357,19 +1412,24 @@ class Squeue:
         return self.sq.items()
 
     def copy(self):
-        obj = type(self).__new__(self.__class__)
-        obj.sq = self.sq.copy()
-        return obj
+        squeue = type(self).__new__(self.__class__)
+        squeue.sq = self.sq.copy()
+        return squeue
 
     def running(self):
-        obj = type(self).__new__(self.__class__)
-        obj.sq = self._filter_jobs(self, states="R").copy()
-        return obj
+        squeue = type(self).__new__(self.__class__)
+        squeue.sq = self._filter_jobs(self, states="R").copy()
+        return squeue
 
     def pending(self):
-        obj = type(self).__new__(self.__class__)
-        obj.sq = self._filter_jobs(self, states="PD").copy()
-        return obj
+        squeue = type(self).__new__(self.__class__)
+        squeue.sq = self._filter_jobs(self, states="PD").copy()
+        return squeue
+    
+    def closing(self):
+        squeue = type(self).__new__(self.__class__)
+        squeue.sq = self._filter_jobs(self, states="CG").copy()
+        return squeue
 
     def states(self, **kwargs):
         """Get a list of job states."""
