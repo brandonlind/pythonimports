@@ -396,6 +396,8 @@ class Seff:
             mem = float(mem) / 1024
         elif mem_units == "EB":
             mem = 0
+        elif mem_units == "TB":
+            mem = float(mem) * 1048576  # 1,048,576 = 1024 * 1024
         else:
             assert mem_units == "MB", ("info = ", mem_units, self.info)
             mem = float(mem)
@@ -746,14 +748,17 @@ class Seffs:
                     jobs.append(lview.apply_async(Seffs, **dict(outs=[out])))
                 for pid in pids:
                     jobs.append(lview.apply_async(Seffs, **dict(pids=[pid])))
+                args = outs + pids
 
             elif outs is not None:
                 for out in outs:
                     jobs.append(lview.apply_async(Seffs, **dict(outs=[out])))
+                args = outs
 
-            else:                
+            else:
                 for pid in pids:
                     jobs.append(lview.apply_async(Seffs, **dict(pids=[pid])))
+                args = pids
 
             pyimp.watch_async(jobs, desc='requesting seffs', phase='parallel Seffs')
 
@@ -765,7 +770,7 @@ class Seffs:
                     try:
                         seffs += j.r
                     except:
-                        seffs += Seffs(outs=[iterator[i]], progress_bar=False)
+                        seffs += Seffs(outs=[args[i]], progress_bar=False)
         else:
             raise Exception('one of `outs` or `pids` kwargs needs to be provided.')
 
