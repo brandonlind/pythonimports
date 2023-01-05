@@ -181,9 +181,10 @@ def sbatch(shfiles: Union[str, list], sleep=0, printing=False, outdir=None, prog
     - `sbatch` therefore assumes that each job has a unique job name
     """
 
-    if isinstance(shfiles, list) is False:
-        assert isinstance(shfiles, str)
+    if isinstance(shfiles, str):
         shfiles = [shfiles]
+    else:
+        assert '__iter__' in shfiles.__dict__
 
     if progress_bar is True:
         iterator = pbar(shfiles, desc='sbatching')
@@ -1632,13 +1633,16 @@ class Squeue:
 
         pass
 
-    def hold(self, **kwargs):
+    def hold(self, num_jobs=None, **kwargs):
         """Hold jobs. Parameters described in `Squeue._update_job.__doc__`."""
         _sq = self._filter_jobs(self, **kwargs)
+        
+        if num_jobs is None:
+            num_jobs = len(_sq)
 
-        for pid, q in pbar(_sq.items()):
+        for q in pbar(pyimp.values(_sq)[:num_jobs]):
             if "pd" in q.state.lower():  # only pending jobs can be held
-                updated_result = Squeue._update_job([shutil.which("scontrol"), "hold"], q.job, pid)
+                updated_result = Squeue._update_job([shutil.which("scontrol"), "hold"], q.job, q.pid)
                 if updated_result is True:
                     # update job info in Squeue container
                     self[q.pid].info = Squeue._update_self(q.info, **kwargs)
@@ -1646,16 +1650,19 @@ class Squeue:
                     self[q.pid].info = updated_result[1]
                 elif updated_result == "missing":
                     self.__delitem__(q.pid)
+        
         pass
 
-    def release(self, **kwargs):
+    def release(self, num_jobs=None, **kwargs):
         """Release held jobs. Parameters described in `Squeue._update_job.__doc__`."""
         _sq = self._filter_jobs(self, **kwargs)
+        
+        if num_jobs is None:
+            num_jobs = len(_sq)
 
-        released = 0
-        for pid, q in pbar(_sq.items()):
+        for q in pbar(pyimp.values(_sq)[:num_jobs]):
             if "held" in q.status.lower():  # JobHeldUser
-                updated_result = Squeue._update_job([shutil.which("scontrol"), "release"], q.job, pid)
+                updated_result = Squeue._update_job([shutil.which("scontrol"), "release"], q.job, q.pid)
                 if updated_result is True:
                     # update job info in Squeue container
                     self[q.pid].info = Squeue._update_self(q.info, **kwargs)
@@ -1663,8 +1670,7 @@ class Squeue:
                     self[q.pid].info = updated_result[1]
                 elif updated_result == "missing":
                     self.__delitem__(q.pid)
-                released += 1
-        print(pyimp.ColorText(f"\tReleased {released} jobs").gray())
+
         pass
 
     pass
