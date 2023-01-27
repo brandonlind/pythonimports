@@ -110,13 +110,10 @@ def histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, 
     return ax_box, ax_hist
 
 
-import matplotlib.lines as mlines
-import matplotlib.colors as mcolors
-# differs from commit because I've moved `marker_size` from being hard-coded (as `size`) to it being a kwarg
 def slope_graph(x, *y, labels=['x', 'y'], figsize=(3,8), positive_color='black', negative_color='tomato',
                 labeldict=None, shape_color=None, saveloc=None, title=None, legloc='center',
                 colors=list(mcolors.TABLEAU_COLORS), markers=None, addtolegend=None, ylabel='importance rank',
-                ascending=False, legendcols=None, bbox_to_anchor=(0.5, -0.05), ax=None, marker_size=80):
+                ascending=False, legendcols=None, bbox_to_anchor=(0.5, -0.05), ax=None, marker_size=80, all_yticks=False):
     """Visually display how rank order of .index changes between arbitrary number of pd.Series, `x` and *`y`.
     
     Parameters
@@ -136,6 +133,7 @@ def slope_graph(x, *y, labels=['x', 'y'], figsize=(3,8), positive_color='black',
     ylabel - label for the y-axis
     ascending - bool; if False, lowest value gets lower rank (1 being high rank, and eg 20 being lower rank)
     ax - matplotlib.axes._subplots.AxesSubplot; in case I want a slope graph on an ax within a plt.subplot
+    all_yticks - whether to show all y-axis tick labels, otherwise only every 5th tick label is shown
     
     Notes
     -----
@@ -195,7 +193,10 @@ def slope_graph(x, *y, labels=['x', 'y'], figsize=(3,8), positive_color='black',
     # fix the axes and labels
     ax.set_xticks([0])
     _ = ax.set_xticklabels([None], fontsize='x-large')
-    plt.yticks(np.arange(1, pyimp.nrow(x), 5))
+    if all_yticks is False:
+        plt.yticks(np.arange(1, pyimp.nrow(x), 5))
+    else:
+        plt.yticks(np.arange(1, pyimp.nrow(x)+1, 1))
     plt.ylabel(ylabel, fontsize=15)
     plt.title(title)
 
