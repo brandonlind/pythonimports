@@ -183,6 +183,8 @@ def sbatch(shfiles: Union[str, list], sleep=0, printing=False, outdir=None, prog
 
     if isinstance(shfiles, str):
         shfiles = [shfiles]
+    elif isinstance(shfiles, list):
+        pass
     else:
         assert '__iter__' in shfiles.__dict__
 
@@ -1123,7 +1125,7 @@ class Squeue:
         return grepped
 
     @staticmethod
-    def _getsq(grepping=None, states=[], user=None, partition=None, **kwargs):
+    def _getsq(grepping=None, states=[], user=None, partition=None, aflag=False, **kwargs):
         """Get and parse slurm queue according to criteria. kwargs is not used."""
 
         def _checksq(sq):
@@ -1163,6 +1165,8 @@ class Squeue:
             cmd.extend(["-t", "PD"])
         if partition is not None:
             cmd.extend(["-p", partition])
+        if aflag is True:
+            cmd.append("-a")
 
         # execute command
         found = 0
