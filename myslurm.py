@@ -524,6 +524,16 @@ class Seffs:
                               index=pyimp.keys(seffs))
         
         Seffs.check_shfiles(self.shfiles)
+        
+        self.boxplot_kws = dict(
+            flierprops={
+                'markersize' : 8,
+                'zorder' : 0,
+                'markerfacecolor': 'gray',
+                'alpha': 0.5,
+                'markeredgewidth' : 0.0  # remove edge
+            }
+        )
 
         pass
     
@@ -614,6 +624,16 @@ class Seffs:
         self.cpus = Seffs._update(self.cpus, seffs2.cpus)
 
         self.nodes = Seffs._update(self.nodes, seffs2.nodes)
+        
+        self.boxplot_kws = dict(
+            flierprops={
+                'markersize' : 8,
+                'zorder' : 0,
+                'markerfacecolor': 'gray',
+                'alpha': 0.5,
+                'markeredgewidth' : 0.0  # remove edge
+            }
+        )
 
         return self
 
@@ -703,11 +723,25 @@ class Seffs:
         return MySeries(attr1, name=name)
 
     def plot_mems(self, **kwargs):
-        _ = get_mems(self.seffs, **kwargs)
+        """Plot myfigs.histo_box of mem usage for all jobs in self."""
+        if 'boxplot_kws' not in kwargs.keys():
+            boxplot_kws = self.boxplot_kws
+        else:
+            boxplot_kws = kwargs.pop('boxplot_kws')
+        
+        _ = get_mems(self.seffs, boxplot_kws=boxplot_kws, **kwargs)
+        
         pass
 
     def plot_times(self, **kwargs):
-        _ = get_times(self.finished().seffs, **kwargs)
+        """Plot myfigs.histo_box of times usage for all jobs in self."""
+        if 'boxplot_kws' not in kwargs.keys():
+            boxplot_kws = self.boxplot_kws            
+        else:
+            boxplot_kws = kwargs.pop('boxplot_kws')
+            
+        _ = get_times(self.finished().seffs, boxplot_kws=boxplot_kws, **kwargs)
+        
         pass
 
     def keys(self):
@@ -873,6 +907,21 @@ class Seffs:
                 seffs[key] = seff
                 assert 'sh' in seff.__dict__, seff.__dict__
 
+        return Seffs(seffs=seffs.copy(), unit=self.unit, units=self.units)
+    
+    def most_recent(self):
+        """From the shfiles inferred from outs, pair most recent out with sh."""
+        
+        recent_outs = pyimp.values(self.sh_out())
+        recent_pids = [getpid(out) for out in recent_outs]
+        assert len(recent_pids) == len(set(recent_pids))
+
+        seffs = self.seffs.copy()
+        
+        for pid in pyimp.keys(seffs):
+            if pid not in recent_pids:
+                del seffs[pid]
+        
         return Seffs(seffs=seffs.copy(), unit=self.unit, units=self.units)
 
     pass
