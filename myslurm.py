@@ -445,7 +445,8 @@ class Seffs:
     - __isub__ and __iadd__ do not Seffs.check_shfiles for duplicates (but __add__ and __sub__ do)
 
     """
-    def __init__(self, outs=None, seffs=None, pids=None, pids_as_keys=True, units="MB", unit="clock", plot=False, progress_bar=True):
+    def __init__(self, outs=None, seffs=None, pids=None, pids_as_keys=True, units="MB", unit="clock",
+                 plot=False, progress_bar=True):
         if any([outs is not None, seffs is not None, pids is not None]):
             if outs is not None or pids is not None:
                 seffs = get_seff(outs=outs, pids=pids, pids_as_keys=pids_as_keys, progress_bar=progress_bar)
@@ -850,7 +851,7 @@ class Seffs:
         """Return Seffs object for any timeout jobs."""
         seffs = Seffs.filter_states(self.seffs, 'timeout')
         return Seffs(seffs=seffs.copy(), unit=self.unit, units=self.units)
-    
+
     def sh_outs(self, sh_as_key=True, internal=False):
         """key = sh, val = list of outfiles."""
         shdict = defaultdict(list)
@@ -887,9 +888,9 @@ class Seffs:
             if "running" in seff.state().lower() or "pending" in seff.state().lower():
                 continue
             seffs[key] = seff.copy()
-        
+
         return Seffs(seffs=seffs.copy(), unit=self.unit, units=self.units)
-    
+
     def uncompleted(self):
         """Return Seffs object for any uncompleted job.
         
@@ -913,7 +914,7 @@ class Seffs:
         """From the shfiles inferred from outs, pair most recent out with sh."""
         
         recent_outs = pyimp.values(self.sh_out())
-        recent_pids = [getpid(out) for out in recent_outs]
+        recent_pids = [getpid(out) for out in recent_outs]  # don't do pyimp.keys(self.sh_out(sh_as_key=False)) 
         assert len(recent_pids) == len(set(recent_pids))
 
         seffs = self.seffs.copy()
@@ -1174,7 +1175,7 @@ class Squeue:
         return grepped
 
     @staticmethod
-    def _getsq(grepping=None, states=[], user=None, partition=None, aflag=False, **kwargs):
+    def _getsq(grepping=None, states=[], user=None, partition=None, aflag=False, p=None, **kwargs):
         """Get and parse slurm queue according to criteria. kwargs is not used."""
 
         def _checksq(sq):
@@ -1212,7 +1213,8 @@ class Squeue:
             cmd.extend(["-t", "RUNNING"])
         if any(["pending" in states, "PD" in states, "pd" in states]):
             cmd.extend(["-t", "PD"])
-        if partition is not None:
+        if partition is not None or p is not None:
+            partition = partition if partition is not None else p
             cmd.extend(["-p", partition])
         if aflag is True:
             cmd.append("-a")
@@ -1493,23 +1495,56 @@ class Squeue:
     def states(self, **kwargs):
         """Get a list of job states."""
         _sq = self._filter_jobs(self, **kwargs)
-        return [info.state for q, info in _sq.items()]
+        return MySeries({q : info.state for (q, info) in _sq.items()})
 
     def pids(self, **kwargs):
         """Get a list of pids, subset with kwargs."""
         _sq = self._filter_jobs(self, **kwargs)
-        return [info.pid for q, info in _sq.items()]
+        return MySeries({q : info.pid for (q, info) in _sq.items()})
+#         return [info.pid for q, info in _sq.items()]
 
     def jobs(self, **kwargs):
         """Get a list of job names, subset with kwargs."""
         _sq = self._filter_jobs(self, **kwargs)
-        return [info.job for q, info in _sq.items()]
+        return MySeries({q : info.job for (q, info) in _sq.items()})
+#         return [info.job for q, info in _sq.items()]
 
     def accounts(self, **kwargs):
         """Get a list of accounts, subset with kwargs."""
         _sq = self._filter_jobs(self, **kwargs)
-        return [info.account for q, info in _sq.items()]
+        return MySeries({q : info.account for (q, info) in _sq.items()})
+#         return [info.account for q, info in _sq.items()]
+
+    def cpus(self, **kwargs):
+        """Get a list of CPUs."""
+        _sq = self._filter_jobs(self, **kwargs)
+        return MySeries({q: info.cpus for (q, info) in _sq.items()})
     
+    def mems(self, units='MB', **kwargs):
+        """Get a list of memory requests."""
+        _sq = self._filter_jobs(self, **kwargs)
+        return MySeries({q: info.mem(units=units) for (q, info) in _sq.items()})
+    
+    def nodelists(self, **kwargs):
+        _sq = self._filter_jobs(self, **kwargs)
+        return MySeries({q: info.nodelist for (q, info) in _sq.items()})
+    
+    def nodes(self, **kwargs):
+        _sq = self._filter_jobs(self, **kwargs)
+        return MySeries({q: info.nodes for (q, info) in _sq.items()})
+    
+    def times(self, unit='clock', **kwargs):
+        _sq = self._filter_jobs(self, **kwargs)
+        return MySeries({q: info.time if unit == 'clock' else clock_hrs(info.time, unit=unit) for (q, info) in _sq.items()})
+    
+    def statuses(self, **kwargs):
+        _sq = self._filter_jobs(self, **kwargs)
+        return MySeries({q: info.status for (q, info) in _sq.items()})
+
+    def users(self, **kwargs):
+        _sq = self._filter_jobs(self, **kwargs)
+        return MySeries({q: info.user for (q, info) in _sq.items()})
+
     def partitions(self):
         """Get counts of job states across partitions."""
         partitions = defaultdict(Counter)
@@ -1534,7 +1569,8 @@ class Squeue:
         minmemorynode - total memory requested
         timelimit - total wall time requested
         """
-        def _cmd(account=None, minmemorynode=None, timelimit=None, to_partition=None, to_reservation=None, **kwargs):
+        def _cmd(account=None, minmemorynode=None, timelimit=None, to_partition=None, to_reservation=None, to=None,
+                 to_res=None, **kwargs):
             """Create bash command for slurm scontrol update."""
             # base command
             cmd_ = "scontrol update"
@@ -1548,9 +1584,11 @@ class Squeue:
             if timelimit is not None:
                 timelimit = Squeue._handle_clock(timelimit)
                 cmd_ = f"{cmd_} TimeLimit={timelimit}"
-            if to_partition is not None:
+            if to_partition is not None or to is not None:
+                to_partition = to_partition if to_partition is not None else to
                 cmd_ = f"{cmd_} partition={to_partition}"
-            if to_reservation is not None:
+            if to_reservation is not None or to_res is not None:
+                to_reservation = to_reservation if to_reservation is not None else to_res
                 cmd_ = f"{cmd_} reservation={to_reservation}"
             return cmd_
 
