@@ -13,6 +13,7 @@ import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
 import pythonimports as pyimp
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+import matplotlib.gridspec as gridspec
 
 
 def create_cmap(list_of_colors, name=None, grain=500):
@@ -257,9 +258,9 @@ def save_pdf(saveloc):
     pass
 
 
-def makesweetgraph(x=None, y=None, cmap="jet", ylab=None, xlab=None, bins=100, saveloc=None, figsize=(5, 4), snsbins=60,
-                   title=None, xlim=None, ylim=None, vlim=(None, None)) -> None:
-    """Make 2D histogram with marginal histograms for each axis.
+def scatter2d(x=None, y=None, cmap="jet", ylab=None, xlab=None, bins=100, saveloc=None, figsize=(5, 4), snsbins=60,
+                   title=None, xlim=None, ylim=None, vlim=(None, None), marginal_kws={}, title_kws={}) -> None:
+    """Make 2D scatterplot with marginal histograms for each axis.
 
     Parameters
     ----------
@@ -275,28 +276,39 @@ def makesweetgraph(x=None, y=None, cmap="jet", ylab=None, xlab=None, bins=100, s
     xlim, ylim - tuple with min and max for each axis
     vlim - tuple with min and max for color bar (to standardize across figures)
     """
+    if 'bins' not in pyimp.keys(marginal_kws):
+        marginal_kws.update(dict(bins=snsbins))
+    
     # plot data
-    ax1 = sns.jointplot(x=x, y=y, marginal_kws=dict(bins=snsbins))
+    ax1 = sns.jointplot(x=x, y=y, marginal_kws=marginal_kws)
     ax1.fig.set_size_inches(figsize[0], figsize[1])
     ax1.ax_joint.cla()
     plt.sca(ax1.ax_joint)
     plt.hist2d(x, y, bins, norm=mcolors.LogNorm(*vlim), cmap=cmap, range=None if xlim is None else np.array([xlim, ylim]))
+    
     # set title and axes labels
     if title is None:
-        plt.title("%s\nvs\n%s\n" % (xlab, ylab), y=1.2, x=0.6)
+        plt.title("%s\nvs\n%s\n" % (xlab, ylab), y=1.2, x=0.6, **title_kws)
     else:
-        plt.title(title, y=1.2, x=0.6)
+        plt.title(title, y=1.2, x=0.6, **title_kws)
+
     plt.ylabel(ylab, fontsize=12)
     plt.xlabel(xlab, fontsize=12)
+    
     # set up scale bar legend
     cbar_ax = ax1.fig.add_axes([1, 0.1, 0.03, 0.7])
     cb = plt.colorbar(cax=cbar_ax)
     cb.set_label(r"$\log_{10}$ density of points", fontsize=13)
+    
     # save if prompted
     if saveloc is not None:
         save_pdf(saveloc)
-    plt.show()
-    pass
+        
+        plt.show()
+    
+    return ax1
+
+makesweetgraph = scatter2d  # backwards compatibility
 
 
 def gradient_image(ax, direction=0.3, cmap_range=(0, 1), extent=(0, 1, 0, 1), **kwargs):
@@ -355,12 +367,15 @@ def gradient_image(ax, direction=0.3, cmap_range=(0, 1), extent=(0, 1, 0, 1), **
 
 def adjust_box_widths(axes, fac=0.9):
     """
-    Adjust the widths of a seaborn-generated boxplot.
+    Adjust the widths of a seaborn-generated boxplot or boxenplot.
     
     Notes
     -----
     - thanks https://github.com/mwaskom/seaborn/issues/1076
     """
+    from matplotlib.patches import PathPatch
+    from matplotlib.collections import PatchCollection
+    
     if isinstance(axes, list) is False:
         axes = [axes]
     
@@ -369,11 +384,15 @@ def adjust_box_widths(axes, fac=0.9):
 
         # iterating through axes artists:
         for c in ax.get_children():
-
             # searching for PathPatches
-            if isinstance(c, PathPatch):
+            if isinstance(c, PathPatch) or isinstance(c, PatchCollection):
+                if isinstance(c, PathPatch):
+                    p = c.get_path()
+                else:
+                    p = c.get_paths()[-1]
+            
                 # getting current width of box:
-                p = c.get_path()
+#                 p = c.get_path()
                 verts = p.vertices
                 verts_sub = verts[:-1]
                 xmin = np.min(verts_sub[:, 0])
@@ -397,4 +416,69 @@ def adjust_box_widths(axes, fac=0.9):
                             # this will raise an error in the future.
                                 # if np.all(l.get_xdata() == [xmin, xmax]):
                         pass
+    pass
+
+
+class SeabornFig2Grid():
+    """Allow seaborn figure-level figs to be suplots.
+    
+    thanks - https://stackoverflow.com/questions/35042255/how-to-plot-multiple-seaborn-jointplot-in-subplot/47664533#47664533
+    """
+    def __init__(self, seaborngrid, fig,  subplot_spec):
+        self.fig = fig
+        self.sg = seaborngrid
+        self.subplot = subplot_spec
+        if isinstance(self.sg, sns.axisgrid.FacetGrid) or \
+            isinstance(self.sg, sns.axisgrid.PairGrid):
+            self._movegrid()
+        elif isinstance(self.sg, sns.axisgrid.JointGrid):
+            self._movejointgrid()
+        self._finalize()
+        pass
+
+    def _movegrid(self):
+        """Move PairGrid or Facetgrid."""
+        self._resize()
+        n = self.sg.axes.shape[0]
+        m = self.sg.axes.shape[1]
+        self.subgrid = gridspec.GridSpecFromSubplotSpec(n,m, subplot_spec=self.subplot)
+        for i in range(n):
+            for j in range(m):
+                self._moveaxes(self.sg.axes[i,j], self.subgrid[i,j])
+        pass
+
+    def _movejointgrid(self):
+        """Move Jointgrid."""
+        h= self.sg.ax_joint.get_position().height
+        h2= self.sg.ax_marg_x.get_position().height
+        r = int(np.round(h/h2))
+        self._resize()
+        self.subgrid = gridspec.GridSpecFromSubplotSpec(r+1,r+1, subplot_spec=self.subplot)
+
+        self._moveaxes(self.sg.ax_joint, self.subgrid[1:, :-1])
+        self._moveaxes(self.sg.ax_marg_x, self.subgrid[0, :-1])
+        self._moveaxes(self.sg.ax_marg_y, self.subgrid[1:, -1])
+        pass
+
+    def _moveaxes(self, ax, gs):
+        #https://stackoverflow.com/a/46906599/4124317
+        ax.remove()
+        ax.figure=self.fig
+        self.fig.axes.append(ax)
+        self.fig.add_axes(ax)
+        ax._subplotspec = gs
+        ax.set_position(gs.get_position(self.fig))
+        ax.set_subplotspec(gs)
+        pass
+
+    def _finalize(self):
+        plt.close(self.sg.fig)
+        self.fig.canvas.mpl_connect("resize_event", self._resize)
+        self.fig.canvas.draw()
+        pass
+
+    def _resize(self, evt=None):
+        self.sg.fig.set_size_inches(self.fig.get_size_inches())
+        pass
+    
     pass
