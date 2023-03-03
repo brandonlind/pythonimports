@@ -855,7 +855,7 @@ def wrap_defaultdict(instance, times=1):
     return dd
 
 
-def unwrap_dictionary(nested_dict):
+def unwrap_dictionary(nested_dict, progress_bar=False):
     """Instead of iterating a nested dict, spit out all keys and the final value.
     
     Example
@@ -881,8 +881,13 @@ def unwrap_dictionary(nested_dict):
     -----
     - thanks https://stackoverflow.com/questions/68322685/how-do-i-explode-a-nested-dictionary-for-assignment-iteration
     """
+    if progress_bar is True:
+        iterator = pbar(nested_dict.items())
+    else:
+        iterator = nested_dict.items()
+    
     # iterate over the top-level dictionary
-    for k, v in nested_dict.items():
+    for k, v in iterator:
         if isinstance(v, dict):
             # it's a nested dictionary, so recurse
             for ks, v2 in unwrap_dictionary(v):
