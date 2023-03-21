@@ -216,7 +216,7 @@ def getmostrecent(files: list, remove=False) -> Optional[str]:
     pass
 
 
-def formatclock(hrs: Union[datetime.timedelta, float], exact=False) -> str:
+def formatclock(hrs: Union[datetime.timedelta, float], exact=True) -> str:
     """For a given number of hours, format a clock: days-hours:mins:seconds.
 
     Parameters
