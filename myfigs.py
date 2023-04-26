@@ -14,6 +14,7 @@ import matplotlib.patches as mpatches
 import pythonimports as pyimp
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import matplotlib.gridspec as gridspec
+from collections import defaultdict
 
 
 def create_cmap(list_of_colors, name=None, grain=500):
