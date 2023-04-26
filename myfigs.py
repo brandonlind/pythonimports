@@ -24,7 +24,7 @@ def create_cmap(list_of_colors, name=None, grain=500):
 def histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, fontsize=12,
               y_pad=1.3, histbins='auto', saveloc=None, rotation=0, ax=None, 
               markersize=8, zorder=0, markerfacecolor='gray', alpha=0.5, markeredgewidth=0.0,
-              histplot_kws={}, **kwargs):
+              histplot_kws={}, boxplot_kws=defaultdict(dict), **kwargs):
     """Create histogram with boxplot in top margin.
     
     Parameters
@@ -54,7 +54,7 @@ def histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, 
     ax - [matplotlib.axes.Axes, matplotlib.axes._subplots.AxesSubplot]
         axis canvas upon which to create the histo boxplot
     boxplot_kws - (markersize, zorder, markerfacecolor, alpha, markeredgewidth)
-        kwargs pass to seaborn.boxplot
+        kwargs passed to seaborn.boxplot
     histplot_kws - dict
         kwargs passed to seaborn.histplot
     kwargs
@@ -64,16 +64,14 @@ def histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, 
     ------
         thanks https://www.python-graph-gallery.com/24-histogram-with-a-boxplot-on-top-seaborn
     """
-    boxplot_kws=dict(
-        flierprops={
-            'markersize' : markersize,
-            'zorder' : zorder,
-            'markerfacecolor': markerfacecolor,
-            'alpha': alpha,
-            'markeredgewidth' : markeredgewidth  # remove edge if markeredgewidth==0
-        }
-    )    
-    
+    boxplot_kws['flierprops'].update({
+                'markersize' : markersize,
+                'zorder' : zorder,
+                'markerfacecolor': markerfacecolor,
+                'alpha': alpha,
+                'markeredgewidth' : markeredgewidth  # remove edge if markeredgewidth==0
+            })  
+
 #     col = 'data' if col is None else col
     if 'name' in dir(data):
         col = data.name
