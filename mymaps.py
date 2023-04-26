@@ -40,6 +40,8 @@ def gdalwarp(infile, netcdf_outfile, proj, gdalwarp_exe=None):
     if gdalwarp_exe is None:
         gdalwarp_exe = op.join(os.environ['HOME'], 'anaconda3/envs/gdal_env/bin/gdalwarp')
     
+    # gdalwarp -s_srs <proj> -t_srs <proj> -of netCDF /path/to/infile /path/to/outfile -overwrite
+    
     output = subprocess.check_output([gdalwarp_exe,
                                       '-s_srs', proj,
                                       '-t_srs',  '+proj=longlat +ellps=WGS84',
@@ -51,7 +53,8 @@ def gdalwarp(infile, netcdf_outfile, proj, gdalwarp_exe=None):
 
 
 def draw_pie_marker(ratios, xcoord, ycoord, sizes, colors, ax, edgecolors="black", slice_edgecolors="none", alpha=1,
-                    edge_linewidths=1.5, slice_linewidths=1.5, zorder=10, transform=False, label=None, edgefactor=1):
+                    edge_linewidths=1.5, slice_linewidths=1.5, zorder=10, transform=False, label=None, edgefactor=1,
+                    label_kws={}):
     """Draw a pie chart at coordinates `[xcoord,ycoord]` on `ax`.
 
     Parameters
@@ -65,6 +68,7 @@ def draw_pie_marker(ratios, xcoord, ycoord, sizes, colors, ax, edgecolors="black
     zorder : layer order
     transform : bool; transform coordinates to cylindrical projection
     label : str label for the pie graph at `[x,y]`
+    label_kws : dict, passed to ax.annotate
 
     TODO
     ----
@@ -110,12 +114,18 @@ def draw_pie_marker(ratios, xcoord, ycoord, sizes, colors, ax, edgecolors="black
     scatter = (ax.scatter if transform is False else partial(ax.scatter, transform=ccrs.PlateCarree()))
     annotate = (ax.annotate if transform is False
                 else partial(ax.annotate, xycoords=ccrs.PlateCarree()._as_mpl_transform(ax)))
+    
+    objects = []
     for marker in markers:
-        scatter(xcoord, ycoord, zorder=zorder, **marker)
+        objects.append(
+            scatter(xcoord, ycoord, zorder=zorder, **marker)
+        )
     if label is not None:
-        annotate(label, (xcoord, ycoord), zorder=zorder + 10, color="white", weight="bold")
+        objects.append(
+            annotate(label, (xcoord, ycoord), zorder=zorder + 10, **label_kws)
+        )
 
-    pass
+    return pyimp.flatten(objects)
 
 
 def basemap(extent, shapefiles=None, figsize=(8, 15)):
