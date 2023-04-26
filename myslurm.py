@@ -227,7 +227,7 @@ def sbatch(shfiles: Union[str, list], sleep=0, printing=False, outdir=None, prog
                     print("!!!REACHED FAILCOUNT LIMIT OF 10!!!")
                     return pids
             # one more failsafe to ensure a job isn't submitted twice
-            sq = Squeue(verbose=False)
+            sq = Squeue(aflag=True, verbose=False)
             jobs = defaultdict(list)
             for _pid, q in sq.items():
                 jobs[q.job].append(_pid)
@@ -1203,7 +1203,7 @@ class Squeue:
             return sq
 
         if user is None:
-            user = os.environ["USER"]
+            user = os.environ["USER"]  # to get queue without '-u $USER', need to add support for array jobs
         if grepping is None:
             grepping = [user]
 
@@ -1300,13 +1300,13 @@ class Squeue:
                 # see if job is running or still in queue
                 if all([job is None, jobid is None, "scancel" in "".join(cmd)]):
                     # for scancel -u $USER
-                    sq = Squeue(verbose=False)
+                    sq = Squeue(aflag=True, verbose=False)
                     if len(sq) > 0:
                         failcount += 1
                     else:
                         return True
                 else:
-                    jobq = Squeue(grepping=jobid, verbose=False)
+                    jobq = Squeue(aflag=True, grepping=jobid, verbose=False)
                     if len(jobq) == 0:
                         return "missing"
                     elif jobq[jobid].state == "R":
@@ -1678,7 +1678,7 @@ class Squeue:
             if "onaccount" in kwargs:
                 # if the job is no longer on the queried account, it won't be found in new queue query
                 kwargs.pop("onaccount")
-            sq = self._filter_jobs(Squeue(), **kwargs)  # re-query the queue, filter
+            sq = self._filter_jobs(Squeue(aflag=True), **kwargs)  # re-query the queue, filter
             balq.announceacctlens(*balq.getaccounts(sq,
                                                     "final",
                                                     user_accts),
