@@ -442,20 +442,20 @@ def watch_async(jobs: list, phase=None, desc=None, color=None) -> None:
     pass
 
 
-def read(file: str, lines=True, ignore_blank=True) -> Union[str, list]:
+def read(file: str, lines=True, ignore_blank=False) -> Union[str, list]:
     """Read lines from a file.
 
     Return a list of lines, or one large string
     """
     with open(file, "r") as o:
         text = o.read()
+
     if lines is True:
         text = text.split("\n")
         if ignore_blank is True:
             text = [line for line in text if line != ""]
-        return text
-    else:
-        return text
+
+    return text
 
 
 def get_skipto_df(f: str, skipto: int, nrows: int, sep="\t", index_col=None, header="infer", **kwargs) -> pd.DataFrame:
