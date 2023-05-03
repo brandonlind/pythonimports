@@ -307,7 +307,7 @@ def create_watcherfile(pids, directory, watcher_name="watcher", email="b.lind@no
     with open(watcherfile, "w") as o:
         o.write(text)
 
-    print(sbatch(watcherfile))
+    print(sbatch(watcherfile, progress_bar=False))
 
     return watcherfile
 
