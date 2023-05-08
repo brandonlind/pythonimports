@@ -1418,7 +1418,21 @@ class Squeue:
         return _sq
 
     def _update_queue(self, cmd, desc, user=False, num_jobs=None, **kwargs):
-        """Update jobs in queue and job info in Squeue class object."""
+        """Update jobs in queue and job info in Squeue class object.
+        
+        Parameters
+        ----------
+        cmd : str
+            the command to update the queue
+        desc : str
+            passed to tqdm.tqdm (progress bar name)
+        user : bool
+            whether to cancel all jobs (True) or not (False); when False, kwargs filter jobs
+        num_jobs : int, float
+            - the number of jobs to change
+            - if float, percentage of jobs returning from query
+            - if int, the max number of jobs to change given the query
+        """
 
         if user is False:  # scontrol commands
             cmd = cmd.split()
@@ -1430,6 +1444,11 @@ class Squeue:
         if len(_sq) > 0:
             if num_jobs is None:
                 num_jobs = len(_sq)
+            elif isinstance(num_jobs, float) and num_jobs < 1:
+                num_jobs = math.ceil(num_jobs * len(_sq))
+                
+            print(f'{num_jobs = }, len(sq) = %s ' % str(len(_sq)))
+
             for q in pbar(list(_sq.values())[:num_jobs], desc=desc):
                 # if the job is updated successfully
                 updated_result = Squeue._update_job(cmd, q.job, q.pid)
