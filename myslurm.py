@@ -13,6 +13,7 @@ from collections import defaultdict, Counter
 from typing import Union
 from functools import partial
 import warnings
+import math
 
 import pythonimports as pyimp
 import balance_queue as balq
@@ -1447,7 +1448,7 @@ class Squeue:
             elif isinstance(num_jobs, float) and num_jobs < 1:
                 num_jobs = math.ceil(num_jobs * len(_sq))
                 
-            print(f'{num_jobs = }, len(sq) = %s ' % str(len(_sq)))
+#             print(f'{num_jobs = }, len(sq) = %s ' % str(len(_sq)))
 
             for q in pbar(list(_sq.values())[:num_jobs], desc=desc):
                 # if the job is updated successfully
