@@ -37,10 +37,12 @@ from myclasses import ColorText
 #from myfigs import *
 
 # backwards compatibility
-trange = partial(_trange, bar_format='{l_bar}{bar:15}{r_bar}')
-pbar = partial(tqdm, bar_format='{l_bar}{bar:15}{r_bar}')
+bar_format = '{l_bar}{bar:15}{r_bar}'
+trange = partial(_trange, bar_format=bar_format)
+pbar = partial(tqdm, bar_format=bar_format)
 nb = pbar
 sinfo = session_info.show
+tqdm.pandas(bar_format=bar_format)
 # /backwards compatibility
 
 pd.set_option("display.max_columns", 100)
@@ -416,19 +418,24 @@ def send_chunks(fxn, elements, thresh, lview, kwargs={}):
     return jobs
 
 
-def watch_async(jobs: list, phase=None, desc=None, color=None) -> None:
+def watch_async(jobs: list, phase=None, desc=None, color=None, verbose=True) -> None:
     """Wait until all ipyparallel jobs `jobs` are done executing, show progress bar."""
 
-    print(
-        ColorText(
-            f"\nWatching {len(jobs)} {f'{phase} ' if phase is not None else ''}jobs ..."
-        ).bold().custom(color)
-    )
-    time.sleep(1)
+    if verbose is True:
+        print(
+            ColorText(
+                f"\nWatching {len(jobs)} {f'{phase} ' if phase is not None else ''}jobs ..."
+            ).bold().custom(color)
+        )
+        time.sleep(1)
+        
+        iterator = partial(_trange, bar_format=bar_format, desc=phase if desc is None else desc)
+    else:
+        iterator = range
 
     try:
         job_idx = list(range(len(jobs)))
-        for i in trange(len(jobs), desc=phase if desc is None else desc):
+        for i in iterator(len(jobs)):
             count = len(jobs) - len(job_idx)
             while count < (i + 1):
                 for j in job_idx:
@@ -813,20 +820,27 @@ def latest_commit(repopath=None):
     import pythonimports as pyimp
 
     if repopath is None:
-        repopath = _find_pythonimports()
+        repopath = pyimp._find_pythonimports()
+
+    try:
+        env = 'conda env: %s\n' % os.environ['CONDA_DEFAULT_ENV']
+    except KeyError as e:
+        env = ''
 
     gitout = pyimp._git_pretty(repopath)
     current_datetime = "Today:\t" + dt.now().strftime("%B %d, %Y - %H:%M:%S") + "\n"
     version = "python version: " + sys.version.split()[0] + "\n"
     hashes = "##################################################################\n"
+
     print(
         hashes
+        + current_datetime
+        + version + f'{env}\n'
         + f"Current commit of {op.basename(repopath)}:\n"
         + gitout
-        + current_datetime
-        + version
         + hashes
     )
+
     pass
 
 
