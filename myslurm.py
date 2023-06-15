@@ -479,8 +479,7 @@ class Seffs:
         self.slurm_job_ids = self.pids
 
         self.states = MySeries([seff.state() for seff in self.seffs.values()],
-                               index=pyimp.keys(seffs),
-                               dtype=object)
+                               index=pyimp.keys(seffs))
 
         self.mems = MySeries(
             get_mems(self.seffs, units=units, plot=plot),
@@ -506,33 +505,26 @@ class Seffs:
 
         self.cpu_us = MySeries([seff.cpu_u(unit=unit) for seff in seffs.values()],
                                index=pyimp.keys(seffs),
-                               dtype=object,
                                name=unit)
 
         self.cpu_es = MySeries([seff.cpu_e() for seff in seffs.values()],
-                               index=pyimp.keys(seffs),
-                               dtype=object)
+                               index=pyimp.keys(seffs))
 
         self.core_walltimes = MySeries([seff.core_walltime(unit=unit) for seff in seffs.values()],
                                        index=pyimp.keys(seffs),
-                                       dtype=object,
                                        name=unit)
 
         self.mem_reqs = MySeries([seff.mem_req(units=units) for seff in seffs.values()],
                                  index=pyimp.keys(seffs),
-                                 dtype=float,
                                  name=units)
 
         self.mem_es = MySeries([seff.mem_e() for seff in seffs.values()],
-                               dtype=object,
                                index=pyimp.keys(seffs))
         
         self.cpus = MySeries([seff.cpus for seff in seffs.values()],
-                             dtype=int,
                              index=pyimp.keys(seffs))
         
         self.nodes = MySeries([seff.nodes for seff in seffs.values()],
-                              dtype=int,
                               index=pyimp.keys(seffs))
         
         Seffs.check_shfiles(self.shfiles)
@@ -594,7 +586,6 @@ class Seffs:
                 get_mems(seffs2.finished().seffs, units=self.units, plot=False),
                 name=self.units,
                 index=pyimp.keys(seffs2.finished().seffs),
-                dtype=float
             )  # TODO: add index?
         )
 
@@ -604,7 +595,6 @@ class Seffs:
                 get_times(seffs2.finished().seffs, unit=self.unit if self.unit != 'clock' else 'hrs', plot=False),
                 index=pyimp.keys(seffs2.finished()),
                 name=self.unit if self.unit != 'clock' else 'hrs',
-                dtype=float if self.unit != 'clock' else object
             )
         )
 
@@ -614,7 +604,6 @@ class Seffs:
             self.cpu_us,
             MySeries([seff.cpu_u(unit=self.unit) for seff in seffs2.values()],
                      index=pyimp.keys(seffs2),
-                     dtype=float if self.unit != 'clock' else object,
                      name=self.unit)
         )
 
@@ -624,7 +613,6 @@ class Seffs:
             self.core_walltimes,
             MySeries([seff.core_walltime(unit=self.unit) for seff in seffs2.values()],
                      index=pyimp.keys(seffs2),
-                     dtype=float if self.unit != 'clock' else object,
                      name=self.unit)
         )
 
@@ -632,7 +620,6 @@ class Seffs:
             self.mem_reqs,
             MySeries([seff.mem_req(units=self.units) for seff in seffs2.values()],
                      index=pyimp.keys(seffs2),
-                     dtype=float,
                      name=self.units)
         )
 
@@ -1546,35 +1533,35 @@ class Squeue:
     def states(self, **kwargs):
         """Get a list of job states."""
         _sq = self._filter_jobs(self, **kwargs)
-        return MySeries({q : info.state for (q, info) in _sq.items()}, dtype=object)
+        return MySeries({q : info.state for (q, info) in _sq.items()})
 
     def pids(self, **kwargs):
         """Get a list of pids, subset with kwargs."""
         _sq = self._filter_jobs(self, **kwargs)
-        return MySeries({q : info.pid for (q, info) in _sq.items()}, dtype=object)
+        return MySeries({q : info.pid for (q, info) in _sq.items()})
 #         return [info.pid for q, info in _sq.items()]
 
     def jobs(self, **kwargs):
         """Get a list of job names, subset with kwargs."""
         _sq = self._filter_jobs(self, **kwargs)
-        return MySeries({q : info.job for (q, info) in _sq.items()}, dtype=object)
+        return MySeries({q : info.job for (q, info) in _sq.items()})
 #         return [info.job for q, info in _sq.items()]
 
     def accounts(self, **kwargs):
         """Get a list of accounts, subset with kwargs."""
         _sq = self._filter_jobs(self, **kwargs)
-        return MySeries({q : info.account for (q, info) in _sq.items()}, dtype=object)
+        return MySeries({q : info.account for (q, info) in _sq.items()})
 #         return [info.account for q, info in _sq.items()]
 
     def cpus(self, **kwargs):
         """Get a list of CPUs."""
         _sq = self._filter_jobs(self, **kwargs)
-        return MySeries({q: info.cpus for (q, info) in _sq.items()}, dtype=int)
+        return MySeries({q: info.cpus for (q, info) in _sq.items()})
     
     def mems(self, units='MB', **kwargs):
         """Get a list of memory requests."""
         _sq = self._filter_jobs(self, **kwargs)
-        return MySeries({q: info.mem(units=units) for (q, info) in _sq.items()}, dtype=float)
+        return MySeries({q: info.mem(units=units) for (q, info) in _sq.items()})
     
     def nodelists(self, **kwargs):
         _sq = self._filter_jobs(self, **kwargs)
@@ -1582,20 +1569,19 @@ class Squeue:
     
     def nodes(self, **kwargs):
         _sq = self._filter_jobs(self, **kwargs)
-        return MySeries({q: info.nodes for (q, info) in _sq.items()}, dtype=int)
+        return MySeries({q: info.nodes for (q, info) in _sq.items()})
     
     def times(self, unit='clock', **kwargs):
         _sq = self._filter_jobs(self, **kwargs)
-        return MySeries({q: info.time if unit == 'clock' else clock_hrs(info.time, unit=unit) for (q, info) in _sq.items()},
-                        dtype=float if unit != 'clock' else object)
+        return MySeries({q: info.time if unit == 'clock' else clock_hrs(info.time, unit=unit) for (q, info) in _sq.items()})
     
     def statuses(self, **kwargs):
         _sq = self._filter_jobs(self, **kwargs)
-        return MySeries({q: info.status for (q, info) in _sq.items()}, dtype=object)
+        return MySeries({q: info.status for (q, info) in _sq.items()})
 
     def users(self, **kwargs):
         _sq = self._filter_jobs(self, **kwargs)
-        return MySeries({q: info.user for (q, info) in _sq.items()}, dtype=object)
+        return MySeries({q: info.user for (q, info) in _sq.items()})
 
     def partitions(self):
         """Get counts of job states across partitions."""
