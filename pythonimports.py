@@ -828,7 +828,7 @@ def latest_commit(repopath=None):
         env = ''
 
     gitout = pyimp._git_pretty(repopath)
-    current_datetime = "Today:\t" + dt.now().strftime("%B %d, %Y - %H:%M:%S") + "\n"
+    current_datetime = "Today:\t" + time.strftime("%B %d, %Y - %H:%M:%S %Z") + "\n"
     version = "python version: " + sys.version.split()[0] + "\n"
     hashes = "##################################################################\n"
 
