@@ -15,7 +15,7 @@ import pythonimports as pyimp
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import matplotlib.gridspec as gridspec
 from collections import defaultdict
-
+from pdf2image import convert_from_path
 
 def create_cmap(list_of_colors, name=None, grain=500):
     """Create a custom color map with fine-grain transition."""
@@ -492,3 +492,20 @@ class SeabornFig2Grid():
         pass
     
     pass
+
+
+def pdf_to_png(pdf, outdir=None):
+    """Convert the first page of a pdf document to a png."""
+    pages = convert_from_path(pdf, 500)
+
+    png = pdf.replace('.pdf', '.png')
+    if outdir is not None:
+        png = f'{outdir}/{op.basename(png)}'  # png.replace(op.dirname(png), outdir)
+
+    if len(pages) > 1:
+        raise NotImplementedError(f'unexpected number of pages: {len(pages) = }')
+
+    pages[0].save(png)
+
+    return png
+
