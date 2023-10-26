@@ -1,8 +1,8 @@
 help documentation as of 
 
-commit 8c7ce7778e0a49c6b875935e805e8950ba7cecde  
+commit 9493334506a1f2926fba0734fa74ba2f87194611  
 Author: Brandon Lind <lind.brandon.m@gmail.com>  
-Date:   Mon Oct 31 10:17:48 2022 -0400
+Date:   Fri Jun 30 09:41:00 2023 -0400
 
 ----
 ### Python Library Documentation: module pythonimports
@@ -34,7 +34,7 @@ FUNCTIONS
         - list_of_lists - a list where each element is a list
         - unique - bool; True to return only unique values, False to return all values.
     
-    formatclock(hrs: Union[datetime.timedelta, float], exact=False) -> str
+    formatclock(hrs: Union[datetime.timedelta, float], exact=True) -> str
         For a given number of hours, format a clock: days-hours:mins:seconds.
         
         Parameters
@@ -73,7 +73,7 @@ FUNCTIONS
         -------
         df - pandas.DataFrame
     
-    getdirs(paths: Union[str, list], verbose=False, **kwargs) -> list
+    getdirs(paths: Union[str, list], verbose=False, exclude=None, **kwargs) -> list
         Recursively get a list of all subdirs from given path.
         
         Parameters
@@ -184,7 +184,7 @@ FUNCTIONS
     quick_write(df, dst, sep='\t', header=True, index=False) -> None
         Quickly write a pd.DataFrame to file, much faster than .to_csv for large files.
     
-    read(file: str, lines=True, ignore_blank=True) -> Union[str, list]
+    read(file: str, lines=True, ignore_blank=False) -> Union[str, list]
         Read lines from a file.
         
         Return a list of lines, or one large string
@@ -234,7 +234,7 @@ FUNCTIONS
     uni(mylist: list) -> list
         Return unique values from list.
     
-    unwrap_dictionary(nested_dict)
+    unwrap_dictionary(nested_dict, progress_bar=False)
         Instead of iterating a nested dict, spit out all keys and the final value.
         
         Example
@@ -268,7 +268,7 @@ FUNCTIONS
     values(dikt: dict) -> list
         Get a list of values in a dictionary.
     
-    watch_async(jobs: list, phase=None, desc=None, color=None) -> None
+    watch_async(jobs: list, phase=None, desc=None, color=None, verbose=True) -> None
         Wait until all ipyparallel jobs `jobs` are done executing, show progress bar.
     
     wrap_defaultdict(instance, times=1)
@@ -287,9 +287,10 @@ FUNCTIONS
 DATA
     Optional = typing.Optional
     Union = typing.Union
+    bar_format = '{l_bar}{bar:15}{r_bar}'
     nb = functools.partial(<class 'tqdm.std.tqdm'>, bar_format='{l_bar}{ba...
     pbar = functools.partial(<class 'tqdm.std.tqdm'>, bar_format='{l_bar}{...
-    trange = functools.partial(<function trange at 0x2ad466b509d0>, bar_fo...
+    trange = functools.partial(<function trange at 0x7fbe12b19dc0>, bar_fo...
 
 ```
 
@@ -320,7 +321,7 @@ FUNCTIONS
         extent=[-119.5, -58, 41, 60], figsize=(15,10),
         shapefiles=[('green', '/data/projects/pool_seq/environemental_data/shapefiles/jackpine.shp')]
     
-    draw_pie_marker(ratios, xcoord, ycoord, sizes, colors, ax, edgecolors='black', slice_edgecolors='none', alpha=1, edge_linewidths=1.5, slice_linewidths=1.5, zorder=10, transform=False, label=None, edgefactor=1)
+    draw_pie_marker(ratios, xcoord, ycoord, sizes, colors, ax, edgecolors='black', slice_edgecolors='none', alpha=1, edge_linewidths=1.5, slice_linewidths=1.5, zorder=10, transform=False, label=None, edgefactor=1, label_kws={})
         Draw a pie chart at coordinates `[xcoord,ycoord]` on `ax`.
         
         Parameters
@@ -334,6 +335,7 @@ FUNCTIONS
         zorder : layer order
         transform : bool; transform coordinates to cylindrical projection
         label : str label for the pie graph at `[x,y]`
+        label_kws : dict, passed to ax.annotate
         
         TODO
         ----
@@ -375,9 +377,34 @@ FUNCTIONS
 NAME
     myfigs - Personalized functions to build figures.
 
+CLASSES
+    builtins.object
+        SeabornFig2Grid
+    
+    class SeabornFig2Grid(builtins.object)
+     |  SeabornFig2Grid(seaborngrid, fig, subplot_spec)
+     |  
+     |  Allow seaborn figure-level figs to be suplots.
+     |  
+     |  thanks - https://stackoverflow.com/questions/35042255/how-to-plot-multiple-seaborn-jointplot-in-subplot/47664533#47664533
+     |  
+     |  Methods defined here:
+     |  
+     |  __init__(self, seaborngrid, fig, subplot_spec)
+     |      Initialize self.  See help(type(self)) for accurate signature.
+     |  
+     |  ----------------------------------------------------------------------
+     |  Data descriptors defined here:
+     |  
+     |  __dict__
+     |      dictionary for instance variables (if defined)
+     |  
+     |  __weakref__
+     |      list of weak references to the object (if defined)
+
 FUNCTIONS
     adjust_box_widths(axes, fac=0.9)
-        Adjust the widths of a seaborn-generated boxplot.
+        Adjust the widths of a seaborn-generated boxplot or boxenplot.
         
         Notes
         -----
@@ -421,7 +448,7 @@ FUNCTIONS
         -----
         thanks https://matplotlib.org/3.2.0/gallery/lines_bars_and_markers/gradient_bar.html
     
-    histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, fontsize=12, y_pad=1.3, histbins='auto', saveloc=None, rotation=0, ax=None, histplot_kws={}, boxplot_kws={}, **kwargs)
+    histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, fontsize=12, y_pad=1.3, histbins='auto', saveloc=None, rotation=0, ax=None, markersize=8, zorder=0, markerfacecolor='gray', alpha=0.5, markeredgewidth=0.0, histplot_kws={}, boxplot_kws=defaultdict(<class 'dict'>, {}), **kwargs)
         Create histogram with boxplot in top margin.
         
         Parameters
@@ -450,8 +477,8 @@ FUNCTIONS
             rotation for x-axis tick labels
         ax - [matplotlib.axes.Axes, matplotlib.axes._subplots.AxesSubplot]
             axis canvas upon which to create the histo boxplot
-        boxplot_kws - dict
-            kwargs pass to seaborn.boxplot
+        boxplot_kws - (markersize, zorder, markerfacecolor, alpha, markeredgewidth)
+            kwargs passed to seaborn.boxplot
         histplot_kws - dict
             kwargs passed to seaborn.histplot
         kwargs
@@ -461,8 +488,8 @@ FUNCTIONS
         ------
             thanks https://www.python-graph-gallery.com/24-histogram-with-a-boxplot-on-top-seaborn
     
-    makesweetgraph(x=None, y=None, cmap='jet', ylab=None, xlab=None, bins=100, saveloc=None, figsize=(5, 4), snsbins=60, title=None, xlim=None, ylim=None, vlim=(None, None)) -> None
-        Make 2D histogram with marginal histograms for each axis.
+    makesweetgraph = scatter2d(x=None, y=None, cmap='jet', ylab=None, xlab=None, bins=100, saveloc=None, figsize=(5, 4), snsbins=60, title=None, xlim=None, ylim=None, vlim=(None, None), marginal_kws={}, title_kws={}) -> None
+        Make 2D scatterplot with marginal histograms for each axis.
         
         Parameters
         ----------
@@ -478,10 +505,30 @@ FUNCTIONS
         xlim, ylim - tuple with min and max for each axis
         vlim - tuple with min and max for color bar (to standardize across figures)
     
+    pdf_to_png(pdf, outdir=None)
+        Convert the first page of a pdf document to a png.
+    
     save_pdf(saveloc)
         After creating a figure in jupyter notebooks, save as PDFs at `saveloc`.
     
-    slope_graph(x, *y, labels=['x', 'y'], figsize=(3, 8), positive_color='black', negative_color='tomato', labeldict=None, shape_color=None, saveloc=None, title=None, legloc='center', colors=['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown', 'tab:pink', 'tab:gray', 'tab:olive', 'tab:cyan'], markers=None, addtolegend=None, ylabel='importance rank', ascending=False, legendcols=None, bbox_to_anchor=(0.5, -0.05), ax=None, marker_size=80)
+    scatter2d(x=None, y=None, cmap='jet', ylab=None, xlab=None, bins=100, saveloc=None, figsize=(5, 4), snsbins=60, title=None, xlim=None, ylim=None, vlim=(None, None), marginal_kws={}, title_kws={}) -> None
+        Make 2D scatterplot with marginal histograms for each axis.
+        
+        Parameters
+        ----------
+        x - data for x-axis
+        y - data for y-axis (sample identity in same order as x)
+        cmap - color map (eg 'jet', 'cool', etc)
+        ylab,xlab - axes labels
+        bins - bins for plt.hist2d - basically how thick points are in figure
+        snsbins - bins for margin histograms
+        saveloc - location to save PDF, or None to skip saving
+        figsize - dimensions of figure in inches (x, y)
+        title - text above figure
+        xlim, ylim - tuple with min and max for each axis
+        vlim - tuple with min and max for color bar (to standardize across figures)
+    
+    slope_graph(x, *y, labels=['x', 'y'], figsize=(3, 8), positive_color='black', negative_color='tomato', labeldict=None, shape_color=None, saveloc=None, title=None, legloc='center', colors=['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown', 'tab:pink', 'tab:gray', 'tab:olive', 'tab:cyan'], markers=None, addtolegend=None, ylabel='importance rank', ascending=False, legendcols=None, bbox_to_anchor=(0.5, -0.05), ax=None, marker_size=80, all_yticks=False)
         Visually display how rank order of .index changes between arbitrary number of pd.Series, `x` and *`y`.
         
         Parameters
@@ -501,6 +548,7 @@ FUNCTIONS
         ylabel - label for the y-axis
         ascending - bool; if False, lowest value gets lower rank (1 being high rank, and eg 20 being lower rank)
         ax - matplotlib.axes._subplots.AxesSubplot; in case I want a slope graph on an ax within a plt.subplot
+        all_yticks - whether to show all y-axis tick labels, otherwise only every 5th tick label is shown
         
         Notes
         -----
@@ -633,28 +681,24 @@ CLASSES
      |  Assumed
      |  -------
      |  SQUEUE_FORMAT="%i %u %a %j %t %S %L %D %C %b %m %N (%r) %P"
+     |                  0  1  2  3  4  5  6  7  8  9 10 11  12  13
      |  
-     |  Notes
-     |  -----
-     |  - I realized that %N can be blank when pending, and then cause problems with .split()
-     |      so the attrs now can handle this. But I'm leaving the methods for backwards compatibility.
-     |  
-     |  Example jobinfo    (index number of list)
-     |  ---------------
-     |  ('29068196',       0
-     |   'b.lindb',        1
-     |   'lotterhos',      2
-     |   'batch_0583',     3
-     |   'R',              4
-     |   'N/A',            5
-     |   '9:52:32',        6
-     |   '1',              7
-     |   '56',             8
-     |   'N/A',            9
-     |   '2000M',          10
-     |   'd0036',          11
-     |   '(Priority)')     12
-     |   'short'           13
+     |  Example jobinfo    index
+     |  ---------------    -----
+     |  ('29068196',         0
+     |   'b.lindb',          1
+     |   'lotterhos',        2
+     |   'batch_0583',       3
+     |   'R',                4
+     |   'N/A',              5
+     |   '9:52:32',          6
+     |   '1',                7
+     |   '56',               8
+     |   'N/A',              9
+     |   '2000M',           10
+     |   'd0036',           11
+     |   '(Priority)')      12
+     |   'short'            13
      |  
      |  Methods defined here:
      |  
@@ -676,11 +720,6 @@ CLASSES
      |  
      |  __weakref__
      |      list of weak references to the object (if defined)
-     |  
-     |  ----------------------------------------------------------------------
-     |  Data and other attributes defined here:
-     |  
-     |  __slotnames__ = []
     
     class Seff(builtins.object)
      |  Seff(slurm_job_id)
@@ -807,6 +846,9 @@ CLASSES
      |  
      |  len(self)
      |  
+     |  most_recent(self)
+     |      From the shfiles inferred from outs, pair most recent out with sh.
+     |  
      |  out_sh(self)
      |      key = out, val = sh.
      |  
@@ -814,20 +856,25 @@ CLASSES
      |      Return pending jobs.
      |  
      |  plot_mems(self, **kwargs)
+     |      Plot myfigs.histo_box of mem usage for all jobs in self.
      |  
      |  plot_times(self, **kwargs)
+     |      Plot myfigs.histo_box of times usage for all jobs in self.
      |  
      |  running(self)
      |      Return Seffs object for any running job.
      |  
-     |  sh_out(self, most_recent=True)
-     |      key = sh, val = list of outs or most_recent out.
+     |  sh_out(self, sh_as_key=True)
+     |      key = sh, val = most_recent outfile.
      |      
      |      TODO
      |      ----
      |      - add `remove` kwarg and pass to pyimp.getmostrecent
      |          - but do I care that any outfiles removed could have elements within the Seff?
      |              - eg a pid or out as a key
+     |  
+     |  sh_outs(self, sh_as_key=True, internal=False)
+     |      key = sh, val = list of outfiles.
      |  
      |  timeouts(self)
      |      Return Seffs object for any timeout jobs.
@@ -842,14 +889,16 @@ CLASSES
      |  values(self)
      |  
      |  ----------------------------------------------------------------------
-     |  Class methods defined here:
-     |  
-     |  check_shfiles(shfiles) from builtins.type
-     |  
-     |  ----------------------------------------------------------------------
      |  Static methods defined here:
      |  
+     |  check_shfiles(shfiles)
+     |  
      |  filter_states(seffs, state)
+     |  
+     |  parallel(lview, outs=None, pids=None, units='MB', unit='clock', verbose=True)
+     |      Execute Seffs in parallel using `lview`.
+     |      
+     |      lview = ipyparallel.client.view.LoadBalancedView
      |  
      |  ----------------------------------------------------------------------
      |  Data descriptors defined here:
@@ -994,9 +1043,14 @@ CLASSES
      |  cancel(self, **kwargs)
      |      Cancel jobs in slurm queue, remove job info from Squeue class.
      |  
+     |  closing(self)
+     |  
      |  copy(self)
      |  
-     |  hold(self, **kwargs)
+     |  cpus(self, **kwargs)
+     |      Get a list of CPUs.
+     |  
+     |  hold(self, num_jobs=None, **kwargs)
      |      Hold jobs. Parameters described in `Squeue._update_job.__doc__`.
      |  
      |  items(self)
@@ -1006,6 +1060,13 @@ CLASSES
      |  
      |  keys(self)
      |  
+     |  mems(self, units='MB', **kwargs)
+     |      Get a list of memory requests.
+     |  
+     |  nodelists(self, **kwargs)
+     |  
+     |  nodes(self, **kwargs)
+     |  
      |  partitions(self)
      |      Get counts of job states across partitions.
      |  
@@ -1014,7 +1075,7 @@ CLASSES
      |  pids(self, **kwargs)
      |      Get a list of pids, subset with kwargs.
      |  
-     |  release(self, **kwargs)
+     |  release(self, num_jobs=None, **kwargs)
      |      Release held jobs. Parameters described in `Squeue._update_job.__doc__`.
      |  
      |  running(self)
@@ -1022,8 +1083,12 @@ CLASSES
      |  states(self, **kwargs)
      |      Get a list of job states.
      |  
+     |  statuses(self, **kwargs)
+     |  
      |  summary(self, **kwargs)
      |      Print counts of states and statuses of the queue.
+     |  
+     |  times(self, unit='clock', **kwargs)
      |  
      |  update(self, num_jobs=None, **kwargs)
      |      Update jobs in slurm queue with scontrol, and update job info in Squeue class.
@@ -1033,6 +1098,8 @@ CLASSES
      |      account - the account to transfer jobs
      |      minmemorynode - total memory requested
      |      timelimit - total wall time requested
+     |  
+     |  users(self, **kwargs)
      |  
      |  values(self)
      |  
@@ -1044,11 +1111,6 @@ CLASSES
      |  
      |  __weakref__
      |      list of weak references to the object (if defined)
-     |  
-     |  ----------------------------------------------------------------------
-     |  Data and other attributes defined here:
-     |  
-     |  __slotnames__ = []
     
     sqinfo = class SQInfo(builtins.object)
      |  sqinfo(jobinfo)
@@ -1058,28 +1120,24 @@ CLASSES
      |  Assumed
      |  -------
      |  SQUEUE_FORMAT="%i %u %a %j %t %S %L %D %C %b %m %N (%r) %P"
+     |                  0  1  2  3  4  5  6  7  8  9 10 11  12  13
      |  
-     |  Notes
-     |  -----
-     |  - I realized that %N can be blank when pending, and then cause problems with .split()
-     |      so the attrs now can handle this. But I'm leaving the methods for backwards compatibility.
-     |  
-     |  Example jobinfo    (index number of list)
-     |  ---------------
-     |  ('29068196',       0
-     |   'b.lindb',        1
-     |   'lotterhos',      2
-     |   'batch_0583',     3
-     |   'R',              4
-     |   'N/A',            5
-     |   '9:52:32',        6
-     |   '1',              7
-     |   '56',             8
-     |   'N/A',            9
-     |   '2000M',          10
-     |   'd0036',          11
-     |   '(Priority)')     12
-     |   'short'           13
+     |  Example jobinfo    index
+     |  ---------------    -----
+     |  ('29068196',         0
+     |   'b.lindb',          1
+     |   'lotterhos',        2
+     |   'batch_0583',       3
+     |   'R',                4
+     |   'N/A',              5
+     |   '9:52:32',          6
+     |   '1',                7
+     |   '56',               8
+     |   'N/A',              9
+     |   '2000M',           10
+     |   'd0036',           11
+     |   '(Priority)')      12
+     |   'short'            13
      |  
      |  Methods defined here:
      |  
@@ -1101,11 +1159,6 @@ CLASSES
      |  
      |  __weakref__
      |      list of weak references to the object (if defined)
-     |  
-     |  ----------------------------------------------------------------------
-     |  Data and other attributes defined here:
-     |  
-     |  __slotnames__ = []
 
 FUNCTIONS
     clock_hrs(clock: str, unit='hrs') -> float
@@ -1140,7 +1193,7 @@ FUNCTIONS
             ----
             - incorporate code to save mem and time info of `pids`
     
-    get_mems(seffs: dict, units='MB', plot=True) -> list
+    get_mems(seffs: dict, units='MB', plot=True, **kwargs) -> list
         From output by `get_seff()`, extract mem in `units` units; histogram if `plot` is True.
         
         Parameters
@@ -1168,7 +1221,7 @@ FUNCTIONS
         -----
         - assumes f'{job}_{slurm_job_id}.out' and f'{job}.sh' underly slurm jobs
     
-    get_times(seffs: dict, unit='hrs', plot=True) -> list
+    get_times(seffs: dict, unit='hrs', plot=True, **kwargs) -> list
         From dict(seffs) [val = seff output], get times in hours.
         
         fix: add in other clock units
@@ -1176,7 +1229,7 @@ FUNCTIONS
     getpid(out: str) -> str
         From an .out file with structure <anytext_JOBID.out>, return JOBID.
     
-    getsq = _getsq(grepping=None, states=[], user=None, partition=None, **kwargs)
+    getsq = _getsq(grepping=None, states=[], user=None, partition=None, aflag=False, p=None, **kwargs)
         Get and parse slurm queue according to criteria. kwargs is not used.
     
     sbatch(shfiles: Union[str, list], sleep=0, printing=False, outdir=None, progress_bar=True) -> list
@@ -1191,9 +1244,8 @@ FUNCTIONS
 
 DATA
     Union = typing.Union
-    __warningregistry__ = {'version': 110, ('There are multiple shfiles as...
     pbar = functools.partial(<class 'tqdm.std.tqdm'>, bar_format='{l_bar}{...
-    trange = functools.partial(<function trange at 0x2ad466b509d0>, bar_fo...
+    trange = functools.partial(<function trange at 0x7fbe12b19dc0>, bar_fo...
 
 ```
 
@@ -1365,7 +1417,7 @@ CLASSES
      |  methods from ndarray have been overridden to automatically exclude
      |  missing data (currently represented as NaN).
      |  
-     |  Operations between Series (+, -, /, *, **) align values based on their
+     |  Operations between Series (+, -, /, \*, \*\*) align values based on their
      |  associated index values-- they need not be the same length. The result
      |  index will be the sorted union of the two indexes.
      |  
@@ -1388,6 +1440,10 @@ CLASSES
      |      The name to give to the Series.
      |  copy : bool, default False
      |      Copy input data. Only affects Series or 1d ndarray input. See examples.
+     |  
+     |  Notes
+     |  -----
+     |  Please reference the :ref:`User Guide <basics.series>` for more information.
      |  
      |  Examples
      |  --------
@@ -1469,7 +1525,7 @@ CLASSES
      |  ----------------------------------------------------------------------
      |  Methods inherited from pandas.core.series.Series:
      |  
-     |  __array__(self, dtype: 'NpDtype | None' = None) -> 'np.ndarray'
+     |  __array__(self, dtype: 'npt.DTypeLike | None' = None) -> 'np.ndarray'
      |      Return the values as a NumPy array.
      |      
      |      Users should not call this directly. Rather, it is invoked by
@@ -1546,14 +1602,16 @@ CLASSES
      |      Parameters
      |      ----------
      |      other : Series or scalar value
+     |      level : int or name
+     |          Broadcast across a level, matching Index values on the
+     |          passed MultiIndex level.
      |      fill_value : None or float value, default None (NaN)
      |          Fill existing missing (NaN) values, and any new element needed for
      |          successful Series alignment, with this value before computation.
      |          If data in both corresponding Series locations is missing
      |          the result of filling (at that location) will be missing.
-     |      level : int or name
-     |          Broadcast across a level, matching Index values on the
-     |          passed MultiIndex level.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      
      |      Returns
      |      -------
@@ -1591,9 +1649,9 @@ CLASSES
      |      e    NaN
      |      dtype: float64
      |  
-     |  agg = aggregate(self, func=None, axis=0, *args, **kwargs)
+     |  agg = aggregate(self, func=None, axis: 'Axis' = 0, *args, **kwargs)
      |  
-     |  aggregate(self, func=None, axis=0, *args, **kwargs)
+     |  aggregate(self, func=None, axis: 'Axis' = 0, *args, **kwargs)
      |      Aggregate using one or more operations over the specified axis.
      |      
      |      Parameters
@@ -1609,7 +1667,7 @@ CLASSES
      |          - list of functions and/or function names, e.g. ``[np.sum, 'mean']``
      |          - dict of axis labels -> functions, function names or list of such.
      |      axis : {0 or 'index'}
-     |              Parameter needed for compatibility with DataFrame.
+     |              Unused. Parameter needed for compatibility with DataFrame.
      |      *args
      |          Positional arguments to pass to `func`.
      |      **kwargs
@@ -1660,7 +1718,7 @@ CLASSES
      |      max   4
      |      dtype: int64
      |  
-     |  align(self, other, join='outer', axis=None, level=None, copy=True, fill_value=None, method=None, limit=None, fill_axis=0, broadcast_axis=None)
+     |  align(self, other: 'Series', join: "Literal[('outer', 'inner', 'left', 'right')]" = 'outer', axis: 'Axis | None' = None, level: 'Level' = None, copy: 'bool' = True, fill_value: 'Hashable' = None, method: 'FillnaOptions | None' = None, limit: 'int | None' = None, fill_axis: 'Axis' = 0, broadcast_axis: 'Axis | None' = None) -> 'Series'
      |      Align two objects on their axes with the specified join method.
      |      
      |      Join method is specified for each axis Index.
@@ -1703,6 +1761,71 @@ CLASSES
      |      -------
      |      (left, right) : (Series, type of other)
      |          Aligned objects.
+     |      
+     |      Examples
+     |      --------
+     |      >>> df = pd.DataFrame(
+     |      ...     [[1, 2, 3, 4], [6, 7, 8, 9]], columns=["D", "B", "E", "A"], index=[1, 2]
+     |      ... )
+     |      >>> other = pd.DataFrame(
+     |      ...     [[10, 20, 30, 40], [60, 70, 80, 90], [600, 700, 800, 900]],
+     |      ...     columns=["A", "B", "C", "D"],
+     |      ...     index=[2, 3, 4],
+     |      ... )
+     |      >>> df
+     |         D  B  E  A
+     |      1  1  2  3  4
+     |      2  6  7  8  9
+     |      >>> other
+     |          A    B    C    D
+     |      2   10   20   30   40
+     |      3   60   70   80   90
+     |      4  600  700  800  900
+     |      
+     |      Align on columns:
+     |      
+     |      >>> left, right = df.align(other, join="outer", axis=1)
+     |      >>> left
+     |         A  B   C  D  E
+     |      1  4  2 NaN  1  3
+     |      2  9  7 NaN  6  8
+     |      >>> right
+     |          A    B    C    D   E
+     |      2   10   20   30   40 NaN
+     |      3   60   70   80   90 NaN
+     |      4  600  700  800  900 NaN
+     |      
+     |      We can also align on the index:
+     |      
+     |      >>> left, right = df.align(other, join="outer", axis=0)
+     |      >>> left
+     |          D    B    E    A
+     |      1  1.0  2.0  3.0  4.0
+     |      2  6.0  7.0  8.0  9.0
+     |      3  NaN  NaN  NaN  NaN
+     |      4  NaN  NaN  NaN  NaN
+     |      >>> right
+     |          A      B      C      D
+     |      1    NaN    NaN    NaN    NaN
+     |      2   10.0   20.0   30.0   40.0
+     |      3   60.0   70.0   80.0   90.0
+     |      4  600.0  700.0  800.0  900.0
+     |      
+     |      Finally, the default `axis=None` will align on both index and columns:
+     |      
+     |      >>> left, right = df.align(other, join="outer", axis=None)
+     |      >>> left
+     |           A    B   C    D    E
+     |      1  4.0  2.0 NaN  1.0  3.0
+     |      2  9.0  7.0 NaN  6.0  8.0
+     |      3  NaN  NaN NaN  NaN  NaN
+     |      4  NaN  NaN NaN  NaN  NaN
+     |      >>> right
+     |             A      B      C      D   E
+     |      1    NaN    NaN    NaN    NaN NaN
+     |      2   10.0   20.0   30.0   40.0 NaN
+     |      3   60.0   70.0   80.0   90.0 NaN
+     |      4  600.0  700.0  800.0  900.0 NaN
      |  
      |  all(self, axis=0, bool_only=None, skipna=True, level=None, **kwargs)
      |      Return whether all elements are True, potentially over an axis.
@@ -1714,7 +1837,8 @@ CLASSES
      |      Parameters
      |      ----------
      |      axis : {0 or 'index', 1 or 'columns', None}, default 0
-     |          Indicate which axis or axes should be reduced.
+     |          Indicate which axis or axes should be reduced. For `Series` this parameter
+     |          is unused and defaults to 0.
      |      
      |          * 0 / 'index' : reduce the index, return a Series whose index is the
      |            original column labels.
@@ -1733,6 +1857,9 @@ CLASSES
      |      level : int or level name, default None
      |          If the axis is a MultiIndex (hierarchical), count along a
      |          particular level, collapsing into a scalar.
+     |      
+     |          .. deprecated:: 1.3.0
+     |              The level keyword is deprecated. Use groupby instead.
      |      **kwargs : any, default None
      |          Additional keywords have no effect but might be accepted for
      |          compatibility with NumPy.
@@ -1773,14 +1900,14 @@ CLASSES
      |      0  True   True
      |      1  True  False
      |      
-     |      Default behaviour checks if column-wise values all return True.
+     |      Default behaviour checks if values in each column all return True.
      |      
      |      >>> df.all()
      |      col1     True
      |      col2    False
      |      dtype: bool
      |      
-     |      Specify ``axis='columns'`` to check if row-wise values all return True.
+     |      Specify ``axis='columns'`` to check if values in each row all return True.
      |      
      |      >>> df.all(axis='columns')
      |      0     True
@@ -1792,7 +1919,7 @@ CLASSES
      |      >>> df.all(axis=None)
      |      False
      |  
-     |  any(self, axis=0, bool_only=None, skipna=True, level=None, **kwargs)
+     |  any(self, *, axis=0, bool_only=None, skipna=True, level=None, **kwargs)
      |      Return whether any element is True, potentially over an axis.
      |      
      |      Returns False unless there is at least one element within a series or
@@ -1802,7 +1929,8 @@ CLASSES
      |      Parameters
      |      ----------
      |      axis : {0 or 'index', 1 or 'columns', None}, default 0
-     |          Indicate which axis or axes should be reduced.
+     |          Indicate which axis or axes should be reduced. For `Series` this parameter
+     |          is unused and defaults to 0.
      |      
      |          * 0 / 'index' : reduce the index, return a Series whose index is the
      |            original column labels.
@@ -1821,6 +1949,9 @@ CLASSES
      |      level : int or level name, default None
      |          If the axis is a MultiIndex (hierarchical), count along a
      |          particular level, collapsing into a scalar.
+     |      
+     |          .. deprecated:: 1.3.0
+     |              The level keyword is deprecated. Use groupby instead.
      |      **kwargs : any, default None
      |          Additional keywords have no effect but might be accepted for
      |          compatibility with NumPy.
@@ -1907,8 +2038,12 @@ CLASSES
      |      >>> pd.DataFrame([]).any()
      |      Series([], dtype: bool)
      |  
-     |  append(self, to_append, ignore_index: 'bool' = False, verify_integrity: 'bool' = False)
+     |  append(self, to_append, ignore_index: 'bool' = False, verify_integrity: 'bool' = False) -> 'Series'
      |      Concatenate two or more Series.
+     |      
+     |      .. deprecated:: 1.4.0
+     |          Use :func:`concat` instead. For further details see
+     |          :ref:`whatsnew_140.deprecations.frame_series_append`
      |      
      |      Parameters
      |      ----------
@@ -1976,7 +2111,7 @@ CLASSES
      |      ...
      |      ValueError: Indexes have overlapping values: [0, 1, 2]
      |  
-     |  apply(self, func: 'AggFuncType', convert_dtype: 'bool' = True, args: 'tuple[Any, ...]' = (), **kwargs) -> 'FrameOrSeriesUnion'
+     |  apply(self, func: 'AggFuncType', convert_dtype: 'bool' = True, args: 'tuple[Any, ...]' = (), **kwargs) -> 'DataFrame | Series'
      |      Invoke function on values of Series.
      |      
      |      Can be ufunc (a NumPy function that applies to the entire Series)
@@ -2079,7 +2214,7 @@ CLASSES
      |      Helsinki    2.484907
      |      dtype: float64
      |  
-     |  argsort(self, axis=0, kind='quicksort', order=None) -> 'Series'
+     |  argsort(self, axis: 'Axis' = 0, kind: 'SortKind' = 'quicksort', order: 'None' = None) -> 'Series'
      |      Return the integer indices that would sort the Series values.
      |      
      |      Override ndarray.argsort. Argsorts the value, omitting NA/null values,
@@ -2087,8 +2222,8 @@ CLASSES
      |      
      |      Parameters
      |      ----------
-     |      axis : {0 or "index"}
-     |          Has no effect but is accepted for compatibility with numpy.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      kind : {'mergesort', 'quicksort', 'heapsort', 'stable'}, default 'quicksort'
      |          Choice of sorting algorithm. See :func:`numpy.sort` for more
      |          information. 'mergesort' and 'stable' are the only stable algorithms.
@@ -2105,7 +2240,7 @@ CLASSES
      |      --------
      |      numpy.ndarray.argsort : Returns the indices that would sort this array.
      |  
-     |  asfreq(self, freq, method=None, how: 'str | None' = None, normalize: 'bool' = False, fill_value=None) -> 'Series'
+     |  asfreq(self, freq: 'Frequency', method: 'FillnaOptions | None' = None, how: 'str | None' = None, normalize: 'bool' = False, fill_value: 'Hashable' = None) -> 'Series'
      |      Convert time series to specified frequency.
      |      
      |      Returns the original data conformed to a new index with the specified
@@ -2210,7 +2345,7 @@ CLASSES
      |      2000-01-01 00:02:30    3.0
      |      2000-01-01 00:03:00    3.0
      |  
-     |  autocorr(self, lag=1) -> 'float'
+     |  autocorr(self, lag: 'int' = 1) -> 'float'
      |      Compute the lag-N autocorrelation.
      |      
      |      This method computes the Pearson correlation between
@@ -2252,7 +2387,7 @@ CLASSES
      |      >>> s.autocorr()
      |      nan
      |  
-     |  between(self, left, right, inclusive='both') -> 'Series'
+     |  between(self, left, right, inclusive: "Literal[('both', 'neither', 'left', 'right')]" = 'both') -> 'Series'
      |      Return boolean Series equivalent to left <= series <= right.
      |      
      |      This function returns a boolean vector containing `True` wherever the
@@ -2319,7 +2454,7 @@ CLASSES
      |      3    False
      |      dtype: bool
      |  
-     |  bfill(self: 'Series', axis: 'None | Axis' = None, inplace: 'bool' = False, limit: 'None | int' = None, downcast=None) -> 'Series | None'
+     |  bfill(self, *, axis: 'None | Axis' = None, inplace: 'bool' = False, limit: 'None | int' = None, downcast: 'dict | None' = None) -> 'Series | None'
      |      Synonym for :meth:`DataFrame.fillna` with ``method='bfill'``.
      |      
      |      Returns
@@ -2327,7 +2462,7 @@ CLASSES
      |      Series/DataFrame or None
      |          Object with missing values filled or None if ``inplace=True``.
      |  
-     |  clip(self: 'Series', lower=None, upper=None, axis: 'Axis | None' = None, inplace: 'bool' = False, *args, **kwargs) -> 'Series | None'
+     |  clip(self: 'Series', lower=None, upper=None, *args, axis: 'Axis | None' = None, inplace: 'bool' = False, **kwargs) -> 'Series | None'
      |      Trim values at input threshold(s).
      |      
      |      Assigns values outside boundary to boundary values. Thresholds
@@ -2344,8 +2479,9 @@ CLASSES
      |          Maximum threshold value. All values above this
      |          threshold will be set to it. A missing
      |          threshold (e.g `NA`) will not clip the value.
-     |      axis : int or str axis name, optional
+     |      axis : {{0 or 'index', 1 or 'columns', None}}, default None
      |          Align object with lower and upper along the given axis.
+     |          For `Series` this parameter is unused and defaults to `None`.
      |      inplace : bool, default False
      |          Whether to perform the operation in place on the data.
      |      *args, **kwargs
@@ -2424,7 +2560,7 @@ CLASSES
      |      3      6      8
      |      4      5      3
      |  
-     |  combine(self, other, func, fill_value=None) -> 'Series'
+     |  combine(self, other: 'Series | Hashable', func: 'Callable[[Hashable, Hashable], Hashable]', fill_value: 'Hashable' = None) -> 'Series'
      |      Combine the Series with a Series or scalar according to `func`.
      |      
      |      Combine the Series and `other` using `func` to perform elementwise
@@ -2533,7 +2669,7 @@ CLASSES
      |      falcon      NaN
      |      dtype: float64
      |  
-     |  compare(self, other: 'Series', align_axis: 'Axis' = 1, keep_shape: 'bool' = False, keep_equal: 'bool' = False) -> 'FrameOrSeriesUnion'
+     |  compare(self, other: 'Series', align_axis: 'Axis' = 1, keep_shape: 'bool' = False, keep_equal: 'bool' = False, result_names: 'Suffixes' = ('self', 'other')) -> 'DataFrame | Series'
      |      Compare to another Series and show the differences.
      |      
      |      .. versionadded:: 1.1.0
@@ -2558,6 +2694,11 @@ CLASSES
      |      keep_equal : bool, default False
      |          If true, the result keeps values that are equal.
      |          Otherwise, equal values are shown as NaNs.
+     |      
+     |      result_names : tuple, default ('self', 'other')
+     |          Set the dataframes names in the comparison.
+     |      
+     |          .. versionadded:: 1.5.0
      |      
      |      Returns
      |      -------
@@ -2618,8 +2759,11 @@ CLASSES
      |      3    d     b
      |      4    e     e
      |  
-     |  corr(self, other, method='pearson', min_periods=None) -> 'float'
+     |  corr(self, other: 'Series', method: "Literal[('pearson', 'kendall', 'spearman')] | Callable[[np.ndarray, np.ndarray], float]" = 'pearson', min_periods: 'int | None' = None) -> 'float'
      |      Compute correlation with `other` Series, excluding missing values.
+     |      
+     |      The two `Series` objects are not required to be the same length and will be
+     |      aligned internally before the correlation function is applied.
      |      
      |      Parameters
      |      ----------
@@ -2651,6 +2795,14 @@ CLASSES
      |      DataFrame.corrwith : Compute pairwise correlation with another
      |          DataFrame or Series.
      |      
+     |      Notes
+     |      -----
+     |      Pearson, Kendall and Spearman correlation are currently computed using pairwise complete observations.
+     |      
+     |      * `Pearson correlation coefficient <https://en.wikipedia.org/wiki/Pearson_correlation_coefficient>`_
+     |      * `Kendall rank correlation coefficient <https://en.wikipedia.org/wiki/Kendall_rank_correlation_coefficient>`_
+     |      * `Spearman's rank correlation coefficient <https://en.wikipedia.org/wiki/Spearman%27s_rank_correlation_coefficient>`_
+     |      
      |      Examples
      |      --------
      |      >>> def histogram_intersection(a, b):
@@ -2661,7 +2813,7 @@ CLASSES
      |      >>> s1.corr(s2, method=histogram_intersection)
      |      0.3
      |  
-     |  count(self, level=None)
+     |  count(self, level: 'Level' = None)
      |      Return number of non-NA/null observations in the Series.
      |      
      |      Parameters
@@ -2687,6 +2839,9 @@ CLASSES
      |  
      |  cov(self, other: 'Series', min_periods: 'int | None' = None, ddof: 'int | None' = 1) -> 'float'
      |      Compute covariance with Series, excluding missing values.
+     |      
+     |      The two `Series` objects are not required to be the same length and
+     |      will be aligned internally before the covariance is calculated.
      |      
      |      Parameters
      |      ----------
@@ -2727,6 +2882,7 @@ CLASSES
      |      ----------
      |      axis : {0 or 'index', 1 or 'columns'}, default 0
      |          The index or the name of the axis. 0 is equivalent to None or 'index'.
+     |          For `Series` this parameter is unused and defaults to 0.
      |      skipna : bool, default True
      |          Exclude NA/null values. If an entire row/column is NA, the result
      |          will be NA.
@@ -2741,7 +2897,7 @@ CLASSES
      |      
      |      See Also
      |      --------
-     |      core.window.Expanding.max : Similar functionality
+     |      core.window.expanding.Expanding.max : Similar functionality
      |          but ignores ``NaN`` values.
      |      Series.max : Return the maximum over
      |          Series axis.
@@ -2823,6 +2979,7 @@ CLASSES
      |      ----------
      |      axis : {0 or 'index', 1 or 'columns'}, default 0
      |          The index or the name of the axis. 0 is equivalent to None or 'index'.
+     |          For `Series` this parameter is unused and defaults to 0.
      |      skipna : bool, default True
      |          Exclude NA/null values. If an entire row/column is NA, the result
      |          will be NA.
@@ -2837,7 +2994,7 @@ CLASSES
      |      
      |      See Also
      |      --------
-     |      core.window.Expanding.min : Similar functionality
+     |      core.window.expanding.Expanding.min : Similar functionality
      |          but ignores ``NaN`` values.
      |      Series.min : Return the minimum over
      |          Series axis.
@@ -2919,6 +3076,7 @@ CLASSES
      |      ----------
      |      axis : {0 or 'index', 1 or 'columns'}, default 0
      |          The index or the name of the axis. 0 is equivalent to None or 'index'.
+     |          For `Series` this parameter is unused and defaults to 0.
      |      skipna : bool, default True
      |          Exclude NA/null values. If an entire row/column is NA, the result
      |          will be NA.
@@ -2933,7 +3091,7 @@ CLASSES
      |      
      |      See Also
      |      --------
-     |      core.window.Expanding.prod : Similar functionality
+     |      core.window.expanding.Expanding.prod : Similar functionality
      |          but ignores ``NaN`` values.
      |      Series.prod : Return the product over
      |          Series axis.
@@ -3015,6 +3173,7 @@ CLASSES
      |      ----------
      |      axis : {0 or 'index', 1 or 'columns'}, default 0
      |          The index or the name of the axis. 0 is equivalent to None or 'index'.
+     |          For `Series` this parameter is unused and defaults to 0.
      |      skipna : bool, default True
      |          Exclude NA/null values. If an entire row/column is NA, the result
      |          will be NA.
@@ -3029,7 +3188,7 @@ CLASSES
      |      
      |      See Also
      |      --------
-     |      core.window.Expanding.sum : Similar functionality
+     |      core.window.expanding.Expanding.sum : Similar functionality
      |          but ignores ``NaN`` values.
      |      Series.sum : Return the sum over
      |          Series axis.
@@ -3190,14 +3349,16 @@ CLASSES
      |      Parameters
      |      ----------
      |      other : Series or scalar value
+     |      level : int or name
+     |          Broadcast across a level, matching Index values on the
+     |          passed MultiIndex level.
      |      fill_value : None or float value, default None (NaN)
      |          Fill existing missing (NaN) values, and any new element needed for
      |          successful Series alignment, with this value before computation.
      |          If data in both corresponding Series locations is missing
      |          the result of filling (at that location) will be missing.
-     |      level : int or name
-     |          Broadcast across a level, matching Index values on the
-     |          passed MultiIndex level.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      
      |      Returns
      |      -------
@@ -3241,7 +3402,7 @@ CLASSES
      |       e    NaN
      |       dtype: float64)
      |  
-     |  dot(self, other)
+     |  dot(self, other: 'AnyArrayLike') -> 'Series | np.ndarray'
      |      Compute the dot product between the Series and the columns of other.
      |      
      |      This method computes the dot product between the Series and another
@@ -3290,7 +3451,7 @@ CLASSES
      |      >>> s.dot(arr)
      |      array([24, 14])
      |  
-     |  drop(self, labels=None, axis=0, index=None, columns=None, level=None, inplace=False, errors='raise') -> 'Series'
+     |  drop(self, labels: 'IndexLabel' = None, *, axis: 'Axis' = 0, index: 'IndexLabel' = None, columns: 'IndexLabel' = None, level: 'Level | None' = None, inplace: 'bool' = False, errors: 'IgnoreRaise' = 'raise') -> 'Series | None'
      |      Return Series with specified index labels removed.
      |      
      |      Remove elements of a Series based on specifying the index labels.
@@ -3301,8 +3462,8 @@ CLASSES
      |      ----------
      |      labels : single label or list-like
      |          Index labels to drop.
-     |      axis : 0, default 0
-     |          Redundant for application on Series.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      index : single label or list-like
      |          Redundant for application on Series, but 'index' can be used instead
      |          of 'labels'.
@@ -3376,7 +3537,7 @@ CLASSES
      |              length      0.3
      |      dtype: float64
      |  
-     |  drop_duplicates(self, keep='first', inplace=False) -> 'Series | None'
+     |  drop_duplicates(self, *, keep: "Literal[('first', 'last', False)]" = 'first', inplace=False) -> 'Series | None'
      |      Return Series with duplicate values removed.
      |      
      |      Parameters
@@ -3402,6 +3563,7 @@ CLASSES
      |      DataFrame.drop_duplicates : Equivalent method on DataFrame.
      |      Series.duplicated : Related method on Series, indicating duplicate
      |          Series values.
+     |      Series.unique : Return unique values as an array.
      |      
      |      Examples
      |      --------
@@ -3450,7 +3612,7 @@ CLASSES
      |      5     hippo
      |      Name: animal, dtype: object
      |  
-     |  dropna(self, axis=0, inplace=False, how=None)
+     |  dropna(self, *, axis: 'Axis' = 0, inplace: 'bool' = False, how: 'str | None' = None) -> 'Series | None'
      |      Return a new Series with missing values removed.
      |      
      |      See the :ref:`User Guide <missing_data>` for more on which values are
@@ -3458,8 +3620,8 @@ CLASSES
      |      
      |      Parameters
      |      ----------
-     |      axis : {0 or 'index'}, default 0
-     |          There is only one axis to drop values from.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      inplace : bool, default False
      |          If True, do operation inplace and return None.
      |      how : str, optional
@@ -3520,7 +3682,7 @@ CLASSES
      |      5    I stay
      |      dtype: object
      |  
-     |  duplicated(self, keep='first') -> 'Series'
+     |  duplicated(self, keep: "Literal[('first', 'last', False)]" = 'first') -> 'Series'
      |      Indicate duplicate Series values.
      |      
      |      Duplicated values are indicated as ``True`` values in the resulting
@@ -3604,14 +3766,16 @@ CLASSES
      |      Parameters
      |      ----------
      |      other : Series or scalar value
+     |      level : int or name
+     |          Broadcast across a level, matching Index values on the
+     |          passed MultiIndex level.
      |      fill_value : None or float value, default None (NaN)
      |          Fill existing missing (NaN) values, and any new element needed for
      |          successful Series alignment, with this value before computation.
      |          If data in both corresponding Series locations is missing
      |          the result of filling (at that location) will be missing.
-     |      level : int or name
-     |          Broadcast across a level, matching Index values on the
-     |          passed MultiIndex level.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      
      |      Returns
      |      -------
@@ -3676,6 +3840,8 @@ CLASSES
      |      result in a np.nan for that row. In addition, the ordering of elements in
      |      the output will be non-deterministic when exploding sets.
      |      
+     |      Reference :ref:`the user guide <reshaping.explode>` for more examples.
+     |      
      |      Examples
      |      --------
      |      >>> s = pd.Series([[1, 2, 3], 'foo', [], [3, 4]])
@@ -3696,7 +3862,7 @@ CLASSES
      |      3      4
      |      dtype: object
      |  
-     |  ffill(self: 'Series', axis: 'None | Axis' = None, inplace: 'bool' = False, limit: 'None | int' = None, downcast=None) -> 'Series | None'
+     |  ffill(self, *, axis: 'None | Axis' = None, inplace: 'bool' = False, limit: 'None | int' = None, downcast: 'dict | None' = None) -> 'Series | None'
      |      Synonym for :meth:`DataFrame.fillna` with ``method='ffill'``.
      |      
      |      Returns
@@ -3704,7 +3870,7 @@ CLASSES
      |      Series/DataFrame or None
      |          Object with missing values filled or None if ``inplace=True``.
      |  
-     |  fillna(self, value: 'object | ArrayLike | None' = None, method: 'FillnaOptions | None' = None, axis=None, inplace=False, limit=None, downcast=None) -> 'Series | None'
+     |  fillna(self, value: 'Hashable | Mapping | Series | DataFrame' = None, *, method: 'FillnaOptions | None' = None, axis: 'Axis | None' = None, inplace: 'bool' = False, limit: 'int | None' = None, downcast: 'dict | None' = None) -> 'Series | None'
      |      Fill NA/NaN values using the specified method.
      |      
      |      Parameters
@@ -3720,7 +3886,8 @@ CLASSES
      |          pad / ffill: propagate last valid observation forward to next valid
      |          backfill / bfill: use next valid observation to fill gap.
      |      axis : {0 or 'index'}
-     |          Axis along which to fill missing values.
+     |          Axis along which to fill missing values. For `Series`
+     |          this parameter is unused and defaults to 0.
      |      inplace : bool, default False
      |          If True, fill in-place. Note: this will modify any
      |          other views on this object (e.g., a no-copy slice for a column in a
@@ -3752,64 +3919,66 @@ CLASSES
      |      --------
      |      >>> df = pd.DataFrame([[np.nan, 2, np.nan, 0],
      |      ...                    [3, 4, np.nan, 1],
-     |      ...                    [np.nan, np.nan, np.nan, 5],
+     |      ...                    [np.nan, np.nan, np.nan, np.nan],
      |      ...                    [np.nan, 3, np.nan, 4]],
      |      ...                   columns=list("ABCD"))
      |      >>> df
-     |           A    B   C  D
-     |      0  NaN  2.0 NaN  0
-     |      1  3.0  4.0 NaN  1
-     |      2  NaN  NaN NaN  5
-     |      3  NaN  3.0 NaN  4
+     |           A    B   C    D
+     |      0  NaN  2.0 NaN  0.0
+     |      1  3.0  4.0 NaN  1.0
+     |      2  NaN  NaN NaN  NaN
+     |      3  NaN  3.0 NaN  4.0
      |      
      |      Replace all NaN elements with 0s.
      |      
      |      >>> df.fillna(0)
-     |          A   B   C   D
-     |      0   0.0 2.0 0.0 0
-     |      1   3.0 4.0 0.0 1
-     |      2   0.0 0.0 0.0 5
-     |      3   0.0 3.0 0.0 4
+     |           A    B    C    D
+     |      0  0.0  2.0  0.0  0.0
+     |      1  3.0  4.0  0.0  1.0
+     |      2  0.0  0.0  0.0  0.0
+     |      3  0.0  3.0  0.0  4.0
      |      
      |      We can also propagate non-null values forward or backward.
      |      
      |      >>> df.fillna(method="ffill")
-     |          A   B   C   D
-     |      0   NaN 2.0 NaN 0
-     |      1   3.0 4.0 NaN 1
-     |      2   3.0 4.0 NaN 5
-     |      3   3.0 3.0 NaN 4
+     |           A    B   C    D
+     |      0  NaN  2.0 NaN  0.0
+     |      1  3.0  4.0 NaN  1.0
+     |      2  3.0  4.0 NaN  1.0
+     |      3  3.0  3.0 NaN  4.0
      |      
      |      Replace all NaN elements in column 'A', 'B', 'C', and 'D', with 0, 1,
      |      2, and 3 respectively.
      |      
      |      >>> values = {"A": 0, "B": 1, "C": 2, "D": 3}
      |      >>> df.fillna(value=values)
-     |          A   B   C   D
-     |      0   0.0 2.0 2.0 0
-     |      1   3.0 4.0 2.0 1
-     |      2   0.0 1.0 2.0 5
-     |      3   0.0 3.0 2.0 4
+     |           A    B    C    D
+     |      0  0.0  2.0  2.0  0.0
+     |      1  3.0  4.0  2.0  1.0
+     |      2  0.0  1.0  2.0  3.0
+     |      3  0.0  3.0  2.0  4.0
      |      
      |      Only replace the first NaN element.
      |      
      |      >>> df.fillna(value=values, limit=1)
-     |          A   B   C   D
-     |      0   0.0 2.0 2.0 0
-     |      1   3.0 4.0 NaN 1
-     |      2   NaN 1.0 NaN 5
-     |      3   NaN 3.0 NaN 4
+     |           A    B    C    D
+     |      0  0.0  2.0  2.0  0.0
+     |      1  3.0  4.0  NaN  1.0
+     |      2  NaN  1.0  NaN  3.0
+     |      3  NaN  3.0  NaN  4.0
      |      
      |      When filling using a DataFrame, replacement happens along
      |      the same column names and same indices
      |      
      |      >>> df2 = pd.DataFrame(np.zeros((4, 4)), columns=list("ABCE"))
      |      >>> df.fillna(df2)
-     |          A   B   C   D
-     |      0   0.0 2.0 0.0 0
-     |      1   3.0 4.0 0.0 1
-     |      2   0.0 0.0 0.0 5
-     |      3   0.0 3.0 0.0 4
+     |           A    B    C    D
+     |      0  0.0  2.0  0.0  0.0
+     |      1  3.0  4.0  0.0  1.0
+     |      2  0.0  0.0  0.0  NaN
+     |      3  0.0  3.0  0.0  4.0
+     |      
+     |      Note that column D is not affected since it is not present in df2.
      |  
      |  floordiv(self, other, level=None, fill_value=None, axis=0)
      |      Return Integer division of series and other, element-wise (binary operator `floordiv`).
@@ -3820,14 +3989,16 @@ CLASSES
      |      Parameters
      |      ----------
      |      other : Series or scalar value
+     |      level : int or name
+     |          Broadcast across a level, matching Index values on the
+     |          passed MultiIndex level.
      |      fill_value : None or float value, default None (NaN)
      |          Fill existing missing (NaN) values, and any new element needed for
      |          successful Series alignment, with this value before computation.
      |          If data in both corresponding Series locations is missing
      |          the result of filling (at that location) will be missing.
-     |      level : int or name
-     |          Broadcast across a level, matching Index values on the
-     |          passed MultiIndex level.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      
      |      Returns
      |      -------
@@ -3874,14 +4045,16 @@ CLASSES
      |      Parameters
      |      ----------
      |      other : Series or scalar value
+     |      level : int or name
+     |          Broadcast across a level, matching Index values on the
+     |          passed MultiIndex level.
      |      fill_value : None or float value, default None (NaN)
      |          Fill existing missing (NaN) values, and any new element needed for
      |          successful Series alignment, with this value before computation.
      |          If data in both corresponding Series locations is missing
      |          the result of filling (at that location) will be missing.
-     |      level : int or name
-     |          Broadcast across a level, matching Index values on the
-     |          passed MultiIndex level.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      
      |      Returns
      |      -------
@@ -3915,7 +4088,7 @@ CLASSES
      |      f    False
      |      dtype: bool
      |  
-     |  groupby(self, by=None, axis=0, level=None, as_index: 'bool' = True, sort: 'bool' = True, group_keys: 'bool' = True, squeeze: 'bool | lib.NoDefault' = <no_default>, observed: 'bool' = False, dropna: 'bool' = True) -> 'SeriesGroupBy'
+     |  groupby(self, by=None, axis: 'Axis' = 0, level: 'Level' = None, as_index: 'bool' = True, sort: 'bool' = True, group_keys: 'bool | lib.NoDefault' = <no_default>, squeeze: 'bool | lib.NoDefault' = <no_default>, observed: 'bool' = False, dropna: 'bool' = True) -> 'SeriesGroupBy'
      |      Group Series using a mapper or by a Series of columns.
      |      
      |      A groupby operation involves some combination of splitting the
@@ -3930,15 +4103,18 @@ CLASSES
      |          If ``by`` is a function, it's called on each value of the object's
      |          index. If a dict or Series is passed, the Series or dict VALUES
      |          will be used to determine the groups (the Series' values are first
-     |          aligned; see ``.align()`` method). If an ndarray is passed, the
-     |          values are used as-is to determine the groups. A label or list of
-     |          labels may be passed to group by the columns in ``self``. Notice
-     |          that a tuple is interpreted as a (single) key.
+     |          aligned; see ``.align()`` method). If a list or ndarray of length
+     |          equal to the selected axis is passed (see the `groupby user guide
+     |          <https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html#splitting-an-object-into-groups>`_),
+     |          the values are used as-is to determine the groups. A label or list
+     |          of labels may be passed to group by the columns in ``self``.
+     |          Notice that a tuple is interpreted as a (single) key.
      |      axis : {0 or 'index', 1 or 'columns'}, default 0
-     |          Split along rows (0) or columns (1).
+     |          Split along rows (0) or columns (1). For `Series` this parameter
+     |          is unused and defaults to 0.
      |      level : int, level name, or sequence of such, default None
      |          If the axis is a MultiIndex (hierarchical), group by a particular
-     |          level or levels.
+     |          level or levels. Do not specify both ``by`` and ``level``.
      |      as_index : bool, default True
      |          For aggregated output, return object with group labels as the
      |          index. Only relevant for DataFrame input. as_index=False is
@@ -3947,8 +4123,20 @@ CLASSES
      |          Sort group keys. Get better performance by turning this off.
      |          Note this does not influence the order of observations within each
      |          group. Groupby preserves the order of rows within each group.
-     |      group_keys : bool, default True
-     |          When calling apply, add group keys to index to identify pieces.
+     |      group_keys : bool, optional
+     |          When calling apply and the ``by`` argument produces a like-indexed
+     |          (i.e. :ref:`a transform <groupby.transform>`) result, add group keys to
+     |          index to identify pieces. By default group keys are not included
+     |          when the result's index (and column) labels match the inputs, and
+     |          are included otherwise. This argument has no effect if the result produced
+     |          is not like-indexed with respect to the input.
+     |      
+     |          .. versionchanged:: 1.5.0
+     |      
+     |             Warns that `group_keys` will no longer be ignored when the
+     |             result from ``apply`` is a like-indexed Series or DataFrame.
+     |             Specify ``group_keys`` explicitly to include the group keys or
+     |             not.
      |      squeeze : bool, default False
      |          Reduce the dimensionality of the return type if possible,
      |          otherwise return a consistent type.
@@ -3962,7 +4150,7 @@ CLASSES
      |      dropna : bool, default True
      |          If True, and if group keys contain NA values, NA values together
      |          with row/column will be dropped.
-     |          If False, NA values will also be treated as the key in groups
+     |          If False, NA values will also be treated as the key in groups.
      |      
      |          .. versionadded:: 1.1.0
      |      
@@ -3979,7 +4167,9 @@ CLASSES
      |      Notes
      |      -----
      |      See the `user guide
-     |      <https://pandas.pydata.org/pandas-docs/stable/groupby.html>`__ for more.
+     |      <https://pandas.pydata.org/pandas-docs/stable/groupby.html>`__ for more
+     |      detailed usage and examples, including splitting an object into groups,
+     |      iterating through groups, selecting a group, aggregation, and more.
      |      
      |      Examples
      |      --------
@@ -4033,7 +4223,7 @@ CLASSES
      |      Name: Max Speed, dtype: float64
      |      
      |      We can also choose to include `NA` in group keys or not by defining
-     |      `dropna` parameter, the default setting is `True`:
+     |      `dropna` parameter, the default setting is `True`.
      |      
      |      >>> ser = pd.Series([1, 2, 3, 3], index=["a", 'a', 'b', np.nan])
      |      >>> ser.groupby(level=0).sum()
@@ -4069,14 +4259,16 @@ CLASSES
      |      Parameters
      |      ----------
      |      other : Series or scalar value
+     |      level : int or name
+     |          Broadcast across a level, matching Index values on the
+     |          passed MultiIndex level.
      |      fill_value : None or float value, default None (NaN)
      |          Fill existing missing (NaN) values, and any new element needed for
      |          successful Series alignment, with this value before computation.
      |          If data in both corresponding Series locations is missing
      |          the result of filling (at that location) will be missing.
-     |      level : int or name
-     |          Broadcast across a level, matching Index values on the
-     |          passed MultiIndex level.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      
      |      Returns
      |      -------
@@ -4161,7 +4353,7 @@ CLASSES
      |      --------
      |      matplotlib.axes.Axes.hist : Plot a histogram using matplotlib.
      |  
-     |  idxmax(self, axis=0, skipna=True, *args, **kwargs)
+     |  idxmax(self, axis: 'Axis' = 0, skipna: 'bool' = True, *args, **kwargs) -> 'Hashable'
      |      Return the row label of the maximum value.
      |      
      |      If multiple values equal the maximum, the first row label with that
@@ -4169,9 +4361,8 @@ CLASSES
      |      
      |      Parameters
      |      ----------
-     |      axis : int, default 0
-     |          For compatibility with DataFrame.idxmax. Redundant for application
-     |          on Series.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      skipna : bool, default True
      |          Exclude NA/null values. If the entire Series is NA, the result
      |          will be NA.
@@ -4225,7 +4416,7 @@ CLASSES
      |      >>> s.idxmax(skipna=False)
      |      nan
      |  
-     |  idxmin(self, axis=0, skipna=True, *args, **kwargs)
+     |  idxmin(self, axis: 'Axis' = 0, skipna: 'bool' = True, *args, **kwargs) -> 'Hashable'
      |      Return the row label of the minimum value.
      |      
      |      If multiple values equal the minimum, the first row label with that
@@ -4233,9 +4424,8 @@ CLASSES
      |      
      |      Parameters
      |      ----------
-     |      axis : int, default 0
-     |          For compatibility with DataFrame.idxmin. Redundant for application
-     |          on Series.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      skipna : bool, default True
      |          Exclude NA/null values. If the entire Series is NA, the result
      |          will be NA.
@@ -4288,7 +4478,116 @@ CLASSES
      |      >>> s.idxmin(skipna=False)
      |      nan
      |  
-     |  interpolate(self: 'Series', method: 'str' = 'linear', axis: 'Axis' = 0, limit: 'int | None' = None, inplace: 'bool' = False, limit_direction: 'str | None' = None, limit_area: 'str | None' = None, downcast: 'str | None' = None, **kwargs) -> 'Series | None'
+     |  info(self, verbose: 'bool | None' = None, buf: 'IO[str] | None' = None, max_cols: 'int | None' = None, memory_usage: 'bool | str | None' = None, show_counts: 'bool' = True) -> 'None'
+     |      Print a concise summary of a Series.
+     |      
+     |      This method prints information about a Series including
+     |      the index dtype, non-null values and memory usage.
+     |      
+     |      .. versionadded:: 1.4.0
+     |      
+     |      Parameters
+     |      ----------
+     |      verbose : bool, optional
+     |          Whether to print the full summary. By default, the setting in
+     |          ``pandas.options.display.max_info_columns`` is followed.
+     |      buf : writable buffer, defaults to sys.stdout
+     |          Where to send the output. By default, the output is printed to
+     |          sys.stdout. Pass a writable buffer if you need to further process
+     |          the output.    
+     |      memory_usage : bool, str, optional
+     |          Specifies whether total memory usage of the Series
+     |          elements (including the index) should be displayed. By default,
+     |          this follows the ``pandas.options.display.memory_usage`` setting.
+     |      
+     |          True always show memory usage. False never shows memory usage.
+     |          A value of 'deep' is equivalent to "True with deep introspection".
+     |          Memory usage is shown in human-readable units (base-2
+     |          representation). Without deep introspection a memory estimation is
+     |          made based in column dtype and number of rows assuming values
+     |          consume the same memory amount for corresponding dtypes. With deep
+     |          memory introspection, a real memory usage calculation is performed
+     |          at the cost of computational resources. See the
+     |          :ref:`Frequently Asked Questions <df-memory-usage>` for more
+     |          details.
+     |      show_counts : bool, optional
+     |          Whether to show the non-null counts. By default, this is shown
+     |          only if the DataFrame is smaller than
+     |          ``pandas.options.display.max_info_rows`` and
+     |          ``pandas.options.display.max_info_columns``. A value of True always
+     |          shows the counts, and False never shows the counts.
+     |      
+     |      Returns
+     |      -------
+     |      None
+     |          This method prints a summary of a Series and returns None.
+     |      
+     |      See Also
+     |      --------
+     |      Series.describe: Generate descriptive statistics of Series.
+     |      Series.memory_usage: Memory usage of Series.
+     |      
+     |      Examples
+     |      --------
+     |      >>> int_values = [1, 2, 3, 4, 5]
+     |      >>> text_values = ['alpha', 'beta', 'gamma', 'delta', 'epsilon']
+     |      >>> s = pd.Series(text_values, index=int_values)
+     |      >>> s.info()
+     |      <class 'pandas.core.series.Series'>
+     |      Int64Index: 5 entries, 1 to 5
+     |      Series name: None
+     |      Non-Null Count  Dtype
+     |      --------------  -----
+     |      5 non-null      object
+     |      dtypes: object(1)
+     |      memory usage: 80.0+ bytes
+     |      
+     |      Prints a summary excluding information about its values:
+     |      
+     |      >>> s.info(verbose=False)
+     |      <class 'pandas.core.series.Series'>
+     |      Int64Index: 5 entries, 1 to 5
+     |      dtypes: object(1)
+     |      memory usage: 80.0+ bytes
+     |      
+     |      Pipe output of Series.info to buffer instead of sys.stdout, get
+     |      buffer content and writes to a text file:
+     |      
+     |      >>> import io
+     |      >>> buffer = io.StringIO()
+     |      >>> s.info(buf=buffer)
+     |      >>> s = buffer.getvalue()
+     |      >>> with open("df_info.txt", "w",
+     |      ...           encoding="utf-8") as f:  # doctest: +SKIP
+     |      ...     f.write(s)
+     |      260
+     |      
+     |      The `memory_usage` parameter allows deep introspection mode, specially
+     |      useful for big Series and fine-tune memory optimization:
+     |      
+     |      >>> random_strings_array = np.random.choice(['a', 'b', 'c'], 10 ** 6)
+     |      >>> s = pd.Series(np.random.choice(['a', 'b', 'c'], 10 ** 6))
+     |      >>> s.info()
+     |      <class 'pandas.core.series.Series'>
+     |      RangeIndex: 1000000 entries, 0 to 999999
+     |      Series name: None
+     |      Non-Null Count    Dtype
+     |      --------------    -----
+     |      1000000 non-null  object
+     |      dtypes: object(1)
+     |      memory usage: 7.6+ MB
+     |      
+     |      >>> s.info(memory_usage='deep')
+     |      <class 'pandas.core.series.Series'>
+     |      RangeIndex: 1000000 entries, 0 to 999999
+     |      Series name: None
+     |      Non-Null Count    Dtype
+     |      --------------    -----
+     |      1000000 non-null  object
+     |      dtypes: object(1)
+     |      memory usage: 55.3 MB
+     |  
+     |  interpolate(self: 'Series', method: 'str' = 'linear', *, axis: 'Axis' = 0, limit: 'int | None' = None, inplace: 'bool' = False, limit_direction: 'str | None' = None, limit_area: 'str | None' = None, downcast: 'str | None' = None, **kwargs) -> 'Series | None'
      |      Fill NaN values using an interpolation method.
      |      
      |      Please note that only ``method='linear'`` is supported for
@@ -4320,7 +4619,8 @@ CLASSES
      |            scipy 0.18.
      |      
      |      axis : {{0 or 'index', 1 or 'columns', None}}, default None
-     |          Axis to interpolate along.
+     |          Axis to interpolate along. For `Series` this parameter is unused
+     |          and defaults to 0.
      |      limit : int, optional
      |          Maximum number of consecutive NaNs to fill. Must be greater than
      |          0.
@@ -4385,9 +4685,7 @@ CLASSES
      |      similar names. These use the actual numerical values of the index.
      |      For more information on their behavior, see the
      |      `SciPy documentation
-     |      <https://docs.scipy.org/doc/scipy/reference/interpolate.html#univariate-interpolation>`__
-     |      and `SciPy tutorial
-     |      <https://docs.scipy.org/doc/scipy/reference/tutorial/interpolate.html>`__.
+     |      <https://docs.scipy.org/doc/scipy/reference/interpolate.html#univariate-interpolation>`__.
      |      
      |      Examples
      |      --------
@@ -4524,6 +4822,17 @@ CLASSES
      |      5    False
      |      Name: animal, dtype: bool
      |      
+     |      To invert the boolean values, use the ``~`` operator:
+     |      
+     |      >>> ~s.isin(['cow', 'lama'])
+     |      0    False
+     |      1    False
+     |      2    False
+     |      3     True
+     |      4    False
+     |      5     True
+     |      Name: animal, dtype: bool
+     |      
      |      Passing a single string as ``s.isin('lama')`` will raise an error. Use
      |      a list of one element instead:
      |      
@@ -4605,6 +4914,8 @@ CLASSES
      |      dtype: bool
      |  
      |  isnull(self) -> 'Series'
+     |      Series.isnull is an alias for Series.isna.
+     |      
      |      Detect missing values.
      |      
      |      Return a boolean same-sized object indicating if the values are NA.
@@ -4692,6 +5003,10 @@ CLASSES
      |  iteritems(self) -> 'Iterable[tuple[Hashable, Any]]'
      |      Lazily iterate over (index, value) tuples.
      |      
+     |      .. deprecated:: 1.5.0
+     |          iteritems is deprecated and will be removed in a future version.
+     |          Use .items instead.
+     |      
      |      This method returns an iterable tuple (index, value). This is
      |      convenient if you want to create a lazy iterator.
      |      
@@ -4703,17 +5018,9 @@ CLASSES
      |      
      |      See Also
      |      --------
+     |      Series.items : Recommended alternative.
      |      DataFrame.items : Iterate over (column name, Series) pairs.
      |      DataFrame.iterrows : Iterate over DataFrame rows as (index, Series) pairs.
-     |      
-     |      Examples
-     |      --------
-     |      >>> s = pd.Series(['A', 'B', 'C'])
-     |      >>> for index, value in s.items():
-     |      ...     print(f"Index : {index}, Value : {value}")
-     |      Index : 0, Value : A
-     |      Index : 1, Value : B
-     |      Index : 2, Value : C
      |  
      |  keys(self) -> 'Index'
      |      Return alias for index.
@@ -4723,7 +5030,7 @@ CLASSES
      |      Index
      |          Index of the Series.
      |  
-     |  kurt(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs)
+     |  kurt(self, axis: 'Axis | None | lib.NoDefault' = <no_default>, skipna=True, level=None, numeric_only=None, **kwargs)
      |      Return unbiased kurtosis over requested axis.
      |      
      |      Kurtosis obtained using Fisher's definition of
@@ -4733,14 +5040,23 @@ CLASSES
      |      ----------
      |      axis : {index (0)}
      |          Axis for the function to be applied on.
+     |          For `Series` this parameter is unused and defaults to 0.
      |      skipna : bool, default True
      |          Exclude NA/null values when computing the result.
      |      level : int or level name, default None
      |          If the axis is a MultiIndex (hierarchical), count along a
      |          particular level, collapsing into a scalar.
+     |      
+     |          .. deprecated:: 1.3.0
+     |              The level keyword is deprecated. Use groupby instead.
      |      numeric_only : bool, default None
      |          Include only float, int, boolean columns. If None, will attempt to use
      |          everything, then use only numeric data. Not implemented for Series.
+     |      
+     |          .. deprecated:: 1.5.0
+     |              Specifying ``numeric_only=None`` is deprecated. The default value will be
+     |              ``False`` in a future version of pandas.
+     |      
      |      **kwargs
      |          Additional keyword arguments to be passed to the function.
      |      
@@ -4748,7 +5064,7 @@ CLASSES
      |      -------
      |      scalar or Series (if level specified)
      |  
-     |  kurtosis = kurt(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs)
+     |  kurtosis = kurt(self, axis: 'Axis | None | lib.NoDefault' = <no_default>, skipna=True, level=None, numeric_only=None, **kwargs)
      |  
      |  le(self, other, level=None, fill_value=None, axis=0)
      |      Return Less than or equal to of series and other, element-wise (binary operator `le`).
@@ -4759,14 +5075,16 @@ CLASSES
      |      Parameters
      |      ----------
      |      other : Series or scalar value
+     |      level : int or name
+     |          Broadcast across a level, matching Index values on the
+     |          passed MultiIndex level.
      |      fill_value : None or float value, default None (NaN)
      |          Fill existing missing (NaN) values, and any new element needed for
      |          successful Series alignment, with this value before computation.
      |          If data in both corresponding Series locations is missing
      |          the result of filling (at that location) will be missing.
-     |      level : int or name
-     |          Broadcast across a level, matching Index values on the
-     |          passed MultiIndex level.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      
      |      Returns
      |      -------
@@ -4809,14 +5127,16 @@ CLASSES
      |      Parameters
      |      ----------
      |      other : Series or scalar value
+     |      level : int or name
+     |          Broadcast across a level, matching Index values on the
+     |          passed MultiIndex level.
      |      fill_value : None or float value, default None (NaN)
      |          Fill existing missing (NaN) values, and any new element needed for
      |          successful Series alignment, with this value before computation.
      |          If data in both corresponding Series locations is missing
      |          the result of filling (at that location) will be missing.
-     |      level : int or name
-     |          Broadcast across a level, matching Index values on the
-     |          passed MultiIndex level.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      
      |      Returns
      |      -------
@@ -4850,14 +5170,18 @@ CLASSES
      |      f     True
      |      dtype: bool
      |  
-     |  mad(self, axis=None, skipna=None, level=None)
+     |  mad(self, axis=None, skipna=True, level=None)
      |      Return the mean absolute deviation of the values over the requested axis.
+     |      
+     |      .. deprecated:: 1.5.0
+     |          mad is deprecated.
      |      
      |      Parameters
      |      ----------
      |      axis : {index (0)}
      |          Axis for the function to be applied on.
-     |      skipna : bool, default None
+     |          For `Series` this parameter is unused and defaults to 0.
+     |      skipna : bool, default True
      |          Exclude NA/null values when computing the result.
      |      level : int or level name, default None
      |          If the axis is a MultiIndex (hierarchical), count along a
@@ -4867,8 +5191,8 @@ CLASSES
      |      -------
      |      scalar or Series (if level specified)
      |  
-     |  map(self, arg, na_action=None) -> 'Series'
-     |      Map values of Series according to input correspondence.
+     |  map(self, arg: 'Callable | Mapping | Series', na_action: "Literal['ignore'] | None" = None) -> 'Series'
+     |      Map values of Series according to an input mapping or function.
      |      
      |      Used for substituting each value in a Series with another value,
      |      that may be derived from a function, a ``dict`` or
@@ -4941,7 +5265,7 @@ CLASSES
      |      3  I am a rabbit
      |      dtype: object
      |  
-     |  mask(self, cond, other=nan, inplace=False, axis=None, level=None, errors='raise', try_cast=<no_default>)
+     |  mask(self, cond, other=nan, *, inplace: 'bool' = False, axis: 'Axis | None' = None, level: 'Level' = None, errors: 'IgnoreRaise | lib.NoDefault' = <no_default>, try_cast: 'bool | lib.NoDefault' = <no_default>) -> 'Series | None'
      |      Replace values where the condition is True.
      |      
      |      Parameters
@@ -4961,7 +5285,8 @@ CLASSES
      |      inplace : bool, default False
      |          Whether to perform the operation in place on the data.
      |      axis : int, default None
-     |          Alignment axis if needed.
+     |          Alignment axis if needed. For `Series` this parameter is
+     |          unused and defaults to 0.
      |      level : int, default None
      |          Alignment level if needed.
      |      errors : str, {'raise', 'ignore'}, default 'raise'
@@ -4970,6 +5295,9 @@ CLASSES
      |      
      |          - 'raise' : allow exceptions to be raised.
      |          - 'ignore' : suppress exceptions. On error return original object.
+     |      
+     |          .. deprecated:: 1.5.0
+     |             This argument had no effect.
      |      
      |      try_cast : bool, default None
      |          Try to cast the result back to the input type (if possible).
@@ -4991,7 +5319,9 @@ CLASSES
      |      The mask method is an application of the if-then idiom. For each
      |      element in the calling DataFrame, if ``cond`` is ``False`` the
      |      element is used; otherwise the corresponding element from the DataFrame
-     |      ``other`` is used.
+     |      ``other`` is used. If the axis of ``other`` does not align with axis of
+     |      ``cond`` Series/DataFrame, the misaligned index positions will be filled with
+     |      True.
      |      
      |      The signature for :func:`DataFrame.where` differs from
      |      :func:`numpy.where`. Roughly ``df1.where(m, df2)`` is equivalent to
@@ -4999,6 +5329,9 @@ CLASSES
      |      
      |      For further details and examples see the ``mask`` documentation in
      |      :ref:`indexing <indexing.where_mask>`.
+     |      
+     |      The dtype of the object takes precedence. The fill value is casted to
+     |      the object's dtype, if this can be done losslessly.
      |      
      |      Examples
      |      --------
@@ -5017,6 +5350,23 @@ CLASSES
      |      3    NaN
      |      4    NaN
      |      dtype: float64
+     |      
+     |      >>> s = pd.Series(range(5))
+     |      >>> t = pd.Series([True, False])
+     |      >>> s.where(t, 99)
+     |      0     0
+     |      1    99
+     |      2    99
+     |      3    99
+     |      4    99
+     |      dtype: int64
+     |      >>> s.mask(t, 99)
+     |      0    99
+     |      1     1
+     |      2    99
+     |      3    99
+     |      4    99
+     |      dtype: int64
      |      
      |      >>> s.where(s > 1, 10)
      |      0    10
@@ -5064,7 +5414,7 @@ CLASSES
      |      3  True  True
      |      4  True  True
      |  
-     |  max(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs)
+     |  max(self, axis: 'int | None | lib.NoDefault' = <no_default>, skipna=True, level=None, numeric_only=None, **kwargs)
      |      Return the maximum of the values over the requested axis.
      |      
      |      If you want the *index* of the maximum, use ``idxmax``. This is the equivalent of the ``numpy.ndarray`` method ``argmax``.
@@ -5073,14 +5423,23 @@ CLASSES
      |      ----------
      |      axis : {index (0)}
      |          Axis for the function to be applied on.
+     |          For `Series` this parameter is unused and defaults to 0.
      |      skipna : bool, default True
      |          Exclude NA/null values when computing the result.
      |      level : int or level name, default None
      |          If the axis is a MultiIndex (hierarchical), count along a
      |          particular level, collapsing into a scalar.
+     |      
+     |          .. deprecated:: 1.3.0
+     |              The level keyword is deprecated. Use groupby instead.
      |      numeric_only : bool, default None
      |          Include only float, int, boolean columns. If None, will attempt to use
      |          everything, then use only numeric data. Not implemented for Series.
+     |      
+     |          .. deprecated:: 1.5.0
+     |              Specifying ``numeric_only=None`` is deprecated. The default value will be
+     |              ``False`` in a future version of pandas.
+     |      
      |      **kwargs
      |          Additional keyword arguments to be passed to the function.
      |      
@@ -5119,21 +5478,30 @@ CLASSES
      |      >>> s.max()
      |      8
      |  
-     |  mean(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs)
+     |  mean(self, axis: 'int | None | lib.NoDefault' = <no_default>, skipna=True, level=None, numeric_only=None, **kwargs)
      |      Return the mean of the values over the requested axis.
      |      
      |      Parameters
      |      ----------
      |      axis : {index (0)}
      |          Axis for the function to be applied on.
+     |          For `Series` this parameter is unused and defaults to 0.
      |      skipna : bool, default True
      |          Exclude NA/null values when computing the result.
      |      level : int or level name, default None
      |          If the axis is a MultiIndex (hierarchical), count along a
      |          particular level, collapsing into a scalar.
+     |      
+     |          .. deprecated:: 1.3.0
+     |              The level keyword is deprecated. Use groupby instead.
      |      numeric_only : bool, default None
      |          Include only float, int, boolean columns. If None, will attempt to use
      |          everything, then use only numeric data. Not implemented for Series.
+     |      
+     |          .. deprecated:: 1.5.0
+     |              Specifying ``numeric_only=None`` is deprecated. The default value will be
+     |              ``False`` in a future version of pandas.
+     |      
      |      **kwargs
      |          Additional keyword arguments to be passed to the function.
      |      
@@ -5141,21 +5509,30 @@ CLASSES
      |      -------
      |      scalar or Series (if level specified)
      |  
-     |  median(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs)
+     |  median(self, axis: 'int | None | lib.NoDefault' = <no_default>, skipna=True, level=None, numeric_only=None, **kwargs)
      |      Return the median of the values over the requested axis.
      |      
      |      Parameters
      |      ----------
      |      axis : {index (0)}
      |          Axis for the function to be applied on.
+     |          For `Series` this parameter is unused and defaults to 0.
      |      skipna : bool, default True
      |          Exclude NA/null values when computing the result.
      |      level : int or level name, default None
      |          If the axis is a MultiIndex (hierarchical), count along a
      |          particular level, collapsing into a scalar.
+     |      
+     |          .. deprecated:: 1.3.0
+     |              The level keyword is deprecated. Use groupby instead.
      |      numeric_only : bool, default None
      |          Include only float, int, boolean columns. If None, will attempt to use
      |          everything, then use only numeric data. Not implemented for Series.
+     |      
+     |          .. deprecated:: 1.5.0
+     |              Specifying ``numeric_only=None`` is deprecated. The default value will be
+     |              ``False`` in a future version of pandas.
+     |      
      |      **kwargs
      |          Additional keyword arguments to be passed to the function.
      |      
@@ -5211,7 +5588,7 @@ CLASSES
      |      >>> s.memory_usage(deep=True)
      |      244
      |  
-     |  min(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs)
+     |  min(self, axis: 'int | None | lib.NoDefault' = <no_default>, skipna=True, level=None, numeric_only=None, **kwargs)
      |      Return the minimum of the values over the requested axis.
      |      
      |      If you want the *index* of the minimum, use ``idxmin``. This is the equivalent of the ``numpy.ndarray`` method ``argmin``.
@@ -5220,14 +5597,23 @@ CLASSES
      |      ----------
      |      axis : {index (0)}
      |          Axis for the function to be applied on.
+     |          For `Series` this parameter is unused and defaults to 0.
      |      skipna : bool, default True
      |          Exclude NA/null values when computing the result.
      |      level : int or level name, default None
      |          If the axis is a MultiIndex (hierarchical), count along a
      |          particular level, collapsing into a scalar.
+     |      
+     |          .. deprecated:: 1.3.0
+     |              The level keyword is deprecated. Use groupby instead.
      |      numeric_only : bool, default None
      |          Include only float, int, boolean columns. If None, will attempt to use
      |          everything, then use only numeric data. Not implemented for Series.
+     |      
+     |          .. deprecated:: 1.5.0
+     |              Specifying ``numeric_only=None`` is deprecated. The default value will be
+     |              ``False`` in a future version of pandas.
+     |      
      |      **kwargs
      |          Additional keyword arguments to be passed to the function.
      |      
@@ -5275,14 +5661,16 @@ CLASSES
      |      Parameters
      |      ----------
      |      other : Series or scalar value
+     |      level : int or name
+     |          Broadcast across a level, matching Index values on the
+     |          passed MultiIndex level.
      |      fill_value : None or float value, default None (NaN)
      |          Fill existing missing (NaN) values, and any new element needed for
      |          successful Series alignment, with this value before computation.
      |          If data in both corresponding Series locations is missing
      |          the result of filling (at that location) will be missing.
-     |      level : int or name
-     |          Broadcast across a level, matching Index values on the
-     |          passed MultiIndex level.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      
      |      Returns
      |      -------
@@ -5320,7 +5708,7 @@ CLASSES
      |      e    NaN
      |      dtype: float64
      |  
-     |  mode(self, dropna=True) -> 'Series'
+     |  mode(self, dropna: 'bool' = True) -> 'Series'
      |      Return the mode(s) of the Series.
      |      
      |      The mode is the value that appears most often. There can be multiple modes.
@@ -5346,14 +5734,16 @@ CLASSES
      |      Parameters
      |      ----------
      |      other : Series or scalar value
+     |      level : int or name
+     |          Broadcast across a level, matching Index values on the
+     |          passed MultiIndex level.
      |      fill_value : None or float value, default None (NaN)
      |          Fill existing missing (NaN) values, and any new element needed for
      |          successful Series alignment, with this value before computation.
      |          If data in both corresponding Series locations is missing
      |          the result of filling (at that location) will be missing.
-     |      level : int or name
-     |          Broadcast across a level, matching Index values on the
-     |          passed MultiIndex level.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      
      |      Returns
      |      -------
@@ -5402,14 +5792,16 @@ CLASSES
      |      Parameters
      |      ----------
      |      other : Series or scalar value
+     |      level : int or name
+     |          Broadcast across a level, matching Index values on the
+     |          passed MultiIndex level.
      |      fill_value : None or float value, default None (NaN)
      |          Fill existing missing (NaN) values, and any new element needed for
      |          successful Series alignment, with this value before computation.
      |          If data in both corresponding Series locations is missing
      |          the result of filling (at that location) will be missing.
-     |      level : int or name
-     |          Broadcast across a level, matching Index values on the
-     |          passed MultiIndex level.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      
      |      Returns
      |      -------
@@ -5440,7 +5832,7 @@ CLASSES
      |      e     True
      |      dtype: bool
      |  
-     |  nlargest(self, n=5, keep='first') -> 'Series'
+     |  nlargest(self, n: 'int' = 5, keep: "Literal[('first', 'last', 'all')]" = 'first') -> 'Series'
      |      Return the largest `n` elements.
      |      
      |      Parameters
@@ -5452,11 +5844,11 @@ CLASSES
      |          Series of `n` elements:
      |      
      |          - ``first`` : return the first `n` occurrences in order
-     |              of appearance.
+     |            of appearance.
      |          - ``last`` : return the last `n` occurrences in reverse
-     |              order of appearance.
+     |            order of appearance.
      |          - ``all`` : keep all occurrences. This can result in a Series of
-     |              size larger than `n`.
+     |            size larger than `n`.
      |      
      |      Returns
      |      -------
@@ -5595,6 +5987,8 @@ CLASSES
      |      dtype: bool
      |  
      |  notnull(self) -> 'Series'
+     |      Series.notnull is an alias for Series.notna.
+     |      
      |      Detect existing (non-missing) values.
      |      
      |      Return a boolean same-sized object indicating if the values are not NA.
@@ -5665,11 +6059,11 @@ CLASSES
      |          Series of `n` elements:
      |      
      |          - ``first`` : return the first `n` occurrences in order
-     |              of appearance.
+     |            of appearance.
      |          - ``last`` : return the last `n` occurrences in reverse
-     |              order of appearance.
+     |            order of appearance.
      |          - ``all`` : keep all occurrences. This can result in a Series of
-     |              size larger than `n`.
+     |            size larger than `n`.
      |      
      |      Returns
      |      -------
@@ -5780,14 +6174,16 @@ CLASSES
      |      Parameters
      |      ----------
      |      other : Series or scalar value
+     |      level : int or name
+     |          Broadcast across a level, matching Index values on the
+     |          passed MultiIndex level.
      |      fill_value : None or float value, default None (NaN)
      |          Fill existing missing (NaN) values, and any new element needed for
      |          successful Series alignment, with this value before computation.
      |          If data in both corresponding Series locations is missing
      |          the result of filling (at that location) will be missing.
-     |      level : int or name
-     |          Broadcast across a level, matching Index values on the
-     |          passed MultiIndex level.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      
      |      Returns
      |      -------
@@ -5825,21 +6221,30 @@ CLASSES
      |      e    NaN
      |      dtype: float64
      |  
-     |  prod(self, axis=None, skipna=None, level=None, numeric_only=None, min_count=0, **kwargs)
+     |  prod(self, axis=None, skipna=True, level=None, numeric_only=None, min_count=0, **kwargs)
      |      Return the product of the values over the requested axis.
      |      
      |      Parameters
      |      ----------
      |      axis : {index (0)}
      |          Axis for the function to be applied on.
+     |          For `Series` this parameter is unused and defaults to 0.
      |      skipna : bool, default True
      |          Exclude NA/null values when computing the result.
      |      level : int or level name, default None
      |          If the axis is a MultiIndex (hierarchical), count along a
      |          particular level, collapsing into a scalar.
+     |      
+     |          .. deprecated:: 1.3.0
+     |              The level keyword is deprecated. Use groupby instead.
      |      numeric_only : bool, default None
      |          Include only float, int, boolean columns. If None, will attempt to use
      |          everything, then use only numeric data. Not implemented for Series.
+     |      
+     |          .. deprecated:: 1.5.0
+     |              Specifying ``numeric_only=None`` is deprecated. The default value will be
+     |              ``False`` in a future version of pandas.
+     |      
      |      min_count : int, default 0
      |          The required number of valid values to perform the operation. If fewer than
      |          ``min_count`` non-NA values are present the result will be NA.
@@ -5884,9 +6289,29 @@ CLASSES
      |      >>> pd.Series([np.nan]).prod(min_count=1)
      |      nan
      |  
-     |  product = prod(self, axis=None, skipna=None, level=None, numeric_only=None, min_count=0, **kwargs)
+     |  product = prod(self, axis=None, skipna=True, level=None, numeric_only=None, min_count=0, **kwargs)
      |  
-     |  quantile(self, q=0.5, interpolation='linear')
+     |  progress_apply = inner(df, func, *args, **kwargs)
+     |      Parameters
+     |      ----------
+     |      df  : (DataFrame|Series)[GroupBy]
+     |          Data (may be grouped).
+     |      func  : function
+     |          To be applied on the (grouped) data.
+     |      **kwargs  : optional
+     |          Transmitted to `df.apply()`.
+     |  
+     |  progress_map = inner(df, func, *args, **kwargs)
+     |      Parameters
+     |      ----------
+     |      df  : (DataFrame|Series)[GroupBy]
+     |          Data (may be grouped).
+     |      func  : function
+     |          To be applied on the (grouped) data.
+     |      **kwargs  : optional
+     |          Transmitted to `df.apply()`.
+     |  
+     |  quantile(self, q: 'float | Sequence[float] | AnyArrayLike' = 0.5, interpolation: 'QuantileInterpolation' = 'linear') -> 'float | Series'
      |      Return value at the given quantile.
      |      
      |      Parameters
@@ -5936,14 +6361,16 @@ CLASSES
      |      Parameters
      |      ----------
      |      other : Series or scalar value
+     |      level : int or name
+     |          Broadcast across a level, matching Index values on the
+     |          passed MultiIndex level.
      |      fill_value : None or float value, default None (NaN)
      |          Fill existing missing (NaN) values, and any new element needed for
      |          successful Series alignment, with this value before computation.
      |          If data in both corresponding Series locations is missing
      |          the result of filling (at that location) will be missing.
-     |      level : int or name
-     |          Broadcast across a level, matching Index values on the
-     |          passed MultiIndex level.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      
      |      Returns
      |      -------
@@ -5981,7 +6408,7 @@ CLASSES
      |      e    NaN
      |      dtype: float64
      |  
-     |  ravel(self, order='C')
+     |  ravel(self, order: 'str' = 'C') -> 'np.ndarray'
      |      Return the flattened underlying data as an ndarray.
      |      
      |      Returns
@@ -6004,14 +6431,16 @@ CLASSES
      |      Parameters
      |      ----------
      |      other : Series or scalar value
+     |      level : int or name
+     |          Broadcast across a level, matching Index values on the
+     |          passed MultiIndex level.
      |      fill_value : None or float value, default None (NaN)
      |          Fill existing missing (NaN) values, and any new element needed for
      |          successful Series alignment, with this value before computation.
      |          If data in both corresponding Series locations is missing
      |          the result of filling (at that location) will be missing.
-     |      level : int or name
-     |          Broadcast across a level, matching Index values on the
-     |          passed MultiIndex level.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      
      |      Returns
      |      -------
@@ -6055,7 +6484,7 @@ CLASSES
      |       e    NaN
      |       dtype: float64)
      |  
-     |  reindex(self, index=None, **kwargs)
+     |  reindex(self, *args, **kwargs) -> 'Series'
      |      Conform Series to new index with optional filling logic.
      |      
      |      Places NA/NaN in locations having no value in the previous index. A new object
@@ -6254,7 +6683,7 @@ CLASSES
      |      
      |      See the :ref:`user guide <basics.reindexing>` for more.
      |  
-     |  rename(self, index=None, *, axis=None, copy=True, inplace=False, level=None, errors='ignore')
+     |  rename(self, index: 'Renamer | Hashable | None' = None, *, axis: 'Axis | None' = None, copy: 'bool' = True, inplace: 'bool' = False, level: 'Level | None' = None, errors: 'IgnoreRaise' = 'ignore') -> 'Series | None'
      |      Alter Series index labels or name.
      |      
      |      Function / dict values must be unique (1-to-1). Labels not contained in
@@ -6267,17 +6696,23 @@ CLASSES
      |      
      |      Parameters
      |      ----------
-     |      axis : {0 or "index"}
-     |          Unused. Accepted for compatibility with DataFrame method only.
-     |      index : scalar, hashable sequence, dict-like or function, optional
+     |      index : scalar, hashable sequence, dict-like or function optional
      |          Functions or dict-like are transformations to apply to
      |          the index.
      |          Scalar or hashable sequence-like will alter the ``Series.name``
      |          attribute.
-     |      
-     |      **kwargs
-     |          Additional keyword arguments passed to the function. Only the
-     |          "inplace" keyword is used.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
+     |      copy : bool, default True
+     |          Also copy underlying data.
+     |      inplace : bool, default False
+     |          Whether to return a new Series. If True the value of copy is ignored.
+     |      level : int or level name, default None
+     |          In case of MultiIndex, only rename labels in the specified level.
+     |      errors : {'ignore', 'raise'}, default 'ignore'
+     |          If 'raise', raise `KeyError` when a `dict-like mapper` or
+     |          `index` contains labels that are not present in the index being transformed.
+     |          If 'ignore', existing keys will be renamed and extra keys will be ignored.
      |      
      |      Returns
      |      -------
@@ -6313,7 +6748,7 @@ CLASSES
      |      5    3
      |      dtype: int64
      |  
-     |  reorder_levels(self, order) -> 'Series'
+     |  reorder_levels(self, order: 'Sequence[Level]') -> 'Series'
      |      Rearrange index levels using input order.
      |      
      |      May not drop or duplicate levels.
@@ -6327,7 +6762,7 @@ CLASSES
      |      -------
      |      type of caller (new object)
      |  
-     |  repeat(self, repeats, axis=None) -> 'Series'
+     |  repeat(self, repeats: 'int | Sequence[int]', axis: 'None' = None) -> 'Series'
      |      Repeat elements of a Series.
      |      
      |      Returns a new Series where each element of the current Series
@@ -6340,8 +6775,7 @@ CLASSES
      |          non-negative integer. Repeating 0 times will return an empty
      |          Series.
      |      axis : None
-     |          Must be ``None``. Has no effect but is accepted for compatibility
-     |          with numpy.
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      
      |      Returns
      |      -------
@@ -6378,7 +6812,7 @@ CLASSES
      |      2    c
      |      dtype: object
      |  
-     |  replace(self, to_replace=None, value=None, inplace=False, limit=None, regex=False, method='pad')
+     |  replace(self, to_replace=None, value=<no_default>, *, inplace: 'bool' = False, limit: 'int | None' = None, regex: 'bool' = False, method: "Literal[('pad', 'ffill', 'bfill')] | lib.NoDefault" = <no_default>) -> 'Series | None'
      |      Replace values given in `to_replace` with `value`.
      |      
      |      Values of the Series are replaced with other values dynamically.
@@ -6394,51 +6828,51 @@ CLASSES
      |          * numeric, str or regex:
      |      
      |              - numeric: numeric values equal to `to_replace` will be
-     |                  replaced with `value`
+     |                replaced with `value`
      |              - str: string exactly matching `to_replace` will be replaced
-     |                  with `value`
+     |                with `value`
      |              - regex: regexs matching `to_replace` will be replaced with
-     |                  `value`
+     |                `value`
      |      
      |          * list of str, regex, or numeric:
      |      
      |              - First, if `to_replace` and `value` are both lists, they
-     |                  **must** be the same length.
+     |                **must** be the same length.
      |              - Second, if ``regex=True`` then all of the strings in **both**
-     |                  lists will be interpreted as regexs otherwise they will match
-     |                  directly. This doesn't matter much for `value` since there
-     |                  are only a few possible substitution regexes you can use.
+     |                lists will be interpreted as regexs otherwise they will match
+     |                directly. This doesn't matter much for `value` since there
+     |                are only a few possible substitution regexes you can use.
      |              - str, regex and numeric rules apply as above.
      |      
      |          * dict:
      |      
      |              - Dicts can be used to specify different replacement values
-     |                  for different existing values. For example,
-     |                  ``{'a': 'b', 'y': 'z'}`` replaces the value 'a' with 'b' and
-     |                  'y' with 'z'. To use a dict in this way the `value`
-     |                  parameter should be `None`.
+     |                for different existing values. For example,
+     |                ``{'a': 'b', 'y': 'z'}`` replaces the value 'a' with 'b' and
+     |                'y' with 'z'. To use a dict in this way, the optional `value`
+     |                parameter should not be given.
      |              - For a DataFrame a dict can specify that different values
-     |                  should be replaced in different columns. For example,
-     |                  ``{'a': 1, 'b': 'z'}`` looks for the value 1 in column 'a'
-     |                  and the value 'z' in column 'b' and replaces these values
-     |                  with whatever is specified in `value`. The `value` parameter
-     |                  should not be ``None`` in this case. You can treat this as a
-     |                  special case of passing two lists except that you are
-     |                  specifying the column to search in.
+     |                should be replaced in different columns. For example,
+     |                ``{'a': 1, 'b': 'z'}`` looks for the value 1 in column 'a'
+     |                and the value 'z' in column 'b' and replaces these values
+     |                with whatever is specified in `value`. The `value` parameter
+     |                should not be ``None`` in this case. You can treat this as a
+     |                special case of passing two lists except that you are
+     |                specifying the column to search in.
      |              - For a DataFrame nested dictionaries, e.g.,
-     |                  ``{'a': {'b': np.nan}}``, are read as follows: look in column
-     |                  'a' for the value 'b' and replace it with NaN. The `value`
-     |                  parameter should be ``None`` to use a nested dict in this
-     |                  way. You can nest regular expressions as well. Note that
-     |                  column names (the top-level dictionary keys in a nested
-     |                  dictionary) **cannot** be regular expressions.
+     |                ``{'a': {'b': np.nan}}``, are read as follows: look in column
+     |                'a' for the value 'b' and replace it with NaN. The optional `value`
+     |                parameter should not be specified to use a nested dict in this
+     |                way. You can nest regular expressions as well. Note that
+     |                column names (the top-level dictionary keys in a nested
+     |                dictionary) **cannot** be regular expressions.
      |      
      |          * None:
      |      
      |              - This means that the `regex` argument must be a string,
-     |                  compiled regular expression, or list, dict, ndarray or
-     |                  Series of such elements. If `value` is also ``None`` then
-     |                  this **must** be a nested dictionary or Series.
+     |                compiled regular expression, or list, dict, ndarray or
+     |                Series of such elements. If `value` is also ``None`` then
+     |                this **must** be a nested dictionary or Series.
      |      
      |          See the examples section for examples of each of these.
      |      value : scalar, dict, list, str, regex, default None
@@ -6457,7 +6891,7 @@ CLASSES
      |          string. Alternatively, this could be a regular expression or a
      |          list, dict, or array of regular expressions in which case
      |          `to_replace` must be ``None``.
-     |      method : {'pad', 'ffill', 'bfill', `None`}
+     |      method : {'pad', 'ffill', 'bfill'}
      |          The method to use when for replacement, when `to_replace` is a
      |          scalar, list or tuple and `value` is ``None``.
      |      
@@ -6473,22 +6907,22 @@ CLASSES
      |      ------
      |      AssertionError
      |          * If `regex` is not a ``bool`` and `to_replace` is not
-     |              ``None``.
+     |            ``None``.
      |      
      |      TypeError
      |          * If `to_replace` is not a scalar, array-like, ``dict``, or ``None``
      |          * If `to_replace` is a ``dict`` and `value` is not a ``list``,
-     |              ``dict``, ``ndarray``, or ``Series``
+     |            ``dict``, ``ndarray``, or ``Series``
      |          * If `to_replace` is ``None`` and `regex` is not compilable
-     |              into a regular expression or is a list, dict, ndarray, or
-     |              Series.
+     |            into a regular expression or is a list, dict, ndarray, or
+     |            Series.
      |          * When replacing multiple ``bool`` or ``datetime64`` objects and
-     |              the arguments to `to_replace` does not match the type of the
-     |              value being replaced
+     |            the arguments to `to_replace` does not match the type of the
+     |            value being replaced
      |      
      |      ValueError
      |          * If a ``list`` or an ``ndarray`` is passed to `to_replace` and
-     |              `value` but they are not the same length.
+     |            `value` but they are not the same length.
      |      
      |      See Also
      |      --------
@@ -6499,30 +6933,30 @@ CLASSES
      |      Notes
      |      -----
      |      * Regex substitution is performed under the hood with ``re.sub``. The
-     |          rules for substitution for ``re.sub`` are the same.
+     |        rules for substitution for ``re.sub`` are the same.
      |      * Regular expressions will only substitute on strings, meaning you
-     |          cannot provide, for example, a regular expression matching floating
-     |          point numbers and expect the columns in your frame that have a
-     |          numeric dtype to be matched. However, if those floating point
-     |          numbers *are* strings, then you can do this.
+     |        cannot provide, for example, a regular expression matching floating
+     |        point numbers and expect the columns in your frame that have a
+     |        numeric dtype to be matched. However, if those floating point
+     |        numbers *are* strings, then you can do this.
      |      * This method has *a lot* of options. You are encouraged to experiment
-     |          and play with this method to gain intuition about how it works.
+     |        and play with this method to gain intuition about how it works.
      |      * When dict is used as the `to_replace` value, it is like
-     |          key(s) in the dict are the to_replace part and
-     |          value(s) in the dict are the value parameter.
+     |        key(s) in the dict are the to_replace part and
+     |        value(s) in the dict are the value parameter.
      |      
      |      Examples
      |      --------
      |      
      |      **Scalar `to_replace` and `value`**
      |      
-     |      >>> s = pd.Series([0, 1, 2, 3, 4])
-     |      >>> s.replace(0, 5)
+     |      >>> s = pd.Series([1, 2, 3, 4, 5])
+     |      >>> s.replace(1, 5)
      |      0    5
-     |      1    1
-     |      2    2
-     |      3    3
-     |      4    4
+     |      1    2
+     |      2    3
+     |      3    4
+     |      4    5
      |      dtype: int64
      |      
      |      >>> df = pd.DataFrame({'A': [0, 1, 2, 3, 4],
@@ -6555,11 +6989,11 @@ CLASSES
      |      4  4  9  e
      |      
      |      >>> s.replace([1, 2], method='bfill')
-     |      0    0
+     |      0    3
      |      1    3
      |      2    3
-     |      3    3
-     |      4    4
+     |      3    4
+     |      4    5
      |      dtype: int64
      |      
      |      **dict-like `to_replace`**
@@ -6641,22 +7075,34 @@ CLASSES
      |      4    None
      |      dtype: object
      |      
-     |      When ``value=None`` and `to_replace` is a scalar, list or
-     |      tuple, `replace` uses the method parameter (default 'pad') to do the
+     |      When ``value`` is not explicitly passed and `to_replace` is a scalar, list
+     |      or tuple, `replace` uses the method parameter (default 'pad') to do the
      |      replacement. So this is why the 'a' values are being replaced by 10
      |      in rows 1 and 2 and 'b' in row 4 in this case.
-     |      The command ``s.replace('a', None)`` is actually equivalent to
-     |      ``s.replace(to_replace='a', value=None, method='pad')``:
      |      
-     |      >>> s.replace('a', None)
+     |      >>> s.replace('a')
      |      0    10
      |      1    10
      |      2    10
      |      3     b
      |      4     b
      |      dtype: object
+     |      
+     |      On the other hand, if ``None`` is explicitly passed for ``value``, it will
+     |      be respected:
+     |      
+     |      >>> s.replace('a', None)
+     |      0      10
+     |      1    None
+     |      2    None
+     |      3       b
+     |      4    None
+     |      dtype: object
+     |      
+     |          .. versionchanged:: 1.4.0
+     |              Previously the explicit ``None`` was silently ignored.
      |  
-     |  resample(self, rule, axis=0, closed: 'str | None' = None, label: 'str | None' = None, convention: 'str' = 'start', kind: 'str | None' = None, loffset=None, base: 'int | None' = None, on=None, level=None, origin: 'str | TimestampConvertibleTypes' = 'start_day', offset: 'TimedeltaConvertibleTypes | None' = None) -> 'Resampler'
+     |  resample(self, rule, axis: 'Axis' = 0, closed: 'str | None' = None, label: 'str | None' = None, convention: 'str' = 'start', kind: 'str | None' = None, loffset=None, base: 'int | None' = None, on: 'Level' = None, level: 'Level' = None, origin: 'str | TimestampConvertibleTypes' = 'start_day', offset: 'TimedeltaConvertibleTypes | None' = None, group_keys: 'bool | lib.NoDefault' = <no_default>) -> 'Resampler'
      |      Resample time-series data.
      |      
      |      Convenience method for frequency conversion and resampling of time series.
@@ -6669,8 +7115,8 @@ CLASSES
      |      rule : DateOffset, Timedelta or str
      |          The offset string or object representing target conversion.
      |      axis : {0 or 'index', 1 or 'columns'}, default 0
-     |          Which axis to use for up- or down-sampling. For `Series` this
-     |          will default to 0, i.e. along the rows. Must be
+     |          Which axis to use for up- or down-sampling. For `Series` this parameter
+     |          is unused and defaults to 0. Must be
      |          `DatetimeIndex`, `TimedeltaIndex` or `PeriodIndex`.
      |      closed : {'right', 'left'}, default None
      |          Which side of bin interval is closed. The default is 'left'
@@ -6708,11 +7154,10 @@ CLASSES
      |      level : str or int, optional
      |          For a MultiIndex, level (name or number) to use for
      |          resampling. `level` must be datetime-like.
-     |      origin : {'epoch', 'start', 'start_day', 'end', 'end_day'}, Timestamp
-     |          or str, default 'start_day'
+     |      origin : Timestamp or str, default 'start_day'
      |          The timestamp on which to adjust the grouping. The timezone of origin
      |          must match the timezone of the index.
-     |          If a timestamp is not used, these values are also supported:
+     |          If string, must be one of the following:
      |      
      |          - 'epoch': `origin` is 1970-01-01
      |          - 'start': `origin` is the first value of the timeseries
@@ -6729,6 +7174,17 @@ CLASSES
      |          An offset timedelta added to the origin.
      |      
      |          .. versionadded:: 1.1.0
+     |      
+     |      group_keys : bool, optional
+     |          Whether to include the group keys in the result index when using
+     |          ``.apply()`` on the resampled object. Not specifying ``group_keys``
+     |          will retain values-dependent behavior from pandas 1.4
+     |          and earlier (see :ref:`pandas 1.5.0 Release notes
+     |          <whatsnew_150.enhancements.resample_group_keys>`
+     |          for examples). In a future version of pandas, the behavior will
+     |          default to the same as specifying ``group_keys=False``.
+     |      
+     |          .. versionadded:: 1.5.0
      |      
      |      Returns
      |      -------
@@ -6815,9 +7271,9 @@ CLASSES
      |      Freq: 30S, dtype: float64
      |      
      |      Upsample the series into 30 second bins and fill the ``NaN``
-     |      values using the ``pad`` method.
+     |      values using the ``ffill`` method.
      |      
-     |      >>> series.resample('30S').pad()[0:5]
+     |      >>> series.resample('30S').ffill()[0:5]
      |      2000-01-01 00:00:00    0
      |      2000-01-01 00:00:30    0
      |      2000-01-01 00:01:00    1
@@ -7052,7 +7508,7 @@ CLASSES
      |      2000-10-02 00:41:00    24
      |      Freq: 17T, dtype: int64
      |  
-     |  reset_index(self, level=None, drop=False, name=None, inplace=False)
+     |  reset_index(self, level: 'IndexLabel' = None, *, drop: 'bool' = False, name: 'Level' = <no_default>, inplace: 'bool' = False, allow_duplicates: 'bool' = False) -> 'DataFrame | Series | None'
      |      Generate a new DataFrame or Series with the index reset.
      |      
      |      This is useful when the index needs to be treated as a column, or
@@ -7073,6 +7529,10 @@ CLASSES
      |          when `drop` is True.
      |      inplace : bool, default False
      |          Modify the Series in place (do not create a new object).
+     |      allow_duplicates : bool, default False
+     |          Allow duplicate column labels to be created.
+     |      
+     |          .. versionadded:: 1.5.0
      |      
      |      Returns
      |      -------
@@ -7168,14 +7628,16 @@ CLASSES
      |      Parameters
      |      ----------
      |      other : Series or scalar value
+     |      level : int or name
+     |          Broadcast across a level, matching Index values on the
+     |          passed MultiIndex level.
      |      fill_value : None or float value, default None (NaN)
      |          Fill existing missing (NaN) values, and any new element needed for
      |          successful Series alignment, with this value before computation.
      |          If data in both corresponding Series locations is missing
      |          the result of filling (at that location) will be missing.
-     |      level : int or name
-     |          Broadcast across a level, matching Index values on the
-     |          passed MultiIndex level.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      
      |      Returns
      |      -------
@@ -7222,14 +7684,16 @@ CLASSES
      |      Parameters
      |      ----------
      |      other : Series or scalar value
+     |      level : int or name
+     |          Broadcast across a level, matching Index values on the
+     |          passed MultiIndex level.
      |      fill_value : None or float value, default None (NaN)
      |          Fill existing missing (NaN) values, and any new element needed for
      |          successful Series alignment, with this value before computation.
      |          If data in both corresponding Series locations is missing
      |          the result of filling (at that location) will be missing.
-     |      level : int or name
-     |          Broadcast across a level, matching Index values on the
-     |          passed MultiIndex level.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      
      |      Returns
      |      -------
@@ -7276,14 +7740,16 @@ CLASSES
      |      Parameters
      |      ----------
      |      other : Series or scalar value
+     |      level : int or name
+     |          Broadcast across a level, matching Index values on the
+     |          passed MultiIndex level.
      |      fill_value : None or float value, default None (NaN)
      |          Fill existing missing (NaN) values, and any new element needed for
      |          successful Series alignment, with this value before computation.
      |          If data in both corresponding Series locations is missing
      |          the result of filling (at that location) will be missing.
-     |      level : int or name
-     |          Broadcast across a level, matching Index values on the
-     |          passed MultiIndex level.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      
      |      Returns
      |      -------
@@ -7321,7 +7787,7 @@ CLASSES
      |      e    NaN
      |      dtype: float64
      |  
-     |  round(self, decimals=0, *args, **kwargs) -> 'Series'
+     |  round(self, decimals: 'int' = 0, *args, **kwargs) -> 'Series'
      |      Round each value in a Series to the given number of decimals.
      |      
      |      Parameters
@@ -7361,14 +7827,16 @@ CLASSES
      |      Parameters
      |      ----------
      |      other : Series or scalar value
+     |      level : int or name
+     |          Broadcast across a level, matching Index values on the
+     |          passed MultiIndex level.
      |      fill_value : None or float value, default None (NaN)
      |          Fill existing missing (NaN) values, and any new element needed for
      |          successful Series alignment, with this value before computation.
      |          If data in both corresponding Series locations is missing
      |          the result of filling (at that location) will be missing.
-     |      level : int or name
-     |          Broadcast across a level, matching Index values on the
-     |          passed MultiIndex level.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      
      |      Returns
      |      -------
@@ -7415,14 +7883,16 @@ CLASSES
      |      Parameters
      |      ----------
      |      other : Series or scalar value
+     |      level : int or name
+     |          Broadcast across a level, matching Index values on the
+     |          passed MultiIndex level.
      |      fill_value : None or float value, default None (NaN)
      |          Fill existing missing (NaN) values, and any new element needed for
      |          successful Series alignment, with this value before computation.
      |          If data in both corresponding Series locations is missing
      |          the result of filling (at that location) will be missing.
-     |      level : int or name
-     |          Broadcast across a level, matching Index values on the
-     |          passed MultiIndex level.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      
      |      Returns
      |      -------
@@ -7469,14 +7939,16 @@ CLASSES
      |      Parameters
      |      ----------
      |      other : Series or scalar value
+     |      level : int or name
+     |          Broadcast across a level, matching Index values on the
+     |          passed MultiIndex level.
      |      fill_value : None or float value, default None (NaN)
      |          Fill existing missing (NaN) values, and any new element needed for
      |          successful Series alignment, with this value before computation.
      |          If data in both corresponding Series locations is missing
      |          the result of filling (at that location) will be missing.
-     |      level : int or name
-     |          Broadcast across a level, matching Index values on the
-     |          passed MultiIndex level.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      
      |      Returns
      |      -------
@@ -7514,7 +7986,7 @@ CLASSES
      |      e    NaN
      |      dtype: float64
      |  
-     |  searchsorted(self, value, side='left', sorter=None) -> 'np.ndarray'
+     |  searchsorted(self, value: 'NumpyValueArrayLike | ExtensionArray', side: "Literal[('left', 'right')]" = 'left', sorter: 'NumpySorter' = None) -> 'npt.NDArray[np.intp] | np.intp'
      |      Find indices where elements should be inserted to maintain order.
      |      
      |      Find the indices into a sorted Series `self` such that, if the
@@ -7529,7 +8001,7 @@ CLASSES
      |      
      |      Parameters
      |      ----------
-     |      value : array-like
+     |      value : array-like or scalar
      |          Values to insert into `self`.
      |      side : {'left', 'right'}, optional
      |          If 'left', the index of the first suitable location found is given.
@@ -7611,7 +8083,7 @@ CLASSES
      |      >>> ser.searchsorted(1)  # doctest: +SKIP
      |      0  # wrong result, correct would be 1
      |  
-     |  sem(self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs)
+     |  sem(self, axis=None, skipna=True, level=None, ddof=1, numeric_only=None, **kwargs)
      |      Return unbiased standard error of the mean over requested axis.
      |      
      |      Normalized by N-1 by default. This can be changed using the ddof argument
@@ -7619,12 +8091,16 @@ CLASSES
      |      Parameters
      |      ----------
      |      axis : {index (0)}
+     |          For `Series` this parameter is unused and defaults to 0.
      |      skipna : bool, default True
      |          Exclude NA/null values. If an entire row/column is NA, the result
      |          will be NA.
      |      level : int or level name, default None
      |          If the axis is a MultiIndex (hierarchical), count along a
      |          particular level, collapsing into a scalar.
+     |      
+     |          .. deprecated:: 1.3.0
+     |              The level keyword is deprecated. Use groupby instead.
      |      ddof : int, default 1
      |          Delta Degrees of Freedom. The divisor used in calculations is N - ddof,
      |          where N represents the number of elements.
@@ -7632,16 +8108,15 @@ CLASSES
      |          Include only float, int, boolean columns. If None, will attempt to use
      |          everything, then use only numeric data. Not implemented for Series.
      |      
+     |          .. deprecated:: 1.5.0
+     |              Specifying ``numeric_only=None`` is deprecated. The default value will be
+     |              ``False`` in a future version of pandas.
+     |      
      |      Returns
      |      -------
      |      scalar or Series (if level specified)
-     |      
-     |      Notes
-     |      -----
-     |      To have the same behaviour as `numpy.std`, use `ddof=0` (instead of the
-     |      default `ddof=1`)
      |  
-     |  set_axis(self, labels, axis: 'Axis' = 0, inplace: 'bool' = False)
+     |  set_axis(self, labels, *, axis: 'Axis' = 0, inplace: 'bool | lib.NoDefault' = <no_default>, copy: 'bool | lib.NoDefault' = <no_default>) -> 'Series | None'
      |      Assign desired index to given axis.
      |      
      |      Indexes for row labels can be changed by assigning
@@ -7653,10 +8128,18 @@ CLASSES
      |          The values for the new index.
      |      
      |      axis : {0 or 'index'}, default 0
-     |          The axis to update. The value 0 identifies the rows.
+     |          The axis to update. The value 0 identifies the rows. For `Series`
+     |          this parameter is unused and defaults to 0.
      |      
      |      inplace : bool, default False
      |          Whether to return a new Series instance.
+     |      
+     |          .. deprecated:: 1.5.0
+     |      
+     |      copy : bool, default True
+     |          Whether to make a copy of the underlying data.
+     |      
+     |          .. versionadded:: 1.5.0
      |      
      |      Returns
      |      -------
@@ -7682,7 +8165,7 @@ CLASSES
      |              c    3
      |              dtype: int64
      |  
-     |  shift(self, periods=1, freq=None, axis=0, fill_value=None) -> 'Series'
+     |  shift(self, periods: 'int' = 1, freq=None, axis: 'Axis' = 0, fill_value: 'Hashable' = None) -> 'Series'
      |      Shift index by desired number of periods with an optional time `freq`.
      |      
      |      When `freq` is not passed, shift the index without realigning the data.
@@ -7705,7 +8188,7 @@ CLASSES
      |          the freq or inferred_freq attributes of the index. If neither of
      |          those attributes exist, a ValueError is thrown.
      |      axis : {0 or 'index', 1 or 'columns', None}, default None
-     |          Shift direction.
+     |          Shift direction. For `Series` this parameter is unused and defaults to 0.
      |      fill_value : object, optional
      |          The scalar value to use for newly introduced missing values.
      |          the default depends on the dtype of `self`.
@@ -7782,7 +8265,7 @@ CLASSES
      |      2020-01-07    30    33    37
      |      2020-01-08    45    48    52
      |  
-     |  skew(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs)
+     |  skew(self, axis: 'int | None | lib.NoDefault' = <no_default>, skipna=True, level=None, numeric_only=None, **kwargs)
      |      Return unbiased skew over requested axis.
      |      
      |      Normalized by N-1.
@@ -7791,14 +8274,23 @@ CLASSES
      |      ----------
      |      axis : {index (0)}
      |          Axis for the function to be applied on.
+     |          For `Series` this parameter is unused and defaults to 0.
      |      skipna : bool, default True
      |          Exclude NA/null values when computing the result.
      |      level : int or level name, default None
      |          If the axis is a MultiIndex (hierarchical), count along a
      |          particular level, collapsing into a scalar.
+     |      
+     |          .. deprecated:: 1.3.0
+     |              The level keyword is deprecated. Use groupby instead.
      |      numeric_only : bool, default None
      |          Include only float, int, boolean columns. If None, will attempt to use
      |          everything, then use only numeric data. Not implemented for Series.
+     |      
+     |          .. deprecated:: 1.5.0
+     |              Specifying ``numeric_only=None`` is deprecated. The default value will be
+     |              ``False`` in a future version of pandas.
+     |      
      |      **kwargs
      |          Additional keyword arguments to be passed to the function.
      |      
@@ -7806,7 +8298,7 @@ CLASSES
      |      -------
      |      scalar or Series (if level specified)
      |  
-     |  sort_index(self, axis=0, level=None, ascending: 'bool | int | Sequence[bool | int]' = True, inplace: 'bool' = False, kind: 'str' = 'quicksort', na_position: 'str' = 'last', sort_remaining: 'bool' = True, ignore_index: 'bool' = False, key: 'IndexKeyFunc' = None)
+     |  sort_index(self, *, axis: 'Axis' = 0, level: 'IndexLabel' = None, ascending: 'bool | Sequence[bool]' = True, inplace: 'bool' = False, kind: 'SortKind' = 'quicksort', na_position: 'NaPosition' = 'last', sort_remaining: 'bool' = True, ignore_index: 'bool' = False, key: 'IndexKeyFunc' = None) -> 'Series | None'
      |      Sort Series by index labels.
      |      
      |      Returns a new Series sorted by label if `inplace` argument is
@@ -7814,8 +8306,8 @@ CLASSES
      |      
      |      Parameters
      |      ----------
-     |      axis : int, default 0
-     |          Axis to direct sorting. This can only be 0 for Series.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      level : int, optional
      |          If not None, sort on values in specified index level(s).
      |      ascending : bool or list-like of bools, default True
@@ -7940,7 +8432,7 @@ CLASSES
      |      d    4
      |      dtype: int64
      |  
-     |  sort_values(self, axis=0, ascending: 'bool | int | Sequence[bool | int]' = True, inplace: 'bool' = False, kind: 'str' = 'quicksort', na_position: 'str' = 'last', ignore_index: 'bool' = False, key: 'ValueKeyFunc' = None)
+     |  sort_values(self, *, axis: 'Axis' = 0, ascending: 'bool | int | Sequence[bool] | Sequence[int]' = True, inplace: 'bool' = False, kind: 'str' = 'quicksort', na_position: 'str' = 'last', ignore_index: 'bool' = False, key: 'ValueKeyFunc' = None) -> 'Series | None'
      |      Sort by the values.
      |      
      |      Sort a Series in ascending or descending order by some
@@ -7948,9 +8440,8 @@ CLASSES
      |      
      |      Parameters
      |      ----------
-     |      axis : {0 or 'index'}, default 0
-     |          Axis to direct sorting. The value 'index' is accepted for
-     |          compatibility with DataFrame.sort_values.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      ascending : bool or list of bools, default True
      |          If True, sort values in ascending order, otherwise descending.
      |      inplace : bool, default False
@@ -8099,20 +8590,24 @@ CLASSES
      |      2    0
      |      dtype: int64
      |  
-     |  std(self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs)
+     |  std(self, axis=None, skipna=True, level=None, ddof=1, numeric_only=None, **kwargs)
      |      Return sample standard deviation over requested axis.
      |      
-     |      Normalized by N-1 by default. This can be changed using the ddof argument
+     |      Normalized by N-1 by default. This can be changed using the ddof argument.
      |      
      |      Parameters
      |      ----------
      |      axis : {index (0)}
+     |          For `Series` this parameter is unused and defaults to 0.
      |      skipna : bool, default True
      |          Exclude NA/null values. If an entire row/column is NA, the result
      |          will be NA.
      |      level : int or level name, default None
      |          If the axis is a MultiIndex (hierarchical), count along a
      |          particular level, collapsing into a scalar.
+     |      
+     |          .. deprecated:: 1.3.0
+     |              The level keyword is deprecated. Use groupby instead.
      |      ddof : int, default 1
      |          Delta Degrees of Freedom. The divisor used in calculations is N - ddof,
      |          where N represents the number of elements.
@@ -8120,14 +8615,44 @@ CLASSES
      |          Include only float, int, boolean columns. If None, will attempt to use
      |          everything, then use only numeric data. Not implemented for Series.
      |      
+     |          .. deprecated:: 1.5.0
+     |              Specifying ``numeric_only=None`` is deprecated. The default value will be
+     |              ``False`` in a future version of pandas.
+     |      
      |      Returns
      |      -------
-     |      scalar or Series (if level specified)
+     |      scalar or Series (if level specified) 
      |      
      |      Notes
      |      -----
      |      To have the same behaviour as `numpy.std`, use `ddof=0` (instead of the
      |      default `ddof=1`)
+     |      
+     |      Examples
+     |      --------
+     |      >>> df = pd.DataFrame({'person_id': [0, 1, 2, 3],
+     |      ...                   'age': [21, 25, 62, 43],
+     |      ...                   'height': [1.61, 1.87, 1.49, 2.01]}
+     |      ...                  ).set_index('person_id')
+     |      >>> df
+     |                 age  height
+     |      person_id
+     |      0           21    1.61
+     |      1           25    1.87
+     |      2           62    1.49
+     |      3           43    2.01
+     |      
+     |      The standard deviation of the columns can be found as follows:
+     |      
+     |      >>> df.std()
+     |      age       18.786076
+     |      height     0.237417
+     |      
+     |      Alternatively, `ddof=0` can be set to normalize by N instead of N-1:
+     |      
+     |      >>> df.std(ddof=0)
+     |      age       16.269219
+     |      height     0.205609
      |  
      |  sub(self, other, level=None, fill_value=None, axis=0)
      |      Return Subtraction of series and other, element-wise (binary operator `sub`).
@@ -8138,14 +8663,16 @@ CLASSES
      |      Parameters
      |      ----------
      |      other : Series or scalar value
+     |      level : int or name
+     |          Broadcast across a level, matching Index values on the
+     |          passed MultiIndex level.
      |      fill_value : None or float value, default None (NaN)
      |          Fill existing missing (NaN) values, and any new element needed for
      |          successful Series alignment, with this value before computation.
      |          If data in both corresponding Series locations is missing
      |          the result of filling (at that location) will be missing.
-     |      level : int or name
-     |          Broadcast across a level, matching Index values on the
-     |          passed MultiIndex level.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      
      |      Returns
      |      -------
@@ -8185,7 +8712,7 @@ CLASSES
      |  
      |  subtract = sub(self, other, level=None, fill_value=None, axis=0)
      |  
-     |  sum(self, axis=None, skipna=None, level=None, numeric_only=None, min_count=0, **kwargs)
+     |  sum(self, axis=None, skipna=True, level=None, numeric_only=None, min_count=0, **kwargs)
      |      Return the sum of the values over the requested axis.
      |      
      |      This is equivalent to the method ``numpy.sum``.
@@ -8194,14 +8721,23 @@ CLASSES
      |      ----------
      |      axis : {index (0)}
      |          Axis for the function to be applied on.
+     |          For `Series` this parameter is unused and defaults to 0.
      |      skipna : bool, default True
      |          Exclude NA/null values when computing the result.
      |      level : int or level name, default None
      |          If the axis is a MultiIndex (hierarchical), count along a
      |          particular level, collapsing into a scalar.
+     |      
+     |          .. deprecated:: 1.3.0
+     |              The level keyword is deprecated. Use groupby instead.
      |      numeric_only : bool, default None
      |          Include only float, int, boolean columns. If None, will attempt to use
      |          everything, then use only numeric data. Not implemented for Series.
+     |      
+     |          .. deprecated:: 1.5.0
+     |              Specifying ``numeric_only=None`` is deprecated. The default value will be
+     |              ``False`` in a future version of pandas.
+     |      
      |      min_count : int, default 0
      |          The required number of valid values to perform the operation. If fewer than
      |          ``min_count`` non-NA values are present the result will be NA.
@@ -8263,7 +8799,7 @@ CLASSES
      |      >>> pd.Series([np.nan]).sum(min_count=1)
      |      nan
      |  
-     |  swaplevel(self, i=-2, j=-1, copy=True) -> 'Series'
+     |  swaplevel(self, i: 'Level' = -2, j: 'Level' = -1, copy: 'bool' = True) -> 'Series'
      |      Swap levels i and j in a :class:`MultiIndex`.
      |      
      |      Default is to swap the two innermost levels of the index.
@@ -8281,57 +8817,57 @@ CLASSES
      |          Series with levels swapped in MultiIndex.
      |      
      |      Examples
-     |              --------
-     |              >>> s = pd.Series(
-     |              ...     ["A", "B", "A", "C"],
-     |              ...     index=[
-     |              ...         ["Final exam", "Final exam", "Coursework", "Coursework"],
-     |              ...         ["History", "Geography", "History", "Geography"],
-     |              ...         ["January", "February", "March", "April"],
-     |              ...     ],
-     |              ... )
-     |              >>> s
-     |              Final exam  History     January      A
-     |                          Geography   February     B
-     |              Coursework  History     March        A
-     |                          Geography   April        C
-     |              dtype: object
+     |      --------
+     |      >>> s = pd.Series(
+     |      ...     ["A", "B", "A", "C"],
+     |      ...     index=[
+     |      ...         ["Final exam", "Final exam", "Coursework", "Coursework"],
+     |      ...         ["History", "Geography", "History", "Geography"],
+     |      ...         ["January", "February", "March", "April"],
+     |      ...     ],
+     |      ... )
+     |      >>> s
+     |      Final exam  History     January      A
+     |                  Geography   February     B
+     |      Coursework  History     March        A
+     |                  Geography   April        C
+     |      dtype: object
      |      
-     |              In the following example, we will swap the levels of the indices.
-     |              Here, we will swap the levels column-wise, but levels can be swapped row-wise
-     |              in a similar manner. Note that column-wise is the default behaviour.
-     |              By not supplying any arguments for i and j, we swap the last and second to
-     |              last indices.
+     |      In the following example, we will swap the levels of the indices.
+     |      Here, we will swap the levels column-wise, but levels can be swapped row-wise
+     |      in a similar manner. Note that column-wise is the default behaviour.
+     |      By not supplying any arguments for i and j, we swap the last and second to
+     |      last indices.
      |      
-     |              >>> s.swaplevel()
-     |              Final exam  January     History         A
-     |                          February    Geography       B
-     |              Coursework  March       History         A
-     |                          April       Geography       C
-     |              dtype: object
+     |      >>> s.swaplevel()
+     |      Final exam  January     History         A
+     |                  February    Geography       B
+     |      Coursework  March       History         A
+     |                  April       Geography       C
+     |      dtype: object
      |      
-     |              By supplying one argument, we can choose which index to swap the last
-     |              index with. We can for example swap the first index with the last one as
-     |              follows.
+     |      By supplying one argument, we can choose which index to swap the last
+     |      index with. We can for example swap the first index with the last one as
+     |      follows.
      |      
-     |              >>> s.swaplevel(0)
-     |              January     History     Final exam      A
-     |              February    Geography   Final exam      B
-     |              March       History     Coursework      A
-     |              April       Geography   Coursework      C
-     |              dtype: object
+     |      >>> s.swaplevel(0)
+     |      January     History     Final exam      A
+     |      February    Geography   Final exam      B
+     |      March       History     Coursework      A
+     |      April       Geography   Coursework      C
+     |      dtype: object
      |      
-     |              We can also define explicitly which indices we want to swap by supplying values
-     |              for both i and j. Here, we for example swap the first and second indices.
+     |      We can also define explicitly which indices we want to swap by supplying values
+     |      for both i and j. Here, we for example swap the first and second indices.
      |      
-     |              >>> s.swaplevel(0, 1)
-     |              History     Final exam  January         A
-     |              Geography   Final exam  February        B
-     |              History     Coursework  March           A
-     |              Geography   Coursework  April           C
-     |              dtype: object
+     |      >>> s.swaplevel(0, 1)
+     |      History     Final exam  January         A
+     |      Geography   Final exam  February        B
+     |      History     Coursework  March           A
+     |      Geography   Coursework  April           C
+     |      dtype: object
      |  
-     |  take(self, indices, axis=0, is_copy=None, **kwargs) -> 'Series'
+     |  take(self, indices, axis: 'Axis' = 0, is_copy: 'bool | None' = None, **kwargs) -> 'Series'
      |      Return the elements in the given *positional* indices along an axis.
      |      
      |      This means that we are not indexing according to actual values in
@@ -8345,6 +8881,7 @@ CLASSES
      |      axis : {0 or 'index', 1 or 'columns', None}, default 0
      |          The axis on which to select elements. ``0`` means that we are
      |          selecting rows, ``1`` means that we are selecting columns.
+     |          For `Series` this parameter is unused and defaults to 0.
      |      is_copy : bool
      |          Before pandas 1.0, ``is_copy=False`` can be specified to ensure
      |          that the return value is an actual copy. Starting with pandas 1.0,
@@ -8410,7 +8947,7 @@ CLASSES
      |      1  monkey  mammal        NaN
      |      3    lion  mammal       80.5
      |  
-     |  to_dict(self, into=<class 'dict'>)
+     |  to_dict(self, into: 'type[dict]' = <class 'dict'>) -> 'dict'
      |      Convert Series to {label -> value} dict or dict-like object.
      |      
      |      Parameters
@@ -8438,12 +8975,12 @@ CLASSES
      |      >>> s.to_dict(dd)
      |      defaultdict(<class 'list'>, {0: 1, 1: 2, 2: 3, 3: 4})
      |  
-     |  to_frame(self, name=None) -> 'DataFrame'
+     |  to_frame(self, name: 'Hashable' = <no_default>) -> 'DataFrame'
      |      Convert Series to DataFrame.
      |      
      |      Parameters
      |      ----------
-     |      name : object, default None
+     |      name : object, optional
      |          The passed name should substitute for the series name (if it has
      |          one).
      |      
@@ -8480,9 +9017,12 @@ CLASSES
      |      storage_options : dict, optional
      |          Extra options that make sense for a particular storage connection, e.g.
      |          host, port, username, password, etc. For HTTP(S) URLs the key-value pairs
-     |          are forwarded to ``urllib`` as header options. For other URLs (e.g.
-     |          starting with "s3://", and "gcs://") the key-value pairs are forwarded to
-     |          ``fsspec``. Please see ``fsspec`` and ``urllib`` for more details.
+     |          are forwarded to ``urllib.request.Request`` as header options. For other
+     |          URLs (e.g. starting with "s3://", and "gcs://") the key-value pairs are
+     |          forwarded to ``fsspec.open``. Please see ``fsspec`` and ``urllib`` for more
+     |          details, and for more examples on storage options refer `here
+     |          <https://pandas.pydata.org/docs/user_guide/io.html?
+     |          highlight=storage_options#reading-writing-remote-files>`_.
      |      
      |          .. versionadded:: 1.2.0
      |      
@@ -8499,32 +9039,32 @@ CLASSES
      |      Requires the `tabulate <https://pypi.org/project/tabulate>`_ package.
      |      
      |      Examples
-     |      --------
-     |      >>> s = pd.Series(["elk", "pig", "dog", "quetzal"], name="animal")
-     |      >>> print(s.to_markdown())
-     |      |    | animal   |
-     |      |---:|:---------|
-     |      |  0 | elk      |
-     |      |  1 | pig      |
-     |      |  2 | dog      |
-     |      |  3 | quetzal  |
+     |                  --------
+     |                  >>> s = pd.Series(["elk", "pig", "dog", "quetzal"], name="animal")
+     |                  >>> print(s.to_markdown())
+     |                  |    | animal   |
+     |                  |---:|:---------|
+     |                  |  0 | elk      |
+     |                  |  1 | pig      |
+     |                  |  2 | dog      |
+     |                  |  3 | quetzal  |
      |      
-     |      Output markdown with a tabulate option.
+     |                  Output markdown with a tabulate option.
      |      
-     |      >>> print(s.to_markdown(tablefmt="grid"))
-     |      +----+----------+
-     |      |    | animal   |
-     |      +====+==========+
-     |      |  0 | elk      |
-     |      +----+----------+
-     |      |  1 | pig      |
-     |      +----+----------+
-     |      |  2 | dog      |
-     |      +----+----------+
-     |      |  3 | quetzal  |
-     |      +----+----------+
+     |                  >>> print(s.to_markdown(tablefmt="grid"))
+     |                  +----+----------+
+     |                  |    | animal   |
+     |                  +====+==========+
+     |                  |  0 | elk      |
+     |                  +----+----------+
+     |                  |  1 | pig      |
+     |                  +----+----------+
+     |                  |  2 | dog      |
+     |                  +----+----------+
+     |                  |  3 | quetzal  |
+     |                  +----+----------+
      |  
-     |  to_period(self, freq=None, copy=True) -> 'Series'
+     |  to_period(self, freq: 'str | None' = None, copy: 'bool' = True) -> 'Series'
      |      Convert Series from DatetimeIndex to PeriodIndex.
      |      
      |      Parameters
@@ -8539,7 +9079,7 @@ CLASSES
      |      Series
      |          Series with index converted to PeriodIndex.
      |  
-     |  to_string(self, buf=None, na_rep='NaN', float_format=None, header=True, index=True, length=False, dtype=False, name=False, max_rows=None, min_rows=None)
+     |  to_string(self, buf: 'FilePath | WriteBuffer[str] | None' = None, na_rep: 'str' = 'NaN', float_format: 'str | None' = None, header: 'bool' = True, index: 'bool' = True, length=False, dtype=False, name=False, max_rows: 'int | None' = None, min_rows: 'int | None' = None) -> 'str | None'
      |      Render a string representation of the Series.
      |      
      |      Parameters
@@ -8573,7 +9113,7 @@ CLASSES
      |      str or None
      |          String representation of Series if ``buf=None``, otherwise None.
      |  
-     |  to_timestamp(self, freq=None, how='start', copy=True) -> 'Series'
+     |  to_timestamp(self, freq=None, how: "Literal[('s', 'e', 'start', 'end')]" = 'start', copy: 'bool' = True) -> 'Series'
      |      Cast to DatetimeIndex of Timestamps, at *beginning* of period.
      |      
      |      Parameters
@@ -8590,10 +9130,8 @@ CLASSES
      |      -------
      |      Series with DatetimeIndex
      |  
-     |  transform(self, func: 'AggFuncType', axis: 'Axis' = 0, *args, **kwargs) -> 'FrameOrSeriesUnion'
-     |      Call ``func`` on self producing a Series with transformed values.
-     |      
-     |      Produced Series will have same axis length as self.
+     |  transform(self, func: 'AggFuncType', axis: 'Axis' = 0, *args, **kwargs) -> 'DataFrame | Series'
+     |      Call ``func`` on self producing a Series with the same axis shape as self.
      |      
      |      Parameters
      |      ----------
@@ -8609,7 +9147,7 @@ CLASSES
      |          - list-like of functions and/or function names, e.g. ``[np.exp, 'sqrt']``
      |          - dict-like of axis labels -> functions, function names or list-like of such.
      |      axis : {0 or 'index'}
-     |              Parameter needed for compatibility with DataFrame.
+     |              Unused. Parameter needed for compatibility with DataFrame.
      |      *args
      |          Positional arguments to pass to `func`.
      |      **kwargs
@@ -8726,14 +9264,16 @@ CLASSES
      |      Parameters
      |      ----------
      |      other : Series or scalar value
+     |      level : int or name
+     |          Broadcast across a level, matching Index values on the
+     |          passed MultiIndex level.
      |      fill_value : None or float value, default None (NaN)
      |          Fill existing missing (NaN) values, and any new element needed for
      |          successful Series alignment, with this value before computation.
      |          If data in both corresponding Series locations is missing
      |          the result of filling (at that location) will be missing.
-     |      level : int or name
-     |          Broadcast across a level, matching Index values on the
-     |          passed MultiIndex level.
+     |      axis : {0 or 'index'}
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      
      |      Returns
      |      -------
@@ -8784,6 +9324,7 @@ CLASSES
      |      
      |      See Also
      |      --------
+     |      Series.drop_duplicates : Return Series with duplicate values removed.
      |      unique : Top-level unique method for any 1-d array-like object.
      |      Index.unique : Return Index with unique values from an Index object.
      |      
@@ -8828,7 +9369,7 @@ CLASSES
      |      ['b', 'a', 'c']
      |      Categories (3, object): ['a' < 'b' < 'c']
      |  
-     |  unstack(self, level=-1, fill_value=None) -> 'DataFrame'
+     |  unstack(self, level: 'IndexLabel' = -1, fill_value: 'Hashable' = None) -> 'DataFrame'
      |      Unstack, also known as pivot, Series with MultiIndex to produce DataFrame.
      |      
      |      Parameters
@@ -8842,6 +9383,10 @@ CLASSES
      |      -------
      |      DataFrame
      |          Unstacked Series.
+     |      
+     |      Notes
+     |      -----
+     |      Reference :ref:`the user guide <reshaping.stacking>` for more examples.
      |      
      |      Examples
      |      --------
@@ -8865,7 +9410,7 @@ CLASSES
      |      a    1    3
      |      b    2    4
      |  
-     |  update(self, other) -> 'None'
+     |  update(self, other: 'Series | Sequence | Mapping') -> 'None'
      |      Modify Series in place using values from passed Series.
      |      
      |      Uses non-NA values from passed Series to make updates. Aligns
@@ -8931,20 +9476,24 @@ CLASSES
      |      2    3
      |      dtype: int64
      |  
-     |  var(self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs)
+     |  var(self, axis=None, skipna=True, level=None, ddof=1, numeric_only=None, **kwargs)
      |      Return unbiased variance over requested axis.
      |      
-     |      Normalized by N-1 by default. This can be changed using the ddof argument
+     |      Normalized by N-1 by default. This can be changed using the ddof argument.
      |      
      |      Parameters
      |      ----------
      |      axis : {index (0)}
+     |          For `Series` this parameter is unused and defaults to 0.
      |      skipna : bool, default True
      |          Exclude NA/null values. If an entire row/column is NA, the result
      |          will be NA.
      |      level : int or level name, default None
      |          If the axis is a MultiIndex (hierarchical), count along a
      |          particular level, collapsing into a scalar.
+     |      
+     |          .. deprecated:: 1.3.0
+     |              The level keyword is deprecated. Use groupby instead.
      |      ddof : int, default 1
      |          Delta Degrees of Freedom. The divisor used in calculations is N - ddof,
      |          where N represents the number of elements.
@@ -8952,14 +9501,37 @@ CLASSES
      |          Include only float, int, boolean columns. If None, will attempt to use
      |          everything, then use only numeric data. Not implemented for Series.
      |      
+     |          .. deprecated:: 1.5.0
+     |              Specifying ``numeric_only=None`` is deprecated. The default value will be
+     |              ``False`` in a future version of pandas.
+     |      
      |      Returns
      |      -------
-     |      scalar or Series (if level specified)
+     |      scalar or Series (if level specified) 
      |      
-     |      Notes
-     |      -----
-     |      To have the same behaviour as `numpy.std`, use `ddof=0` (instead of the
-     |      default `ddof=1`)
+     |      Examples
+     |      --------
+     |      >>> df = pd.DataFrame({'person_id': [0, 1, 2, 3],
+     |      ...                   'age': [21, 25, 62, 43],
+     |      ...                   'height': [1.61, 1.87, 1.49, 2.01]}
+     |      ...                  ).set_index('person_id')
+     |      >>> df
+     |                 age  height
+     |      person_id
+     |      0           21    1.61
+     |      1           25    1.87
+     |      2           62    1.49
+     |      3           43    2.01
+     |      
+     |      >>> df.var()
+     |      age       352.916667
+     |      height      0.056367
+     |      
+     |      Alternatively, ``ddof=0`` can be set to normalize by N instead of N-1:
+     |      
+     |      >>> df.var(ddof=0)
+     |      age       264.687500
+     |      height      0.042275
      |  
      |  view(self, dtype: 'Dtype | None' = None) -> 'Series'
      |      Create a new view of the Series.
@@ -9026,7 +9598,7 @@ CLASSES
      |      4      2
      |      dtype: int8
      |  
-     |  where(self, cond, other=nan, inplace=False, axis=None, level=None, errors='raise', try_cast=<no_default>)
+     |  where(self, cond, other=<no_default>, *, inplace: 'bool' = False, axis: 'Axis | None' = None, level: 'Level' = None, errors: 'IgnoreRaise | lib.NoDefault' = <no_default>, try_cast: 'bool | lib.NoDefault' = <no_default>) -> 'Series | None'
      |      Replace values where the condition is False.
      |      
      |      Parameters
@@ -9046,7 +9618,8 @@ CLASSES
      |      inplace : bool, default False
      |          Whether to perform the operation in place on the data.
      |      axis : int, default None
-     |          Alignment axis if needed.
+     |          Alignment axis if needed. For `Series` this parameter is
+     |          unused and defaults to 0.
      |      level : int, default None
      |          Alignment level if needed.
      |      errors : str, {'raise', 'ignore'}, default 'raise'
@@ -9055,6 +9628,9 @@ CLASSES
      |      
      |          - 'raise' : allow exceptions to be raised.
      |          - 'ignore' : suppress exceptions. On error return original object.
+     |      
+     |          .. deprecated:: 1.5.0
+     |             This argument had no effect.
      |      
      |      try_cast : bool, default None
      |          Try to cast the result back to the input type (if possible).
@@ -9076,7 +9652,9 @@ CLASSES
      |      The where method is an application of the if-then idiom. For each
      |      element in the calling DataFrame, if ``cond`` is ``True`` the
      |      element is used; otherwise the corresponding element from the DataFrame
-     |      ``other`` is used.
+     |      ``other`` is used. If the axis of ``other`` does not align with axis of
+     |      ``cond`` Series/DataFrame, the misaligned index positions will be filled with
+     |      False.
      |      
      |      The signature for :func:`DataFrame.where` differs from
      |      :func:`numpy.where`. Roughly ``df1.where(m, df2)`` is equivalent to
@@ -9084,6 +9662,9 @@ CLASSES
      |      
      |      For further details and examples see the ``where`` documentation in
      |      :ref:`indexing <indexing.where_mask>`.
+     |      
+     |      The dtype of the object takes precedence. The fill value is casted to
+     |      the object's dtype, if this can be done losslessly.
      |      
      |      Examples
      |      --------
@@ -9102,6 +9683,23 @@ CLASSES
      |      3    NaN
      |      4    NaN
      |      dtype: float64
+     |      
+     |      >>> s = pd.Series(range(5))
+     |      >>> t = pd.Series([True, False])
+     |      >>> s.where(t, 99)
+     |      0     0
+     |      1    99
+     |      2    99
+     |      3    99
+     |      4    99
+     |      dtype: int64
+     |      >>> s.mask(t, 99)
+     |      0    99
+     |      1     1
+     |      2    99
+     |      3    99
+     |      4    99
+     |      dtype: int64
      |      
      |      >>> s.where(s > 1, 10)
      |      0    10
@@ -9223,7 +9821,9 @@ CLASSES
      |      Return the dtype object of the underlying data.
      |  
      |  hasnans
-     |      Return if I have any nans; enables various perf speedups.
+     |      Return True if there are any NaNs.
+     |      
+     |      Enables various performance speedups.
      |  
      |  values
      |      Return Series as ndarray or ndarray-like depending on the dtype.
@@ -9318,7 +9918,7 @@ CLASSES
      |  ----------------------------------------------------------------------
      |  Data and other attributes inherited from pandas.core.series.Series:
      |  
-     |  __annotations__ = {'_index': 'Index | None', '_metadata': 'list[str]',...
+     |  __annotations__ = {'_metadata': 'list[str]', '_mgr': 'SingleManager', ...
      |  
      |  cat = <class 'pandas.core.arrays.categorical.CategoricalAccessor'>
      |      Accessor object for categorical properties of the Series values.
@@ -9503,8 +10103,18 @@ CLASSES
      |          - 'hexbin' : hexbin plot (DataFrame only)
      |      ax : matplotlib axes object, default None
      |          An axes of the current figure.
-     |      subplots : bool, default False
-     |          Make separate subplots for each column.
+     |      subplots : bool or sequence of iterables, default False
+     |          Whether to group columns into subplots:
+     |      
+     |          - ``False`` : No subplots will be used
+     |          - ``True`` : Make separate subplots for each column.
+     |          - sequence of iterables of column labels: Create a subplot for each
+     |            group of columns. For example `[('a', 'c'), ('b', 'd')]` will
+     |            create 2 subplots: one with columns 'a' and 'c', and one
+     |            with columns 'b' and 'd'. Remaining columns that aren't specified
+     |            will be plotted in additional subplots (one per column).
+     |            .. versionadded:: 1.5.0
+     |      
      |      sharex : bool, default True if ax is None else False
      |          In case ``subplots=True``, share x axis and set some x axis labels
      |          to invisible; defaults to True if ax is None otherwise False if
@@ -9597,6 +10207,11 @@ CLASSES
      |          If True, create stacked plot.
      |      sort_columns : bool, default False
      |          Sort column names to determine plot ordering.
+     |      
+     |          .. deprecated:: 1.5.0
+     |              The `sort_columns` arguments is deprecated and will be removed in a
+     |              future version.
+     |      
      |      secondary_y : bool or sequence, default False
      |          Whether to plot on the secondary y-axis if a list/tuple, which
      |          columns to plot on secondary y-axis.
@@ -9678,7 +10293,7 @@ CLASSES
      |      Parameters
      |      ----------
      |      axis : {None}
-     |          Dummy argument for consistency with Series.
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      skipna : bool, default True
      |          Exclude NA/null values when showing the result.
      |      *args, **kwargs
@@ -9728,7 +10343,7 @@ CLASSES
      |      Parameters
      |      ----------
      |      axis : {None}
-     |          Dummy argument for consistency with Series.
+     |          Unused. Parameter needed for compatibility with DataFrame.
      |      skipna : bool, default True
      |          Exclude NA/null values when showing the result.
      |      *args, **kwargs
@@ -9769,7 +10384,7 @@ CLASSES
      |      the minimum cereal calories is the first element,
      |      since series is zero-indexed.
      |  
-     |  factorize(self, sort: 'bool' = False, na_sentinel: 'int | None' = -1)
+     |  factorize(self, sort: 'bool' = False, na_sentinel: 'int | lib.NoDefault' = <no_default>, use_na_sentinel: 'bool | lib.NoDefault' = <no_default>)
      |      Encode the object as an enumerated type or categorical variable.
      |      
      |      This method is useful for obtaining a numeric representation of an
@@ -9787,7 +10402,19 @@ CLASSES
      |          Value to mark "not found". If None, will not drop the NaN
      |          from the uniques of the values.
      |      
+     |          .. deprecated:: 1.5.0
+     |              The na_sentinel argument is deprecated and
+     |              will be removed in a future version of pandas. Specify use_na_sentinel as
+     |              either True or False.
+     |      
      |          .. versionchanged:: 1.1.2
+     |      
+     |      use_na_sentinel : bool, default True
+     |          If True, the sentinel -1 will be used for NaN values. If False,
+     |          NaN values will be encoded as non-negative integers and will not drop the
+     |          NaN from the uniques of the values.
+     |      
+     |          .. versionadded:: 1.5.0
      |      
      |      Returns
      |      -------
@@ -9799,7 +10426,7 @@ CLASSES
      |          is a Categorical. When `values` is some other pandas object, an
      |          `Index` is returned. Otherwise, a 1-D ndarray is returned.
      |      
-     |          .. note ::
+     |          .. note::
      |      
      |             Even if there's a missing value in `values`, `uniques` will
      |             *not* contain an entry for it.
@@ -9808,6 +10435,10 @@ CLASSES
      |      --------
      |      cut : Discretize continuous-valued array.
      |      unique : Find the unique value in an array.
+     |      
+     |      Notes
+     |      -----
+     |      Reference :ref:`the user guide <reshaping.factorize>` for more examples.
      |      
      |      Examples
      |      --------
@@ -9830,8 +10461,8 @@ CLASSES
      |      >>> uniques
      |      array(['a', 'b', 'c'], dtype=object)
      |      
-     |      Missing values are indicated in `codes` with `na_sentinel`
-     |      (``-1`` by default). Note that missing values are never
+     |      When ``use_na_sentinel=True`` (the default), missing values are indicated in
+     |      the `codes` with the sentinel value ``-1`` and missing values are not
      |      included in `uniques`.
      |      
      |      >>> codes, uniques = pd.factorize(['b', None, 'a', 'c', 'b'])
@@ -9866,16 +10497,16 @@ CLASSES
      |      Index(['a', 'c'], dtype='object')
      |      
      |      If NaN is in the values, and we want to include NaN in the uniques of the
-     |      values, it can be achieved by setting ``na_sentinel=None``.
+     |      values, it can be achieved by setting ``use_na_sentinel=False``.
      |      
      |      >>> values = np.array([1, 2, 1, np.nan])
-     |      >>> codes, uniques = pd.factorize(values)  # default: na_sentinel=-1
+     |      >>> codes, uniques = pd.factorize(values)  # default: use_na_sentinel=True
      |      >>> codes
      |      array([ 0,  1,  0, -1])
      |      >>> uniques
      |      array([1., 2.])
      |      
-     |      >>> codes, uniques = pd.factorize(values, na_sentinel=None)
+     |      >>> codes, uniques = pd.factorize(values, use_na_sentinel=False)
      |      >>> codes
      |      array([0, 1, 0, 2])
      |      >>> uniques
@@ -9929,7 +10560,7 @@ CLASSES
      |  
      |  to_list = tolist(self)
      |  
-     |  to_numpy(self, dtype: 'Dtype | None' = None, copy: 'bool' = False, na_value=<no_default>, **kwargs) -> 'np.ndarray'
+     |  to_numpy(self, dtype: 'npt.DTypeLike | None' = None, copy: 'bool' = False, na_value: 'object' = <no_default>, **kwargs) -> 'np.ndarray'
      |      A NumPy ndarray representing the values in this Series or Index.
      |      
      |      Parameters
@@ -10044,7 +10675,7 @@ CLASSES
      |      -------
      |      %(klass)s
      |  
-     |  value_counts(self, normalize: 'bool' = False, sort: 'bool' = True, ascending: 'bool' = False, bins=None, dropna: 'bool' = True)
+     |  value_counts(self, normalize: 'bool' = False, sort: 'bool' = True, ascending: 'bool' = False, bins=None, dropna: 'bool' = True) -> 'Series'
      |      Return a Series containing counts of unique values.
      |      
      |      The resulting object will be in descending order so that the
@@ -10131,23 +10762,29 @@ CLASSES
      |  empty
      |  
      |  is_monotonic
-     |      Return boolean if values in the object are
-     |      monotonic_increasing.
+     |      Return boolean if values in the object are monotonically increasing.
+     |      
+     |      .. deprecated:: 1.5.0
+     |          is_monotonic is deprecated and will be removed in a future version.
+     |          Use is_monotonic_increasing instead.
      |      
      |      Returns
      |      -------
      |      bool
      |  
      |  is_monotonic_decreasing
-     |      Return boolean if values in the object are
-     |      monotonic_decreasing.
+     |      Return boolean if values in the object are monotonically decreasing.
      |      
      |      Returns
      |      -------
      |      bool
      |  
      |  is_monotonic_increasing
-     |      Alias for is_monotonic.
+     |      Return boolean if values in the object are monotonically increasing.
+     |      
+     |      Returns
+     |      -------
+     |      bool
      |  
      |  is_unique
      |      Return boolean if values in the object are unique.
@@ -10255,7 +10892,7 @@ CLASSES
      |  ----------------------------------------------------------------------
      |  Methods inherited from pandas.core.generic.NDFrame:
      |  
-     |  __abs__(self: 'FrameOrSeries') -> 'FrameOrSeries'
+     |  __abs__(self: 'NDFrameT') -> 'NDFrameT'
      |  
      |  __array_ufunc__(self, ufunc: 'np.ufunc', method: 'str', *inputs: 'Any', **kwargs: 'Any')
      |  
@@ -10276,14 +10913,14 @@ CLASSES
      |      -----
      |      Series implements __array_ufunc_ so this not called for ufunc on Series.
      |  
-     |  __bool__ = __nonzero__(self)
+     |  __bool__ = __nonzero__(self) -> 'NoReturn'
      |  
      |  __contains__(self, key) -> 'bool_t'
      |      True if the key is in the info axis
      |  
-     |  __copy__(self: 'FrameOrSeries', deep: 'bool_t' = True) -> 'FrameOrSeries'
+     |  __copy__(self: 'NDFrameT', deep: 'bool_t' = True) -> 'NDFrameT'
      |  
-     |  __deepcopy__(self: 'FrameOrSeries', memo=None) -> 'FrameOrSeries'
+     |  __deepcopy__(self: 'NDFrameT', memo=None) -> 'NDFrameT'
      |      Parameters
      |      ----------
      |      memo, default None
@@ -10292,7 +10929,7 @@ CLASSES
      |  __delitem__(self, key) -> 'None'
      |      Delete item
      |  
-     |  __finalize__(self: 'FrameOrSeries', other, method: 'str | None' = None, **kwargs) -> 'FrameOrSeries'
+     |  __finalize__(self: 'NDFrameT', other, method: 'str | None' = None, **kwargs) -> 'NDFrameT'
      |      Propagate metadata from other to self.
      |      
      |      Parameters
@@ -10314,43 +10951,43 @@ CLASSES
      |  
      |  __getstate__(self) -> 'dict[str, Any]'
      |  
-     |  __iadd__(self, other)
+     |  __iadd__(self: 'NDFrameT', other) -> 'NDFrameT'
      |  
-     |  __iand__(self, other)
+     |  __iand__(self: 'NDFrameT', other) -> 'NDFrameT'
      |  
-     |  __ifloordiv__(self, other)
+     |  __ifloordiv__(self: 'NDFrameT', other) -> 'NDFrameT'
      |  
-     |  __imod__(self, other)
+     |  __imod__(self: 'NDFrameT', other) -> 'NDFrameT'
      |  
-     |  __imul__(self, other)
+     |  __imul__(self: 'NDFrameT', other) -> 'NDFrameT'
      |  
-     |  __invert__(self)
+     |  __invert__(self: 'NDFrameT') -> 'NDFrameT'
      |  
-     |  __ior__(self, other)
+     |  __ior__(self: 'NDFrameT', other) -> 'NDFrameT'
      |  
-     |  __ipow__(self, other)
+     |  __ipow__(self: 'NDFrameT', other) -> 'NDFrameT'
      |  
-     |  __isub__(self, other)
+     |  __isub__(self: 'NDFrameT', other) -> 'NDFrameT'
      |  
-     |  __itruediv__(self, other)
+     |  __itruediv__(self: 'NDFrameT', other) -> 'NDFrameT'
      |  
-     |  __ixor__(self, other)
+     |  __ixor__(self: 'NDFrameT', other) -> 'NDFrameT'
      |  
-     |  __neg__(self)
+     |  __neg__(self: 'NDFrameT') -> 'NDFrameT'
      |  
-     |  __nonzero__(self)
+     |  __nonzero__(self) -> 'NoReturn'
      |  
-     |  __pos__(self)
+     |  __pos__(self: 'NDFrameT') -> 'NDFrameT'
      |  
-     |  __round__(self: 'FrameOrSeries', decimals: 'int' = 0) -> 'FrameOrSeries'
+     |  __round__(self: 'NDFrameT', decimals: 'int' = 0) -> 'NDFrameT'
      |  
      |  __setattr__(self, name: 'str', value) -> 'None'
      |      After regular attribute access, try setting the name
      |      This allows simpler access to columns for interactive use.
      |  
-     |  __setstate__(self, state)
+     |  __setstate__(self, state) -> 'None'
      |  
-     |  abs(self: 'FrameOrSeries') -> 'FrameOrSeries'
+     |  abs(self: 'NDFrameT') -> 'NDFrameT'
      |      Return a Series/DataFrame with absolute numeric value of each element.
      |      
      |      This function only applies to elements that are all numeric.
@@ -10416,7 +11053,7 @@ CLASSES
      |      2    6   30  -30
      |      3    7   40  -50
      |  
-     |  add_prefix(self: 'FrameOrSeries', prefix: 'str') -> 'FrameOrSeries'
+     |  add_prefix(self: 'NDFrameT', prefix: 'str') -> 'NDFrameT'
      |      Prefix labels with string `prefix`.
      |      
      |      For Series, the row labels are prefixed.
@@ -10469,7 +11106,7 @@ CLASSES
      |      2       3       5
      |      3       4       6
      |  
-     |  add_suffix(self: 'FrameOrSeries', suffix: 'str') -> 'FrameOrSeries'
+     |  add_suffix(self: 'NDFrameT', suffix: 'str') -> 'NDFrameT'
      |      Suffix labels with string `suffix`.
      |      
      |      For Series, the row labels are suffixed.
@@ -10613,11 +11250,11 @@ CLASSES
      |      >>> df.asof(pd.DatetimeIndex(['2018-02-27 09:03:30',
      |      ...                           '2018-02-27 09:04:30']),
      |      ...         subset=['a'])
-     |                               a   b
-     |      2018-02-27 09:03:30   30.0 NaN
-     |      2018-02-27 09:04:30   40.0 NaN
+     |                            a   b
+     |      2018-02-27 09:03:30  30 NaN
+     |      2018-02-27 09:04:30  40 NaN
      |  
-     |  astype(self: 'FrameOrSeries', dtype, copy: 'bool_t' = True, errors: 'str' = 'raise') -> 'FrameOrSeries'
+     |  astype(self: 'NDFrameT', dtype, copy: 'bool_t' = True, errors: 'IgnoreRaise' = 'raise') -> 'NDFrameT'
      |      Cast a pandas object to a specified dtype ``dtype``.
      |      
      |      Parameters
@@ -10732,13 +11369,14 @@ CLASSES
      |      2   2020-01-03
      |      dtype: datetime64[ns]
      |  
-     |  at_time(self: 'FrameOrSeries', time, asof: 'bool_t' = False, axis=None) -> 'FrameOrSeries'
+     |  at_time(self: 'NDFrameT', time, asof: 'bool_t' = False, axis=None) -> 'NDFrameT'
      |      Select values at particular time of day (e.g., 9:30AM).
      |      
      |      Parameters
      |      ----------
      |      time : datetime.time or str
      |      axis : {0 or 'index', 1 or 'columns'}, default 0
+     |          For `Series` this parameter is unused and defaults to 0.
      |      
      |      Returns
      |      -------
@@ -10773,7 +11411,7 @@ CLASSES
      |      2018-04-09 12:00:00  2
      |      2018-04-10 12:00:00  4
      |  
-     |  backfill = bfill(self: 'FrameOrSeries', axis: 'None | Axis' = None, inplace: 'bool_t' = False, limit: 'None | int' = None, downcast=None) -> 'FrameOrSeries | None'
+     |  backfill = bfill(self: 'NDFrameT', *, axis: 'None | Axis' = None, inplace: 'bool_t' = False, limit: 'None | int' = None, downcast: 'dict | None' = None) -> 'NDFrameT | None'
      |      Synonym for :meth:`DataFrame.fillna` with ``method='bfill'``.
      |      
      |      Returns
@@ -10781,7 +11419,7 @@ CLASSES
      |      Series/DataFrame or None
      |          Object with missing values filled or None if ``inplace=True``.
      |  
-     |  between_time(self: 'FrameOrSeries', start_time, end_time, include_start: 'bool_t' = True, include_end: 'bool_t' = True, axis=None) -> 'FrameOrSeries'
+     |  between_time(self: 'NDFrameT', start_time, end_time, include_start: 'bool_t | lib.NoDefault' = <no_default>, include_end: 'bool_t | lib.NoDefault' = <no_default>, inclusive: 'IntervalClosedType | None' = None, axis=None) -> 'NDFrameT'
      |      Select values between particular times of the day (e.g., 9:00-9:30 AM).
      |      
      |      By setting ``start_time`` to be later than ``end_time``,
@@ -10795,10 +11433,23 @@ CLASSES
      |          End time as a time filter limit.
      |      include_start : bool, default True
      |          Whether the start time needs to be included in the result.
+     |      
+     |          .. deprecated:: 1.4.0
+     |             Arguments `include_start` and `include_end` have been deprecated
+     |             to standardize boundary inputs. Use `inclusive` instead, to set
+     |             each bound as closed or open.
      |      include_end : bool, default True
      |          Whether the end time needs to be included in the result.
+     |      
+     |          .. deprecated:: 1.4.0
+     |             Arguments `include_start` and `include_end` have been deprecated
+     |             to standardize boundary inputs. Use `inclusive` instead, to set
+     |             each bound as closed or open.
+     |      inclusive : {"both", "neither", "left", "right"}, default "both"
+     |          Include boundaries; whether to set each bound as closed or open.
      |      axis : {0 or 'index', 1 or 'columns'}, default 0
      |          Determine range time on index or columns value.
+     |          For `Series` this parameter is unused and defaults to 0.
      |      
      |      Returns
      |      -------
@@ -10842,7 +11493,7 @@ CLASSES
      |      2018-04-09 00:00:00  1
      |      2018-04-12 01:00:00  4
      |  
-     |  bool(self)
+     |  bool(self) -> 'bool_t'
      |      Return the bool of a single element Series or DataFrame.
      |      
      |      This must be a boolean scalar value, either True or False. It will raise a
@@ -10874,7 +11525,7 @@ CLASSES
      |      >>> pd.DataFrame({'col': [False]}).bool()
      |      False
      |  
-     |  convert_dtypes(self: 'FrameOrSeries', infer_objects: 'bool_t' = True, convert_string: 'bool_t' = True, convert_integer: 'bool_t' = True, convert_boolean: 'bool_t' = True, convert_floating: 'bool_t' = True) -> 'FrameOrSeries'
+     |  convert_dtypes(self: 'NDFrameT', infer_objects: 'bool_t' = True, convert_string: 'bool_t' = True, convert_integer: 'bool_t' = True, convert_boolean: 'bool_t' = True, convert_floating: 'bool_t' = True) -> 'NDFrameT'
      |      Convert columns to best possible dtypes using dtypes supporting ``pd.NA``.
      |      
      |      .. versionadded:: 1.0.0
@@ -11000,7 +11651,7 @@ CLASSES
      |      2    <NA>
      |      dtype: string
      |  
-     |  copy(self: 'FrameOrSeries', deep: 'bool_t' = True) -> 'FrameOrSeries'
+     |  copy(self: 'NDFrameT', deep: 'bool_t | None' = True) -> 'NDFrameT'
      |      Make a copy of this object's indices and data.
      |      
      |      When ``deep=True`` (default), a new object will be created with a
@@ -11035,6 +11686,10 @@ CLASSES
      |      numpy array is not copied for performance reasons. Since ``Index`` is
      |      immutable, the underlying data can be safely shared and a copy
      |      is not needed.
+     |      
+     |      Since pandas is not thread safe, see the
+     |      :ref:`gotchas <gotchas.thread-safety>` when copying in a threading
+     |      environment.
      |      
      |      Examples
      |      --------
@@ -11104,7 +11759,7 @@ CLASSES
      |      1     [3, 4]
      |      dtype: object
      |  
-     |  describe(self: 'FrameOrSeries', percentiles=None, include=None, exclude=None, datetime_is_numeric=False) -> 'FrameOrSeries'
+     |  describe(self: 'NDFrameT', percentiles=None, include=None, exclude=None, datetime_is_numeric: 'bool_t' = False) -> 'NDFrameT'
      |      Generate descriptive statistics.
      |      
      |      Descriptive statistics include those that summarize the central
@@ -11145,7 +11800,7 @@ CLASSES
      |            from the result. To exclude numeric types submit
      |            ``numpy.number``. To exclude object columns submit the data
      |            type ``numpy.object``. Strings can also be used in the style of
-     |            ``select_dtypes`` (e.g. ``df.describe(include=['O'])``). To
+     |            ``select_dtypes`` (e.g. ``df.describe(exclude=['O'])``). To
      |            exclude pandas categorical columns, use ``'category'``
      |          - None (default) : The result will exclude nothing.
      |      datetime_is_numeric : bool, default False
@@ -11345,7 +12000,7 @@ CLASSES
      |      75%            NaN      2.5
      |      max            NaN      3.0
      |  
-     |  droplevel(self: 'FrameOrSeries', level, axis=0) -> 'FrameOrSeries'
+     |  droplevel(self: 'NDFrameT', level: 'IndexLabel', axis: 'Axis' = 0) -> 'NDFrameT'
      |      Return Series/DataFrame with requested index / column level(s) removed.
      |      
      |      Parameters
@@ -11360,6 +12015,8 @@ CLASSES
      |      
      |          * 0 or 'index': remove level(s) in column.
      |          * 1 or 'columns': remove level(s) in row.
+     |      
+     |          For `Series` this parameter is unused and defaults to 0.
      |      
      |      Returns
      |      -------
@@ -11478,39 +12135,46 @@ CLASSES
      |      >>> df.equals(different_data_type)
      |      False
      |  
-     |  ewm(self, com: 'float | None' = None, span: 'float | None' = None, halflife: 'float | TimedeltaConvertibleTypes | None' = None, alpha: 'float | None' = None, min_periods: 'int | None' = 0, adjust: 'bool_t' = True, ignore_na: 'bool_t' = False, axis: 'Axis' = 0, times: 'str | np.ndarray | FrameOrSeries | None' = None) -> 'ExponentialMovingWindow'
-     |      Provide exponential weighted (EW) functions.
+     |  ewm(self, com: 'float | None' = None, span: 'float | None' = None, halflife: 'float | TimedeltaConvertibleTypes | None' = None, alpha: 'float | None' = None, min_periods: 'int | None' = 0, adjust: 'bool_t' = True, ignore_na: 'bool_t' = False, axis: 'Axis' = 0, times: 'str | np.ndarray | DataFrame | Series | None' = None, method: 'str' = 'single') -> 'ExponentialMovingWindow'
+     |      Provide exponentially weighted (EW) calculations.
      |      
-     |      Available EW functions: ``mean()``, ``var()``, ``std()``, ``corr()``, ``cov()``.
-     |      
-     |      Exactly one parameter: ``com``, ``span``, ``halflife``, or ``alpha`` must be
-     |      provided.
+     |      Exactly one of ``com``, ``span``, ``halflife``, or ``alpha`` must be
+     |      provided if ``times`` is not provided. If ``times`` is provided,
+     |      ``halflife`` and one of ``com``, ``span`` or ``alpha`` may be provided.
      |      
      |      Parameters
      |      ----------
      |      com : float, optional
-     |          Specify decay in terms of center of mass,
+     |          Specify decay in terms of center of mass
+     |      
      |          :math:`\alpha = 1 / (1 + com)`, for :math:`com \geq 0`.
+     |      
      |      span : float, optional
-     |          Specify decay in terms of span,
+     |          Specify decay in terms of span
+     |      
      |          :math:`\alpha = 2 / (span + 1)`, for :math:`span \geq 1`.
+     |      
      |      halflife : float, str, timedelta, optional
-     |          Specify decay in terms of half-life,
+     |          Specify decay in terms of half-life
+     |      
      |          :math:`\alpha = 1 - \exp\left(-\ln(2) / halflife\right)`, for
      |          :math:`halflife > 0`.
      |      
-     |          If ``times`` is specified, the time unit (str or timedelta) over which an
-     |          observation decays to half its value. Only applicable to ``mean()``
+     |          If ``times`` is specified, a timedelta convertible unit over which an
+     |          observation decays to half its value. Only applicable to ``mean()``,
      |          and halflife value will not apply to the other functions.
      |      
      |          .. versionadded:: 1.1.0
      |      
      |      alpha : float, optional
-     |          Specify smoothing factor :math:`\alpha` directly,
+     |          Specify smoothing factor :math:`\alpha` directly
+     |      
      |          :math:`0 < \alpha \leq 1`.
+     |      
      |      min_periods : int, default 0
-     |          Minimum number of observations in window required to have a value
-     |          (otherwise result is NA).
+     |          Minimum number of observations in window required to have a value;
+     |          otherwise, result is ``np.nan``.
+     |      
      |      adjust : bool, default True
      |          Divide by decaying adjustment factor in beginning periods to account
      |          for imbalance in relative weightings (viewing EWMA as a moving average).
@@ -11532,8 +12196,7 @@ CLASSES
      |                  y_t &= (1 - \alpha) y_{t-1} + \alpha x_t,
      |              \end{split}
      |      ignore_na : bool, default False
-     |          Ignore missing values when calculating weights; specify ``True`` to reproduce
-     |          pre-0.15.0 behavior.
+     |          Ignore missing values when calculating weights.
      |      
      |          - When ``ignore_na=False`` (default), weights are based on absolute positions.
      |            For example, the weights of :math:`x_0` and :math:`x_2` used in calculating
@@ -11541,31 +12204,47 @@ CLASSES
      |            :math:`(1-\alpha)^2` and :math:`1` if ``adjust=True``, and
      |            :math:`(1-\alpha)^2` and :math:`\alpha` if ``adjust=False``.
      |      
-     |          - When ``ignore_na=True`` (reproducing pre-0.15.0 behavior), weights are based
+     |          - When ``ignore_na=True``, weights are based
      |            on relative positions. For example, the weights of :math:`x_0` and :math:`x_2`
      |            used in calculating the final weighted average of
      |            [:math:`x_0`, None, :math:`x_2`] are :math:`1-\alpha` and :math:`1` if
      |            ``adjust=True``, and :math:`1-\alpha` and :math:`\alpha` if ``adjust=False``.
+     |      
      |      axis : {0, 1}, default 0
-     |          The axis to use. The value 0 identifies the rows, and 1
-     |          identifies the columns.
+     |          If ``0`` or ``'index'``, calculate across the rows.
+     |      
+     |          If ``1`` or ``'columns'``, calculate across the columns.
+     |      
+     |          For `Series` this parameter is unused and defaults to 0.
+     |      
      |      times : str, np.ndarray, Series, default None
      |      
      |          .. versionadded:: 1.1.0
      |      
+     |          Only applicable to ``mean()``.
+     |      
      |          Times corresponding to the observations. Must be monotonically increasing and
      |          ``datetime64[ns]`` dtype.
      |      
-     |          If str, the name of the column in the DataFrame representing the times.
-     |      
      |          If 1-D array like, a sequence with the same shape as the observations.
      |      
-     |          Only applicable to ``mean()``.
+     |          .. deprecated:: 1.4.0
+     |              If str, the name of the column in the DataFrame representing the times.
+     |      
+     |      method : str {'single', 'table'}, default 'single'
+     |          .. versionadded:: 1.4.0
+     |      
+     |          Execute the rolling operation per single column or row (``'single'``)
+     |          or over the entire object (``'table'``).
+     |      
+     |          This argument is only implemented when specifying ``engine='numba'``
+     |          in the method call.
+     |      
+     |          Only applicable to ``mean()``
      |      
      |      Returns
      |      -------
-     |      DataFrame
-     |          A Window sub-classed for the particular operation.
+     |      ``ExponentialMovingWindow`` subclass
      |      
      |      See Also
      |      --------
@@ -11574,9 +12253,8 @@ CLASSES
      |      
      |      Notes
      |      -----
-     |      
-     |      More details can be found at:
-     |      :ref:`Exponentially weighted windows <window.exponentially_weighted>`.
+     |      See :ref:`Windowing Operations <window.exponentially_weighted>`
+     |      for further usage details and examples.
      |      
      |      Examples
      |      --------
@@ -11596,8 +12274,52 @@ CLASSES
      |      2  1.615385
      |      3  1.615385
      |      4  3.670213
+     |      >>> df.ewm(alpha=2 / 3).mean()
+     |                B
+     |      0  0.000000
+     |      1  0.750000
+     |      2  1.615385
+     |      3  1.615385
+     |      4  3.670213
      |      
-     |      Specifying ``times`` with a timedelta ``halflife`` when computing mean.
+     |      **adjust**
+     |      
+     |      >>> df.ewm(com=0.5, adjust=True).mean()
+     |                B
+     |      0  0.000000
+     |      1  0.750000
+     |      2  1.615385
+     |      3  1.615385
+     |      4  3.670213
+     |      >>> df.ewm(com=0.5, adjust=False).mean()
+     |                B
+     |      0  0.000000
+     |      1  0.666667
+     |      2  1.555556
+     |      3  1.555556
+     |      4  3.650794
+     |      
+     |      **ignore_na**
+     |      
+     |      >>> df.ewm(com=0.5, ignore_na=True).mean()
+     |                B
+     |      0  0.000000
+     |      1  0.750000
+     |      2  1.615385
+     |      3  1.615385
+     |      4  3.225000
+     |      >>> df.ewm(com=0.5, ignore_na=False).mean()
+     |                B
+     |      0  0.000000
+     |      1  0.750000
+     |      2  1.615385
+     |      3  1.615385
+     |      4  3.670213
+     |      
+     |      **times**
+     |      
+     |      Exponentially weighted mean with weights calculated with a timedelta ``halflife``
+     |      relative to ``times``.
      |      
      |      >>> times = ['2020-01-01', '2020-01-03', '2020-01-10', '2020-01-15', '2020-01-17']
      |      >>> df.ewm(halflife='4 days', times=pd.DatetimeIndex(times)).mean()
@@ -11609,16 +12331,28 @@ CLASSES
      |      4  3.233686
      |  
      |  expanding(self, min_periods: 'int' = 1, center: 'bool_t | None' = None, axis: 'Axis' = 0, method: 'str' = 'single') -> 'Expanding'
-     |      Provide expanding transformations.
+     |      Provide expanding window calculations.
      |      
      |      Parameters
      |      ----------
      |      min_periods : int, default 1
-     |          Minimum number of observations in window required to have a value
-     |          (otherwise result is NA).
+     |          Minimum number of observations in window required to have a value;
+     |          otherwise, result is ``np.nan``.
+     |      
      |      center : bool, default False
-     |          Set the labels at the center of the window.
+     |          If False, set the window labels as the right edge of the window index.
+     |      
+     |          If True, set the window labels as the center of the window index.
+     |      
+     |          .. deprecated:: 1.1.0
+     |      
      |      axis : int or str, default 0
+     |          If ``0`` or ``'index'``, roll across the rows.
+     |      
+     |          If ``1`` or ``'columns'``, roll across the columns.
+     |      
+     |          For `Series` this parameter is unused and defaults to 0.
+     |      
      |      method : str {'single', 'table'}, default 'single'
      |          Execute the rolling operation per single column or row (``'single'``)
      |          or over the entire object (``'table'``).
@@ -11630,7 +12364,7 @@ CLASSES
      |      
      |      Returns
      |      -------
-     |      a Window sub-classed for the particular operation
+     |      ``Expanding`` subclass
      |      
      |      See Also
      |      --------
@@ -11639,8 +12373,8 @@ CLASSES
      |      
      |      Notes
      |      -----
-     |      By default, the result is set to the right edge of the window. This can be
-     |      changed to the center of the window by setting ``center=True``.
+     |      See :ref:`Windowing Operations <window.expanding>` for further usage details
+     |      and examples.
      |      
      |      Examples
      |      --------
@@ -11653,15 +12387,26 @@ CLASSES
      |      3  NaN
      |      4  4.0
      |      
-     |      >>> df.expanding(2).sum()
+     |      **min_periods**
+     |      
+     |      Expanding sum with 1 vs 3 observations needed to calculate a value.
+     |      
+     |      >>> df.expanding(1).sum()
      |           B
-     |      0  NaN
+     |      0  0.0
      |      1  1.0
      |      2  3.0
      |      3  3.0
      |      4  7.0
+     |      >>> df.expanding(3).sum()
+     |           B
+     |      0  NaN
+     |      1  NaN
+     |      2  3.0
+     |      3  3.0
+     |      4  7.0
      |  
-     |  filter(self: 'FrameOrSeries', items=None, like: 'str | None' = None, regex: 'str | None' = None, axis=None) -> 'FrameOrSeries'
+     |  filter(self: 'NDFrameT', items=None, like: 'str | None' = None, regex: 'str | None' = None, axis=None) -> 'NDFrameT'
      |      Subset the dataframe rows or columns according to the specified index labels.
      |      
      |      Note that this routine does not filter a dataframe on its
@@ -11677,8 +12422,8 @@ CLASSES
      |          Keep labels from axis for which re.search(regex, label) == True.
      |      axis : {0 or ‘index’, 1 or ‘columns’, None}, default None
      |          The axis to filter on, expressed either as an index (int)
-     |          or axis name (str). By default this is the info axis,
-     |          'index' for Series, 'columns' for DataFrame.
+     |          or axis name (str). By default this is the info axis, 'columns' for
+     |          DataFrame. For `Series` this parameter is unused and defaults to `None`.
      |      
      |      Returns
      |      -------
@@ -11724,7 +12469,7 @@ CLASSES
      |               one  two  three
      |      rabbit    4    5      6
      |  
-     |  first(self: 'FrameOrSeries', offset) -> 'FrameOrSeries'
+     |  first(self: 'NDFrameT', offset) -> 'NDFrameT'
      |      Select initial periods of time series data based on a date offset.
      |      
      |      When having a DataFrame with dates as index, this function can
@@ -11775,7 +12520,7 @@ CLASSES
      |      not returned.
      |  
      |  first_valid_index(self) -> 'Hashable | None'
-     |      Return index for first non-NA value or None, if no NA value is found.
+     |      Return index for first non-NA value or None, if no non-NA value is found.
      |      
      |      Returns
      |      -------
@@ -11798,8 +12543,40 @@ CLASSES
      |      Returns
      |      -------
      |      value : same type as items contained in object
+     |      
+     |      Examples
+     |      --------
+     |      >>> df = pd.DataFrame(
+     |      ...     [
+     |      ...         [24.3, 75.7, "high"],
+     |      ...         [31, 87.8, "high"],
+     |      ...         [22, 71.6, "medium"],
+     |      ...         [35, 95, "medium"],
+     |      ...     ],
+     |      ...     columns=["temp_celsius", "temp_fahrenheit", "windspeed"],
+     |      ...     index=pd.date_range(start="2014-02-12", end="2014-02-15", freq="D"),
+     |      ... )
+     |      
+     |      >>> df
+     |                  temp_celsius  temp_fahrenheit windspeed
+     |      2014-02-12          24.3             75.7      high
+     |      2014-02-13          31.0             87.8      high
+     |      2014-02-14          22.0             71.6    medium
+     |      2014-02-15          35.0             95.0    medium
+     |      
+     |      >>> df.get(["temp_celsius", "windspeed"])
+     |                  temp_celsius windspeed
+     |      2014-02-12          24.3      high
+     |      2014-02-13          31.0      high
+     |      2014-02-14          22.0    medium
+     |      2014-02-15          35.0    medium
+     |      
+     |      If the key isn't found, the default value will be used.
+     |      
+     |      >>> df.get(["temp_celsius", "temp_kelvin"], default="default_value")
+     |      'default_value'
      |  
-     |  head(self: 'FrameOrSeries', n: 'int' = 5) -> 'FrameOrSeries'
+     |  head(self: 'NDFrameT', n: 'int' = 5) -> 'NDFrameT'
      |      Return the first `n` rows.
      |      
      |      This function returns the first `n` rows for the object based
@@ -11807,7 +12584,9 @@ CLASSES
      |      has the right type of data in it.
      |      
      |      For negative values of `n`, this function returns all rows except
-     |      the last `n` rows, equivalent to ``df[:-n]``.
+     |      the last `|n|` rows, equivalent to ``df[:n]``.
+     |      
+     |      If n is larger than the number of rows, this function returns all rows.
      |      
      |      Parameters
      |      ----------
@@ -11868,7 +12647,7 @@ CLASSES
      |      4     monkey
      |      5     parrot
      |  
-     |  infer_objects(self: 'FrameOrSeries') -> 'FrameOrSeries'
+     |  infer_objects(self: 'NDFrameT') -> 'NDFrameT'
      |      Attempt to infer better dtypes for object columns.
      |      
      |      Attempts soft conversion of object-dtyped
@@ -11905,7 +12684,7 @@ CLASSES
      |      A    int64
      |      dtype: object
      |  
-     |  last(self: 'FrameOrSeries', offset) -> 'FrameOrSeries'
+     |  last(self: 'NDFrameT', offset) -> 'NDFrameT'
      |      Select final periods of time series data based on a date offset.
      |      
      |      For a DataFrame with a sorted DatetimeIndex, this function
@@ -11956,7 +12735,7 @@ CLASSES
      |      not returned.
      |  
      |  last_valid_index(self) -> 'Hashable | None'
-     |      Return index for last non-NA value or None, if no NA value is found.
+     |      Return index for last non-NA value or None, if no non-NA value is found.
      |      
      |      Returns
      |      -------
@@ -11967,7 +12746,7 @@ CLASSES
      |      If all elements are non-NA/null, returns None.
      |      Also returns None for empty Series/DataFrame.
      |  
-     |  pad = ffill(self: 'FrameOrSeries', axis: 'None | Axis' = None, inplace: 'bool_t' = False, limit: 'None | int' = None, downcast=None) -> 'FrameOrSeries | None'
+     |  pad = ffill(self: 'NDFrameT', *, axis: 'None | Axis' = None, inplace: 'bool_t' = False, limit: 'None | int' = None, downcast: 'dict | None' = None) -> 'NDFrameT | None'
      |      Synonym for :meth:`DataFrame.fillna` with ``method='ffill'``.
      |      
      |      Returns
@@ -11975,7 +12754,7 @@ CLASSES
      |      Series/DataFrame or None
      |          Object with missing values filled or None if ``inplace=True``.
      |  
-     |  pct_change(self: 'FrameOrSeries', periods=1, fill_method='pad', limit=None, freq=None, **kwargs) -> 'FrameOrSeries'
+     |  pct_change(self: 'NDFrameT', periods=1, fill_method='pad', limit=None, freq=None, **kwargs) -> 'NDFrameT'
      |      Percentage change between the current and a prior element.
      |      
      |      Computes the percentage change from the immediately previous row by
@@ -11987,7 +12766,7 @@ CLASSES
      |      periods : int, default 1
      |          Periods to shift for forming percent change.
      |      fill_method : str, default 'pad'
-     |          How to handle NAs before computing percent changes.
+     |          How to handle NAs **before** computing percent changes.
      |      limit : int, default None
      |          The number of consecutive NAs to fill before stopping.
      |      freq : DateOffset, timedelta, or str, optional
@@ -12090,7 +12869,7 @@ CLASSES
      |      APPL -0.252395 -0.011860   NaN
      |  
      |  pipe(self, func: 'Callable[..., T] | tuple[Callable[..., T], str]', *args, **kwargs) -> 'T'
-     |      Apply func(self, \*args, \*\*kwargs).
+     |      Apply chainable functions that expect Series or DataFrames.
      |      
      |      Parameters
      |      ----------
@@ -12139,7 +12918,7 @@ CLASSES
      |      ...    .pipe((func, 'arg2'), arg1=a, arg3=c)
      |      ...  )  # doctest: +SKIP
      |  
-     |  rank(self: 'FrameOrSeries', axis=0, method: 'str' = 'average', numeric_only: 'bool_t | None' = None, na_option: 'str' = 'keep', ascending: 'bool_t' = True, pct: 'bool_t' = False) -> 'FrameOrSeries'
+     |  rank(self: 'NDFrameT', axis=0, method: 'str' = 'average', numeric_only: 'bool_t | None | lib.NoDefault' = <no_default>, na_option: 'str' = 'keep', ascending: 'bool_t' = True, pct: 'bool_t' = False) -> 'NDFrameT'
      |      Compute numerical data ranks (1 through n) along axis.
      |      
      |      By default, equal values are assigned a rank that is the average of the
@@ -12149,6 +12928,7 @@ CLASSES
      |      ----------
      |      axis : {0 or 'index', 1 or 'columns'}, default 0
      |          Index to direct ranking.
+     |          For `Series` this parameter is unused and defaults to 0.
      |      method : {'average', 'min', 'max', 'first', 'dense'}, default 'average'
      |          How to rank the group of records that have the same value (i.e. ties):
      |      
@@ -12195,6 +12975,18 @@ CLASSES
      |      3   spider          8.0
      |      4    snake          NaN
      |      
+     |      Ties are assigned the mean of the ranks (by default) for the group.
+     |      
+     |      >>> s = pd.Series(range(5), index=list("abcde"))
+     |      >>> s["d"] = s["b"]
+     |      >>> s.rank()
+     |      a    1.0
+     |      b    2.5
+     |      c    4.0
+     |      d    2.5
+     |      e    5.0
+     |      dtype: float64
+     |      
      |      The following example shows how the method behaves with the above
      |      parameters:
      |      
@@ -12220,7 +13012,7 @@ CLASSES
      |      3   spider          8.0           4.0       4.0        4.0     1.000
      |      4    snake          NaN           NaN       NaN        5.0       NaN
      |  
-     |  reindex_like(self: 'FrameOrSeries', other, method: 'str | None' = None, copy: 'bool_t' = True, limit=None, tolerance=None) -> 'FrameOrSeries'
+     |  reindex_like(self: 'NDFrameT', other, method: 'str | None' = None, copy: 'bool_t' = True, limit=None, tolerance=None) -> 'NDFrameT'
      |      Return an object with matching indices as other object.
      |      
      |      Conform the object to the same index on all axes. Optional
@@ -12313,7 +13105,7 @@ CLASSES
      |      2014-02-14           NaN              NaN       NaN
      |      2014-02-15          35.1              NaN    medium
      |  
-     |  rename_axis(self, mapper=None, index=None, columns=None, axis=None, copy=True, inplace=False)
+     |  rename_axis(self: 'NDFrameT', mapper: 'IndexLabel | lib.NoDefault' = <no_default>, *, inplace: 'bool_t' = False, **kwargs) -> 'NDFrameT | None'
      |      Set the name of the axis for the index or columns.
      |      
      |      Parameters
@@ -12331,7 +13123,7 @@ CLASSES
      |          specify the axis to target with ``mapper``, or ``index``
      |          and/or ``columns``.
      |      axis : {0 or 'index', 1 or 'columns'}, default 0
-     |          The axis to rename.
+     |          The axis to rename. For `Series` this parameter is unused and defaults to 0.
      |      copy : bool, default True
      |          Also copy underlying data.
      |      inplace : bool, default False
@@ -12436,58 +13228,105 @@ CLASSES
      |             cat            4         0
      |             monkey         2         2
      |  
-     |  rolling(self, window: 'int | timedelta | BaseOffset | BaseIndexer', min_periods: 'int | None' = None, center: 'bool_t' = False, win_type: 'str | None' = None, on: 'str | None' = None, axis: 'Axis' = 0, closed: 'str | None' = None, method: 'str' = 'single')
+     |  rolling(self, window: 'int | timedelta | BaseOffset | BaseIndexer', min_periods: 'int | None' = None, center: 'bool_t' = False, win_type: 'str | None' = None, on: 'str | None' = None, axis: 'Axis' = 0, closed: 'str | None' = None, step: 'int | None' = None, method: 'str' = 'single') -> 'Window | Rolling'
      |      Provide rolling window calculations.
      |      
      |      Parameters
      |      ----------
      |      window : int, offset, or BaseIndexer subclass
-     |          Size of the moving window. This is the number of observations used for
-     |          calculating the statistic. Each window will be a fixed size.
+     |          Size of the moving window.
      |      
-     |          If its an offset then this will be the time period of each window. Each
+     |          If an integer, the fixed number of observations used for
+     |          each window.
+     |      
+     |          If an offset, the time period of each window. Each
      |          window will be a variable sized based on the observations included in
      |          the time-period. This is only valid for datetimelike indexes.
+     |          To learn more about the offsets & frequency strings, please see `this link
+     |          <https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases>`__.
      |      
-     |          If a BaseIndexer subclass is passed, calculates the window boundaries
+     |          If a BaseIndexer subclass, the window boundaries
      |          based on the defined ``get_window_bounds`` method. Additional rolling
-     |          keyword arguments, namely `min_periods`, `center`, and
-     |          `closed` will be passed to `get_window_bounds`.
+     |          keyword arguments, namely ``min_periods``, ``center``, ``closed`` and
+     |          ``step`` will be passed to ``get_window_bounds``.
+     |      
      |      min_periods : int, default None
-     |          Minimum number of observations in window required to have a value
-     |          (otherwise result is NA). For a window that is specified by an offset,
-     |          `min_periods` will default to 1. Otherwise, `min_periods` will default
+     |          Minimum number of observations in window required to have a value;
+     |          otherwise, result is ``np.nan``.
+     |      
+     |          For a window that is specified by an offset, ``min_periods`` will default to 1.
+     |      
+     |          For a window that is specified by an integer, ``min_periods`` will default
      |          to the size of the window.
+     |      
      |      center : bool, default False
-     |          Set the labels at the center of the window.
+     |          If False, set the window labels as the right edge of the window index.
+     |      
+     |          If True, set the window labels as the center of the window index.
+     |      
      |      win_type : str, default None
-     |          Provide a window type. If ``None``, all points are evenly weighted.
-     |          See the notes below for further information.
+     |          If ``None``, all points are evenly weighted.
+     |      
+     |          If a string, it must be a valid `scipy.signal window function
+     |          <https://docs.scipy.org/doc/scipy/reference/signal.windows.html#module-scipy.signal.windows>`__.
+     |      
+     |          Certain Scipy window types require additional parameters to be passed
+     |          in the aggregation function. The additional parameters must match
+     |          the keywords specified in the Scipy window type method signature.
+     |      
      |      on : str, optional
-     |          For a DataFrame, a datetime-like column or Index level on which
+     |          For a DataFrame, a column label or Index level on which
      |          to calculate the rolling window, rather than the DataFrame's index.
+     |      
      |          Provided integer column is ignored and excluded from result since
      |          an integer index is not used to calculate the rolling window.
+     |      
      |      axis : int or str, default 0
+     |          If ``0`` or ``'index'``, roll across the rows.
+     |      
+     |          If ``1`` or ``'columns'``, roll across the columns.
+     |      
+     |          For `Series` this parameter is unused and defaults to 0.
+     |      
      |      closed : str, default None
-     |          Make the interval closed on the 'right', 'left', 'both' or
-     |          'neither' endpoints. Defaults to 'right'.
+     |          If ``'right'``, the first point in the window is excluded from calculations.
+     |      
+     |          If ``'left'``, the last point in the window is excluded from calculations.
+     |      
+     |          If ``'both'``, the no points in the window are excluded from calculations.
+     |      
+     |          If ``'neither'``, the first and last points in the window are excluded
+     |          from calculations.
+     |      
+     |          Default ``None`` (``'right'``).
      |      
      |          .. versionchanged:: 1.2.0
      |      
      |              The closed parameter with fixed windows is now supported.
+     |      
+     |      step : int, default None
+     |      
+     |          .. versionadded:: 1.5.0
+     |      
+     |          Evaluate the window at every ``step`` result, equivalent to slicing as
+     |          ``[::step]``. ``window`` must be an integer. Using a step argument other
+     |          than None or 1 will produce a result with a different shape than the input.
+     |      
      |      method : str {'single', 'table'}, default 'single'
+     |      
+     |          .. versionadded:: 1.3.0
+     |      
      |          Execute the rolling operation per single column or row (``'single'``)
      |          or over the entire object (``'table'``).
      |      
      |          This argument is only implemented when specifying ``engine='numba'``
      |          in the method call.
      |      
-     |          .. versionadded:: 1.3.0
-     |      
      |      Returns
      |      -------
-     |      a Window or Rolling sub-classed for the particular operation
+     |      ``Window`` subclass if a ``win_type`` is passed
+     |      
+     |      ``Rolling`` subclass if ``win_type`` is not passed
      |      
      |      See Also
      |      --------
@@ -12496,20 +13335,8 @@ CLASSES
      |      
      |      Notes
      |      -----
-     |      By default, the result is set to the right edge of the window. This can be
-     |      changed to the center of the window by setting ``center=True``.
-     |      
-     |      To learn more about the offsets & frequency strings, please see `this link
-     |      <https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases>`__.
-     |      
-     |      If ``win_type=None``, all points are evenly weighted; otherwise, ``win_type``
-     |      can accept a string of any `scipy.signal window function
-     |      <https://docs.scipy.org/doc/scipy/reference/signal.windows.html#module-scipy.signal.windows>`__.
-     |      
-     |      Certain Scipy window types require additional parameters to be passed
-     |      in the aggregation function. The additional parameters must match
-     |      the keywords specified in the Scipy window type method signature.
-     |      Please see the third example below on how to add the additional parameters.
+     |      See :ref:`Windowing Operations <window.generic>` for further usage details
+     |      and examples.
      |      
      |      Examples
      |      --------
@@ -12522,30 +13349,9 @@ CLASSES
      |      3  NaN
      |      4  4.0
      |      
-     |      Rolling sum with a window length of 2, using the 'triang'
-     |      window type.
+     |      **window**
      |      
-     |      >>> df.rolling(2, win_type='triang').sum()
-     |           B
-     |      0  NaN
-     |      1  0.5
-     |      2  1.5
-     |      3  NaN
-     |      4  NaN
-     |      
-     |      Rolling sum with a window length of 2, using the 'gaussian'
-     |      window type (note how we need to specify std).
-     |      
-     |      >>> df.rolling(2, win_type='gaussian').sum(std=3)
-     |                B
-     |      0       NaN
-     |      1  0.986207
-     |      2  2.958621
-     |      3       NaN
-     |      4       NaN
-     |      
-     |      Rolling sum with a window length of 2, min_periods defaults
-     |      to the window length.
+     |      Rolling sum with a window length of 2 observations.
      |      
      |      >>> df.rolling(2).sum()
      |           B
@@ -12555,17 +13361,32 @@ CLASSES
      |      3  NaN
      |      4  NaN
      |      
-     |      Same as above, but explicitly set the min_periods
+     |      Rolling sum with a window span of 2 seconds.
      |      
-     |      >>> df.rolling(2, min_periods=1).sum()
-     |           B
-     |      0  0.0
-     |      1  1.0
-     |      2  3.0
-     |      3  2.0
-     |      4  4.0
+     |      >>> df_time = pd.DataFrame({'B': [0, 1, 2, np.nan, 4]},
+     |      ...                        index = [pd.Timestamp('20130101 09:00:00'),
+     |      ...                                 pd.Timestamp('20130101 09:00:02'),
+     |      ...                                 pd.Timestamp('20130101 09:00:03'),
+     |      ...                                 pd.Timestamp('20130101 09:00:05'),
+     |      ...                                 pd.Timestamp('20130101 09:00:06')])
      |      
-     |      Same as above, but with forward-looking windows
+     |      >>> df_time
+     |                             B
+     |      2013-01-01 09:00:00  0.0
+     |      2013-01-01 09:00:02  1.0
+     |      2013-01-01 09:00:03  2.0
+     |      2013-01-01 09:00:05  NaN
+     |      2013-01-01 09:00:06  4.0
+     |      
+     |      >>> df_time.rolling('2s').sum()
+     |                             B
+     |      2013-01-01 09:00:00  0.0
+     |      2013-01-01 09:00:02  1.0
+     |      2013-01-01 09:00:03  3.0
+     |      2013-01-01 09:00:05  NaN
+     |      2013-01-01 09:00:06  4.0
+     |      
+     |      Rolling sum with forward looking windows with 2 observations.
      |      
      |      >>> indexer = pd.api.indexers.FixedForwardWindowIndexer(window_size=2)
      |      >>> df.rolling(window=indexer, min_periods=1).sum()
@@ -12576,36 +13397,64 @@ CLASSES
      |      3  4.0
      |      4  4.0
      |      
-     |      A ragged (meaning not-a-regular frequency), time-indexed DataFrame
+     |      **min_periods**
      |      
-     |      >>> df = pd.DataFrame({'B': [0, 1, 2, np.nan, 4]},
-     |      ...                   index = [pd.Timestamp('20130101 09:00:00'),
-     |      ...                            pd.Timestamp('20130101 09:00:02'),
-     |      ...                            pd.Timestamp('20130101 09:00:03'),
-     |      ...                            pd.Timestamp('20130101 09:00:05'),
-     |      ...                            pd.Timestamp('20130101 09:00:06')])
+     |      Rolling sum with a window length of 2 observations, but only needs a minimum of 1
+     |      observation to calculate a value.
      |      
-     |      >>> df
-     |                             B
-     |      2013-01-01 09:00:00  0.0
-     |      2013-01-01 09:00:02  1.0
-     |      2013-01-01 09:00:03  2.0
-     |      2013-01-01 09:00:05  NaN
-     |      2013-01-01 09:00:06  4.0
+     |      >>> df.rolling(2, min_periods=1).sum()
+     |           B
+     |      0  0.0
+     |      1  1.0
+     |      2  3.0
+     |      3  2.0
+     |      4  4.0
      |      
-     |      Contrasting to an integer rolling window, this will roll a variable
-     |      length window corresponding to the time period.
-     |      The default for min_periods is 1.
+     |      **center**
      |      
-     |      >>> df.rolling('2s').sum()
-     |                             B
-     |      2013-01-01 09:00:00  0.0
-     |      2013-01-01 09:00:02  1.0
-     |      2013-01-01 09:00:03  3.0
-     |      2013-01-01 09:00:05  NaN
-     |      2013-01-01 09:00:06  4.0
+     |      Rolling sum with the result assigned to the center of the window index.
+     |      
+     |      >>> df.rolling(3, min_periods=1, center=True).sum()
+     |           B
+     |      0  1.0
+     |      1  3.0
+     |      2  3.0
+     |      3  6.0
+     |      4  4.0
+     |      
+     |      >>> df.rolling(3, min_periods=1, center=False).sum()
+     |           B
+     |      0  0.0
+     |      1  1.0
+     |      2  3.0
+     |      3  3.0
+     |      4  6.0
+     |      
+     |      **step**
+     |      
+     |      Rolling sum with a window length of 2 observations, minimum of 1 observation to
+     |      calculate a value, and a step of 2.
+     |      
+     |      >>> df.rolling(2, min_periods=1, step=2).sum()
+     |           B
+     |      0  0.0
+     |      2  3.0
+     |      4  4.0
+     |      
+     |      **win_type**
+     |      
+     |      Rolling sum with a window length of 2, using the Scipy ``'gaussian'``
+     |      window type. ``std`` is required in the aggregation function.
+     |      
+     |      >>> df.rolling(2, win_type='gaussian').sum(std=3)
+     |                B
+     |      0       NaN
+     |      1  0.986207
+     |      2  2.958621
+     |      3       NaN
+     |      4       NaN
      |  
-     |  sample(self: 'FrameOrSeries', n=None, frac: 'float | None' = None, replace: 'bool_t' = False, weights=None, random_state=None, axis: 'Axis | None' = None, ignore_index: 'bool_t' = False) -> 'FrameOrSeries'
+     |  sample(self: 'NDFrameT', n: 'int | None' = None, frac: 'float | None' = None, replace: 'bool_t' = False, weights=None, random_state: 'RandomState | None' = None, axis: 'Axis | None' = None, ignore_index: 'bool_t' = False) -> 'NDFrameT'
      |      Return a random sample of items from an axis of object.
      |      
      |      You can use `random_state` for reproducibility.
@@ -12632,19 +13481,22 @@ CLASSES
      |          If weights do not sum to 1, they will be normalized to sum to 1.
      |          Missing values in the weights column will be treated as zero.
      |          Infinite values not allowed.
-     |      random_state : int, array-like, BitGenerator, np.random.RandomState, optional
-     |          If int, array-like, or BitGenerator (NumPy>=1.17), seed for
-     |          random number generator
-     |          If np.random.RandomState, use as numpy RandomState object.
+     |      random_state : int, array-like, BitGenerator, np.random.RandomState, np.random.Generator, optional
+     |          If int, array-like, or BitGenerator, seed for random number generator.
+     |          If np.random.RandomState or np.random.Generator, use as given.
      |      
      |          .. versionchanged:: 1.1.0
      |      
-     |              array-like and BitGenerator (for NumPy>=1.17) object now passed to
-     |              np.random.RandomState() as seed
+     |              array-like and BitGenerator object now passed to np.random.RandomState()
+     |              as seed
+     |      
+     |          .. versionchanged:: 1.4.0
+     |      
+     |              np.random.Generator objects now accepted
      |      
      |      axis : {0 or ‘index’, 1 or ‘columns’, None}, default None
      |          Axis to sample. Accepts axis number or name. Default is stat axis
-     |          for given data type (0 for Series and DataFrames).
+     |          for given data type. For `Series` this parameter is unused and defaults to `None`.
      |      ignore_index : bool, default False
      |          If True, the resulting index will be labeled 0, 1, …, n - 1.
      |      
@@ -12721,7 +13573,7 @@ CLASSES
      |      falcon         2          2                 10
      |      fish           0          0                  8
      |  
-     |  set_flags(self: 'FrameOrSeries', *, copy: 'bool_t' = False, allows_duplicate_labels: 'bool_t | None' = None) -> 'FrameOrSeries'
+     |  set_flags(self: 'NDFrameT', *, copy: 'bool_t' = False, allows_duplicate_labels: 'bool_t | None' = None) -> 'NDFrameT'
      |      Return a new object with updated flags.
      |      
      |      Parameters
@@ -12760,19 +13612,22 @@ CLASSES
      |      >>> df2.flags.allows_duplicate_labels
      |      False
      |  
-     |  slice_shift(self: 'FrameOrSeries', periods: 'int' = 1, axis=0) -> 'FrameOrSeries'
+     |  slice_shift(self: 'NDFrameT', periods: 'int' = 1, axis=0) -> 'NDFrameT'
      |      Equivalent to `shift` without copying data.
-     |      The shifted data will not include the dropped periods and the
-     |      shifted axis will be smaller than the original.
      |      
      |      .. deprecated:: 1.2.0
      |          slice_shift is deprecated,
      |          use DataFrame/Series.shift instead.
      |      
+     |      The shifted data will not include the dropped periods and the
+     |      shifted axis will be smaller than the original.
+     |      
      |      Parameters
      |      ----------
      |      periods : int
      |          Number of periods to move, can be positive or negative.
+     |      axis : {0 or 'index', 1 or 'columns', None}, default 0
+     |          For `Series` this parameter is unused and defaults to 0.
      |      
      |      Returns
      |      -------
@@ -12799,7 +13654,7 @@ CLASSES
      |      ----------
      |      axis : {0 or 'index', 1 or 'columns', None}, default None
      |          A specific axis to squeeze. By default, all length-1 axes are
-     |          squeezed.
+     |          squeezed. For `Series` this parameter is unused and defaults to `None`.
      |      
      |      Returns
      |      -------
@@ -12885,14 +13740,14 @@ CLASSES
      |      >>> df_0a.squeeze()
      |      1
      |  
-     |  swapaxes(self: 'FrameOrSeries', axis1, axis2, copy=True) -> 'FrameOrSeries'
+     |  swapaxes(self: 'NDFrameT', axis1: 'Axis', axis2: 'Axis', copy: 'bool_t' = True) -> 'NDFrameT'
      |      Interchange axes and swap values axes appropriately.
      |      
      |      Returns
      |      -------
      |      y : same as input
      |  
-     |  tail(self: 'FrameOrSeries', n: 'int' = 5) -> 'FrameOrSeries'
+     |  tail(self: 'NDFrameT', n: 'int' = 5) -> 'NDFrameT'
      |      Return the last `n` rows.
      |      
      |      This function returns last `n` rows from the object based on
@@ -12900,7 +13755,9 @@ CLASSES
      |      after sorting or appending rows.
      |      
      |      For negative values of `n`, this function returns all rows except
-     |      the first `n` rows, equivalent to ``df[n:]``.
+     |      the first `|n|` rows, equivalent to ``df[|n|:]``.
+     |      
+     |      If n is larger than the number of rows, this function returns all rows.
      |      
      |      Parameters
      |      ----------
@@ -12984,7 +13841,7 @@ CLASSES
      |      --------
      |      DataFrame.to_csv : Write a DataFrame to a comma-separated values
      |          (csv) file.
-     |      read_clipboard : Read text from clipboard and pass to read_table.
+     |      read_clipboard : Read text from clipboard and pass to read_csv.
      |      
      |      Notes
      |      -----
@@ -12992,7 +13849,10 @@ CLASSES
      |      
      |        - Linux : `xclip`, or `xsel` (with `PyQt4` modules)
      |        - Windows : none
-     |        - OS X : none
+     |        - macOS : none
+     |      
+     |      This method uses the processes developed for the package `pyperclip`. A
+     |      solution to render any output string format is given in the examples.
      |      
      |      Examples
      |      --------
@@ -13014,16 +13874,25 @@ CLASSES
      |      ... # A,B,C
      |      ... # 1,2,3
      |      ... # 4,5,6
+     |      
+     |      Using the original `pyperclip` package for any string output format.
+     |      
+     |      .. code-block:: python
+     |      
+     |         import pyperclip
+     |         html = df.style.to_html()
+     |         pyperclip.copy(html)
      |  
-     |  to_csv(self, path_or_buf: 'FilePathOrBuffer[AnyStr] | None' = None, sep: 'str' = ',', na_rep: 'str' = '', float_format: 'str | None' = None, columns: 'Sequence[Hashable] | None' = None, header: 'bool_t | list[str]' = True, index: 'bool_t' = True, index_label: 'IndexLabel | None' = None, mode: 'str' = 'w', encoding: 'str | None' = None, compression: 'CompressionOptions' = 'infer', quoting: 'int | None' = None, quotechar: 'str' = '"', line_terminator: 'str | None' = None, chunksize: 'int | None' = None, date_format: 'str | None' = None, doublequote: 'bool_t' = True, escapechar: 'str | None' = None, decimal: 'str' = '.', errors: 'str' = 'strict', storage_options: 'StorageOptions' = None) -> 'str | None'
+     |  to_csv(self, path_or_buf: 'FilePath | WriteBuffer[bytes] | WriteBuffer[str] | None' = None, sep: 'str' = ',', na_rep: 'str' = '', float_format: 'str | Callable | None' = None, columns: 'Sequence[Hashable] | None' = None, header: 'bool_t | list[str]' = True, index: 'bool_t' = True, index_label: 'IndexLabel | None' = None, mode: 'str' = 'w', encoding: 'str | None' = None, compression: 'CompressionOptions' = 'infer', quoting: 'int | None' = None, quotechar: 'str' = '"', lineterminator: 'str | None' = None, chunksize: 'int | None' = None, date_format: 'str | None' = None, doublequote: 'bool_t' = True, escapechar: 'str | None' = None, decimal: 'str' = '.', errors: 'str' = 'strict', storage_options: 'StorageOptions' = None) -> 'str | None'
      |      Write object to a comma-separated values (csv) file.
      |      
      |      Parameters
      |      ----------
-     |      path_or_buf : str or file handle, default None
-     |          File path or object, if None is provided the result is returned as
-     |          a string.  If a non-binary file object is passed, it should be opened
-     |          with `newline=''`, disabling universal newlines. If a binary
+     |      path_or_buf : str, path object, file-like object, or None, default None
+     |          String, path object (implementing os.PathLike[str]), or file-like
+     |          object implementing a write() function. If None, the result is
+     |          returned as a string. If a non-binary file object is passed, it should
+     |          be opened with `newline=''`, disabling universal newlines. If a binary
      |          file object is passed, `mode` might need to contain a `'b'`.
      |      
      |          .. versionchanged:: 1.2.0
@@ -13034,8 +13903,9 @@ CLASSES
      |          String of length 1. Field delimiter for the output file.
      |      na_rep : str, default ''
      |          Missing data representation.
-     |      float_format : str, default None
-     |          Format string for floating point numbers.
+     |      float_format : str, Callable, default None
+     |          Format string for floating point numbers. If a Callable is given, it takes
+     |          precedence over other numeric formatting parameters, like decimal.
      |      columns : sequence, optional
      |          Columns to write.
      |      header : bool or list of str, default True
@@ -13049,22 +13919,31 @@ CLASSES
      |          sequence should be given if the object uses MultiIndex. If
      |          False do not print fields for index names. Use index_label=False
      |          for easier importing in R.
-     |      mode : str
-     |          Python write mode, default 'w'.
+     |      mode : str, default 'w'
+     |          Python write mode. The available write modes are the same as
+     |          :py:func:`open`.
      |      encoding : str, optional
      |          A string representing the encoding to use in the output file,
      |          defaults to 'utf-8'. `encoding` is not supported if `path_or_buf`
      |          is a non-binary file object.
      |      compression : str or dict, default 'infer'
-     |          If str, represents compression mode. If dict, value at 'method' is
-     |          the compression mode. Compression mode may be any of the following
-     |          possible values: {'infer', 'gzip', 'bz2', 'zip', 'xz', None}. If
-     |          compression mode is 'infer' and `path_or_buf` is path-like, then
-     |          detect compression mode from the following extensions: '.gz',
-     |          '.bz2', '.zip' or '.xz'. (otherwise no compression). If dict given
-     |          and mode is one of {'zip', 'gzip', 'bz2'}, or inferred as
-     |          one of the above, other entries passed as
-     |          additional compression options.
+     |          For on-the-fly compression of the output data. If 'infer' and 'path_or_buf' is
+     |          path-like, then detect compression from the following extensions: '.gz',
+     |          '.bz2', '.zip', '.xz', '.zst', '.tar', '.tar.gz', '.tar.xz' or '.tar.bz2'
+     |          (otherwise no compression).
+     |          Set to ``None`` for no compression.
+     |          Can also be a dict with key ``'method'`` set
+     |          to one of {``'zip'``, ``'gzip'``, ``'bz2'``, ``'zstd'``, ``'tar'``} and other
+     |          key-value pairs are forwarded to
+     |          ``zipfile.ZipFile``, ``gzip.GzipFile``,
+     |          ``bz2.BZ2File``, ``zstandard.ZstdCompressor`` or
+     |          ``tarfile.TarFile``, respectively.
+     |          As an example, the following could be passed for faster compression and to create
+     |          a reproducible gzip archive:
+     |          ``compression={'method': 'gzip', 'compresslevel': 1, 'mtime': 1}``.
+     |      
+     |              .. versionadded:: 1.5.0
+     |                  Added support for `.tar` files.
      |      
      |          .. versionchanged:: 1.0.0
      |      
@@ -13075,8 +13954,7 @@ CLASSES
      |          .. versionchanged:: 1.1.0
      |      
      |             Passing compression options as keys in dict is
-     |             supported for compression modes 'gzip' and 'bz2'
-     |             as well as 'zip'.
+     |             supported for compression modes 'gzip', 'bz2', 'zstd', and 'zip'.
      |      
      |          .. versionchanged:: 1.2.0
      |      
@@ -13094,10 +13972,16 @@ CLASSES
      |          will treat them as non-numeric.
      |      quotechar : str, default '\"'
      |          String of length 1. Character used to quote fields.
-     |      line_terminator : str, optional
+     |      lineterminator : str, optional
      |          The newline character or character sequence to use in the output
      |          file. Defaults to `os.linesep`, which depends on the OS in which
      |          this method is called ('\\n' for linux, '\\r\\n' for Windows, i.e.).
+     |      
+     |          .. versionchanged:: 1.5.0
+     |      
+     |              Previously was line_terminator, changed for consistency with
+     |              read_csv and the standard library 'csv' module.
+     |      
      |      chunksize : int or None
      |          Rows to write at a time.
      |      date_format : str, default None
@@ -13120,9 +14004,12 @@ CLASSES
      |      storage_options : dict, optional
      |          Extra options that make sense for a particular storage connection, e.g.
      |          host, port, username, password, etc. For HTTP(S) URLs the key-value pairs
-     |          are forwarded to ``urllib`` as header options. For other URLs (e.g.
-     |          starting with "s3://", and "gcs://") the key-value pairs are forwarded to
-     |          ``fsspec``. Please see ``fsspec`` and ``urllib`` for more details.
+     |          are forwarded to ``urllib.request.Request`` as header options. For other
+     |          URLs (e.g. starting with "s3://", and "gcs://") the key-value pairs are
+     |          forwarded to ``fsspec.open``. Please see ``fsspec`` and ``urllib`` for more
+     |          details, and for more examples on storage options refer `here
+     |          <https://pandas.pydata.org/docs/user_guide/io.html?
+     |          highlight=storage_options#reading-writing-remote-files>`_.
      |      
      |          .. versionadded:: 1.2.0
      |      
@@ -13151,8 +14038,20 @@ CLASSES
      |      ...                         archive_name='out.csv')  # doctest: +SKIP
      |      >>> df.to_csv('out.zip', index=False,
      |      ...           compression=compression_opts)  # doctest: +SKIP
+     |      
+     |      To write a csv file to a new folder or nested folder you will first
+     |      need to create it using either Pathlib or os:
+     |      
+     |      >>> from pathlib import Path  # doctest: +SKIP
+     |      >>> filepath = Path('folder/subfolder/out.csv')  # doctest: +SKIP
+     |      >>> filepath.parent.mkdir(parents=True, exist_ok=True)  # doctest: +SKIP
+     |      >>> df.to_csv(filepath)  # doctest: +SKIP
+     |      
+     |      >>> import os  # doctest: +SKIP
+     |      >>> os.makedirs('folder/subfolder', exist_ok=True)  # doctest: +SKIP
+     |      >>> df.to_csv('folder/subfolder/out.csv')  # doctest: +SKIP
      |  
-     |  to_excel(self, excel_writer, sheet_name: 'str' = 'Sheet1', na_rep: 'str' = '', float_format: 'str | None' = None, columns=None, header=True, index=True, index_label=None, startrow=0, startcol=0, engine=None, merge_cells=True, encoding=None, inf_rep='inf', verbose=True, freeze_panes=None, storage_options: 'StorageOptions' = None) -> 'None'
+     |  to_excel(self, excel_writer, sheet_name: 'str' = 'Sheet1', na_rep: 'str' = '', float_format: 'str | None' = None, columns: 'Sequence[Hashable] | None' = None, header: 'Sequence[Hashable] | bool_t' = True, index: 'bool_t' = True, index_label: 'IndexLabel' = None, startrow: 'int' = 0, startcol: 'int' = 0, engine: 'str | None' = None, merge_cells: 'bool_t' = True, encoding: 'lib.NoDefault' = <no_default>, inf_rep: 'str' = 'inf', verbose: 'lib.NoDefault' = <no_default>, freeze_panes: 'tuple[int, int] | None' = None, storage_options: 'StorageOptions' = None) -> 'None'
      |      Write object to an Excel sheet.
      |      
      |      To write a single object to an Excel .xlsx file it is only necessary to
@@ -13207,20 +14106,33 @@ CLASSES
      |      encoding : str, optional
      |          Encoding of the resulting excel file. Only necessary for xlwt,
      |          other writers support unicode natively.
+     |      
+     |          .. deprecated:: 1.5.0
+     |      
+     |              This keyword was not used.
+     |      
      |      inf_rep : str, default 'inf'
      |          Representation for infinity (there is no native representation for
      |          infinity in Excel).
      |      verbose : bool, default True
      |          Display more information in the error logs.
+     |      
+     |          .. deprecated:: 1.5.0
+     |      
+     |              This keyword was not used.
+     |      
      |      freeze_panes : tuple of int (length 2), optional
      |          Specifies the one-based bottommost row and rightmost column that
      |          is to be frozen.
      |      storage_options : dict, optional
      |          Extra options that make sense for a particular storage connection, e.g.
      |          host, port, username, password, etc. For HTTP(S) URLs the key-value pairs
-     |          are forwarded to ``urllib`` as header options. For other URLs (e.g.
-     |          starting with "s3://", and "gcs://") the key-value pairs are forwarded to
-     |          ``fsspec``. Please see ``fsspec`` and ``urllib`` for more details.
+     |          are forwarded to ``urllib.request.Request`` as header options. For other
+     |          URLs (e.g. starting with "s3://", and "gcs://") the key-value pairs are
+     |          forwarded to ``fsspec.open``. Please see ``fsspec`` and ``urllib`` for more
+     |          details, and for more examples on storage options refer `here
+     |          <https://pandas.pydata.org/docs/user_guide/io.html?
+     |          highlight=storage_options#reading-writing-remote-files>`_.
      |      
      |          .. versionadded:: 1.2.0
      |      
@@ -13230,6 +14142,7 @@ CLASSES
      |      ExcelWriter : Class for writing DataFrame objects into excel sheets.
      |      read_excel : Read an Excel file into a pandas DataFrame.
      |      read_csv : Read a comma-separated values (csv) file into DataFrame.
+     |      io.formats.style.Styler.to_excel : Add styles to Excel sheet.
      |      
      |      Notes
      |      -----
@@ -13274,7 +14187,7 @@ CLASSES
      |      
      |      >>> df1.to_excel('output1.xlsx', engine='xlsxwriter')  # doctest: +SKIP
      |  
-     |  to_hdf(self, path_or_buf, key: 'str', mode: 'str' = 'a', complevel: 'int | None' = None, complib: 'str | None' = None, append: 'bool_t' = False, format: 'str | None' = None, index: 'bool_t' = True, min_itemsize: 'int | dict[str, int] | None' = None, nan_rep=None, dropna: 'bool_t | None' = None, data_columns: 'bool_t | list[str] | None' = None, errors: 'str' = 'strict', encoding: 'str' = 'UTF-8') -> 'None'
+     |  to_hdf(self, path_or_buf: 'FilePath | HDFStore', key: 'str', mode: 'str' = 'a', complevel: 'int | None' = None, complib: 'str | None' = None, append: 'bool_t' = False, format: 'str | None' = None, index: 'bool_t' = True, min_itemsize: 'int | dict[str, int] | None' = None, nan_rep=None, dropna: 'bool_t | None' = None, data_columns: 'Literal[True] | list[str] | None' = None, errors: 'str' = 'strict', encoding: 'str' = 'UTF-8') -> 'None'
      |      Write the contained data to an HDF5 file using HDFStore.
      |      
      |      Hierarchical Data Format (HDF) is self-describing, allowing an
@@ -13306,9 +14219,9 @@ CLASSES
      |          - 'a': append, an existing file is opened for reading and
      |            writing, and if the file does not exist it is created.
      |          - 'r+': similar to 'a', but the file must already exist.
-     |      complevel : {0-9}, optional
+     |      complevel : {0-9}, default None
      |          Specifies a compression level for data.
-     |          A value of 0 disables compression.
+     |          A value of 0 or None disables compression.
      |      complib : {'zlib', 'lzo', 'bzip2', 'blosc'}, default 'zlib'
      |          Specifies the compression library to be used.
      |          As of v0.20.2 these additional compressors for Blosc are supported
@@ -13328,26 +14241,33 @@ CLASSES
      |            which may perform worse but allow more flexible operations
      |            like searching / selecting subsets of the data.
      |          - If None, pd.get_option('io.hdf.default_format') is checked,
-     |            followed by fallback to "fixed"
-     |      errors : str, default 'strict'
-     |          Specifies how encoding and decoding errors are to be handled.
-     |          See the errors argument for :func:`open` for a full list
-     |          of options.
-     |      encoding : str, default "UTF-8"
+     |            followed by fallback to "fixed".
+     |      index : bool, default True
+     |          Write DataFrame index as a column.
      |      min_itemsize : dict or int, optional
      |          Map column names to minimum string sizes for columns.
      |      nan_rep : Any, optional
      |          How to represent null values as str.
      |          Not allowed with append=True.
+     |      dropna : bool, default False, optional
+     |          Remove missing values.
      |      data_columns : list of columns or True, optional
      |          List of columns to create as indexed data columns for on-disk
      |          queries, or True to use all columns. By default only the axes
-     |          of the object are indexed. See :ref:`io.hdf5-query-data-columns`.
+     |          of the object are indexed. See
+     |          :ref:`Query via data columns<io.hdf5-query-data-columns>`. for
+     |          more information.
      |          Applicable only to format='table'.
+     |      errors : str, default 'strict'
+     |          Specifies how encoding and decoding errors are to be handled.
+     |          See the errors argument for :func:`open` for a full list
+     |          of options.
+     |      encoding : str, default "UTF-8"
      |      
      |      See Also
      |      --------
      |      read_hdf : Read from HDF file.
+     |      DataFrame.to_orc : Write a DataFrame to the binary orc format.
      |      DataFrame.to_parquet : Write a DataFrame to the binary parquet format.
      |      DataFrame.to_sql : Write to a SQL table.
      |      DataFrame.to_feather : Write out feather-format for DataFrames.
@@ -13356,34 +14276,29 @@ CLASSES
      |      Examples
      |      --------
      |      >>> df = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]},
-     |      ...                   index=['a', 'b', 'c'])
-     |      >>> df.to_hdf('data.h5', key='df', mode='w')
+     |      ...                   index=['a', 'b', 'c'])  # doctest: +SKIP
+     |      >>> df.to_hdf('data.h5', key='df', mode='w')  # doctest: +SKIP
      |      
      |      We can add another object to the same file:
      |      
-     |      >>> s = pd.Series([1, 2, 3, 4])
-     |      >>> s.to_hdf('data.h5', key='s')
+     |      >>> s = pd.Series([1, 2, 3, 4])  # doctest: +SKIP
+     |      >>> s.to_hdf('data.h5', key='s')  # doctest: +SKIP
      |      
      |      Reading from HDF file:
      |      
-     |      >>> pd.read_hdf('data.h5', 'df')
+     |      >>> pd.read_hdf('data.h5', 'df')  # doctest: +SKIP
      |      A  B
      |      a  1  4
      |      b  2  5
      |      c  3  6
-     |      >>> pd.read_hdf('data.h5', 's')
+     |      >>> pd.read_hdf('data.h5', 's')  # doctest: +SKIP
      |      0    1
      |      1    2
      |      2    3
      |      3    4
      |      dtype: int64
-     |      
-     |      Deleting file with data:
-     |      
-     |      >>> import os
-     |      >>> os.remove('data.h5')
      |  
-     |  to_json(self, path_or_buf: 'FilePathOrBuffer | None' = None, orient: 'str | None' = None, date_format: 'str | None' = None, double_precision: 'int' = 10, force_ascii: 'bool_t' = True, date_unit: 'str' = 'ms', default_handler: 'Callable[[Any], JSONSerializable] | None' = None, lines: 'bool_t' = False, compression: 'CompressionOptions' = 'infer', index: 'bool_t' = True, indent: 'int | None' = None, storage_options: 'StorageOptions' = None) -> 'str | None'
+     |  to_json(self, path_or_buf: 'FilePath | WriteBuffer[bytes] | WriteBuffer[str] | None' = None, orient: 'str | None' = None, date_format: 'str | None' = None, double_precision: 'int' = 10, force_ascii: 'bool_t' = True, date_unit: 'str' = 'ms', default_handler: 'Callable[[Any], JSONSerializable] | None' = None, lines: 'bool_t' = False, compression: 'CompressionOptions' = 'infer', index: 'bool_t' = True, indent: 'int | None' = None, storage_options: 'StorageOptions' = None) -> 'str | None'
      |      Convert the object to a JSON string.
      |      
      |      Note NaN's and None will be converted to null and datetime objects
@@ -13391,9 +14306,10 @@ CLASSES
      |      
      |      Parameters
      |      ----------
-     |      path_or_buf : str or file handle, optional
-     |          File path or object. If not specified, the result is returned as
-     |          a string.
+     |      path_or_buf : str, path object, file-like object, or None, default None
+     |          String, path object (implementing os.PathLike[str]), or file-like
+     |          object implementing a write() function. If None, the result is
+     |          returned as a string.
      |      orient : str
      |          Indication of expected JSON string format.
      |      
@@ -13442,12 +14358,27 @@ CLASSES
      |          If 'orient' is 'records' write out line-delimited json format. Will
      |          throw ValueError if incorrect 'orient' since others are not
      |          list-like.
+     |      compression : str or dict, default 'infer'
+     |          For on-the-fly compression of the output data. If 'infer' and 'path_or_buf' is
+     |          path-like, then detect compression from the following extensions: '.gz',
+     |          '.bz2', '.zip', '.xz', '.zst', '.tar', '.tar.gz', '.tar.xz' or '.tar.bz2'
+     |          (otherwise no compression).
+     |          Set to ``None`` for no compression.
+     |          Can also be a dict with key ``'method'`` set
+     |          to one of {``'zip'``, ``'gzip'``, ``'bz2'``, ``'zstd'``, ``'tar'``} and other
+     |          key-value pairs are forwarded to
+     |          ``zipfile.ZipFile``, ``gzip.GzipFile``,
+     |          ``bz2.BZ2File``, ``zstandard.ZstdCompressor`` or
+     |          ``tarfile.TarFile``, respectively.
+     |          As an example, the following could be passed for faster compression and to create
+     |          a reproducible gzip archive:
+     |          ``compression={'method': 'gzip', 'compresslevel': 1, 'mtime': 1}``.
      |      
-     |      compression : {'infer', 'gzip', 'bz2', 'zip', 'xz', None}
+     |              .. versionadded:: 1.5.0
+     |                  Added support for `.tar` files.
      |      
-     |          A string representing the compression to use in the output file,
-     |          only used when the first argument is a filename. By default, the
-     |          compression is inferred from the filename.
+     |          .. versionchanged:: 1.4.0 Zstandard support.
+     |      
      |      index : bool, default True
      |          Whether to include the index values in the JSON string. Not
      |          including the index (``index=False``) is only supported when
@@ -13460,9 +14391,12 @@ CLASSES
      |      storage_options : dict, optional
      |          Extra options that make sense for a particular storage connection, e.g.
      |          host, port, username, password, etc. For HTTP(S) URLs the key-value pairs
-     |          are forwarded to ``urllib`` as header options. For other URLs (e.g.
-     |          starting with "s3://", and "gcs://") the key-value pairs are forwarded to
-     |          ``fsspec``. Please see ``fsspec`` and ``urllib`` for more details.
+     |          are forwarded to ``urllib.request.Request`` as header options. For other
+     |          URLs (e.g. starting with "s3://", and "gcs://") the key-value pairs are
+     |          forwarded to ``fsspec.open``. Please see ``fsspec`` and ``urllib`` for more
+     |          details, and for more examples on storage options refer `here
+     |          <https://pandas.pydata.org/docs/user_guide/io.html?
+     |          highlight=storage_options#reading-writing-remote-files>`_.
      |      
      |          .. versionadded:: 1.2.0
      |      
@@ -13609,7 +14543,7 @@ CLASSES
      |              "primaryKey": [
      |                  "index"
      |              ],
-     |              "pandas_version": "0.20.0"
+     |              "pandas_version": "1.4.0"
      |          },
      |          "data": [
      |              {
@@ -13625,8 +14559,8 @@ CLASSES
      |          ]
      |      }
      |  
-     |  to_latex(self, buf=None, columns=None, col_space=None, header=True, index=True, na_rep='NaN', formatters=None, float_format=None, sparsify=None, index_names=True, bold_rows=False, column_format=None, longtable=None, escape=None, encoding=None, decimal='.', multicolumn=None, multicolumn_format=None, multirow=None, caption=None, label=None, position=None)
-     |      Render object to a LaTeX tabular, longtable, or nested table/tabular.
+     |  to_latex(self, buf: 'FilePath | WriteBuffer[str] | None' = None, columns: 'Sequence[Hashable] | None' = None, col_space: 'ColspaceArgType | None' = None, header: 'bool_t | Sequence[str]' = True, index: 'bool_t' = True, na_rep: 'str' = 'NaN', formatters: 'FormattersType | None' = None, float_format: 'FloatFormatType | None' = None, sparsify: 'bool_t | None' = None, index_names: 'bool_t' = True, bold_rows: 'bool_t' = False, column_format: 'str | None' = None, longtable: 'bool_t | None' = None, escape: 'bool_t | None' = None, encoding: 'str | None' = None, decimal: 'str' = '.', multicolumn: 'bool_t | None' = None, multicolumn_format: 'str | None' = None, multirow: 'bool_t | None' = None, caption: 'str | tuple[str, str] | None' = None, label: 'str | None' = None, position: 'str | None' = None) -> 'str | None'
+     |      Render object to a LaTeX tabular, longtable, or nested table.
      |      
      |      Requires ``\usepackage{booktabs}``.  The output can be copy/pasted
      |      into a main LaTeX document or read from an external file
@@ -13728,6 +14662,8 @@ CLASSES
      |          
      |      See Also
      |      --------
+     |      io.formats.style.Styler.to_latex : Render a DataFrame to LaTeX
+     |          with conditional formatting.
      |      DataFrame.to_string : Render a DataFrame to a console-friendly
      |          tabular output.
      |      DataFrame.to_html : Render a DataFrame as an HTML table.
@@ -13737,7 +14673,7 @@ CLASSES
      |      >>> df = pd.DataFrame(dict(name=['Raphael', 'Donatello'],
      |      ...                   mask=['red', 'purple'],
      |      ...                   weapon=['sai', 'bo staff']))
-     |      >>> print(df.to_latex(index=False))  # doctest: +NORMALIZE_WHITESPACE
+     |      >>> print(df.to_latex(index=False))  # doctest: +SKIP
      |      \begin{tabular}{lll}
      |       \toprule
      |             name &    mask &    weapon \\
@@ -13747,23 +14683,33 @@ CLASSES
      |      \bottomrule
      |      \end{tabular}
      |  
-     |  to_pickle(self, path, compression: 'CompressionOptions' = 'infer', protocol: 'int' = 5, storage_options: 'StorageOptions' = None) -> 'None'
+     |  to_pickle(self, path: 'FilePath | WriteBuffer[bytes]', compression: 'CompressionOptions' = 'infer', protocol: 'int' = 5, storage_options: 'StorageOptions' = None) -> 'None'
      |      Pickle (serialize) object to file.
      |      
      |      Parameters
      |      ----------
-     |      path : str
-     |          File path where the pickled object will be stored.
-     |      compression : {'infer', 'gzip', 'bz2', 'zip', 'xz', None},         default 'infer'
-     |          A string representing the compression to use in the output file. By
-     |          default, infers from the file extension in specified path.
-     |          Compression mode may be any of the following possible
-     |          values: {‘infer’, ‘gzip’, ‘bz2’, ‘zip’, ‘xz’, None}. If compression
-     |          mode is ‘infer’ and path_or_buf is path-like, then detect
-     |          compression mode from the following extensions:
-     |          ‘.gz’, ‘.bz2’, ‘.zip’ or ‘.xz’. (otherwise no compression).
-     |          If dict given and mode is ‘zip’ or inferred as ‘zip’, other entries
-     |          passed as additional compression options.
+     |      path : str, path object, or file-like object
+     |          String, path object (implementing ``os.PathLike[str]``), or file-like
+     |          object implementing a binary ``write()`` function. File path where
+     |          the pickled object will be stored.
+     |      compression : str or dict, default 'infer'
+     |          For on-the-fly compression of the output data. If 'infer' and 'path' is
+     |          path-like, then detect compression from the following extensions: '.gz',
+     |          '.bz2', '.zip', '.xz', '.zst', '.tar', '.tar.gz', '.tar.xz' or '.tar.bz2'
+     |          (otherwise no compression).
+     |          Set to ``None`` for no compression.
+     |          Can also be a dict with key ``'method'`` set
+     |          to one of {``'zip'``, ``'gzip'``, ``'bz2'``, ``'zstd'``, ``'tar'``} and other
+     |          key-value pairs are forwarded to
+     |          ``zipfile.ZipFile``, ``gzip.GzipFile``,
+     |          ``bz2.BZ2File``, ``zstandard.ZstdCompressor`` or
+     |          ``tarfile.TarFile``, respectively.
+     |          As an example, the following could be passed for faster compression and to create
+     |          a reproducible gzip archive:
+     |          ``compression={'method': 'gzip', 'compresslevel': 1, 'mtime': 1}``.
+     |      
+     |              .. versionadded:: 1.5.0
+     |                  Added support for `.tar` files.
      |      protocol : int
      |          Int which indicates which protocol should be used by the pickler,
      |          default HIGHEST_PROTOCOL (see [1]_ paragraph 12.1.2). The possible
@@ -13775,9 +14721,12 @@ CLASSES
      |      storage_options : dict, optional
      |          Extra options that make sense for a particular storage connection, e.g.
      |          host, port, username, password, etc. For HTTP(S) URLs the key-value pairs
-     |          are forwarded to ``urllib`` as header options. For other URLs (e.g.
-     |          starting with "s3://", and "gcs://") the key-value pairs are forwarded to
-     |          ``fsspec``. Please see ``fsspec`` and ``urllib`` for more details.
+     |          are forwarded to ``urllib.request.Request`` as header options. For other
+     |          URLs (e.g. starting with "s3://", and "gcs://") the key-value pairs are
+     |          forwarded to ``fsspec.open``. Please see ``fsspec`` and ``urllib`` for more
+     |          details, and for more examples on storage options refer `here
+     |          <https://pandas.pydata.org/docs/user_guide/io.html?
+     |          highlight=storage_options#reading-writing-remote-files>`_.
      |      
      |          .. versionadded:: 1.2.0
      |      
@@ -13790,29 +14739,26 @@ CLASSES
      |      
      |      Examples
      |      --------
-     |      >>> original_df = pd.DataFrame({"foo": range(5), "bar": range(5, 10)})
-     |      >>> original_df
+     |      >>> original_df = pd.DataFrame({"foo": range(5), "bar": range(5, 10)})  # doctest: +SKIP
+     |      >>> original_df  # doctest: +SKIP
      |         foo  bar
      |      0    0    5
      |      1    1    6
      |      2    2    7
      |      3    3    8
      |      4    4    9
-     |      >>> original_df.to_pickle("./dummy.pkl")
+     |      >>> original_df.to_pickle("./dummy.pkl")  # doctest: +SKIP
      |      
-     |      >>> unpickled_df = pd.read_pickle("./dummy.pkl")
-     |      >>> unpickled_df
+     |      >>> unpickled_df = pd.read_pickle("./dummy.pkl")  # doctest: +SKIP
+     |      >>> unpickled_df  # doctest: +SKIP
      |         foo  bar
      |      0    0    5
      |      1    1    6
      |      2    2    7
      |      3    3    8
      |      4    4    9
-     |      
-     |      >>> import os
-     |      >>> os.remove("./dummy.pkl")
      |  
-     |  to_sql(self, name: 'str', con, schema=None, if_exists: 'str' = 'fail', index: 'bool_t' = True, index_label=None, chunksize=None, dtype: 'DtypeArg | None' = None, method=None) -> 'None'
+     |  to_sql(self, name: 'str', con, schema: 'str | None' = None, if_exists: 'str' = 'fail', index: 'bool_t' = True, index_label: 'IndexLabel' = None, chunksize: 'int | None' = None, dtype: 'DtypeArg | None' = None, method: 'str | None' = None) -> 'int | None'
      |      Write records stored in a DataFrame to a SQL database.
      |      
      |      Databases supported by SQLAlchemy [1]_ are supported. Tables can be
@@ -13863,6 +14809,20 @@ CLASSES
      |          Details and a sample callable implementation can be found in the
      |          section :ref:`insert method <io.sql.method>`.
      |      
+     |      Returns
+     |      -------
+     |      None or int
+     |          Number of rows affected by to_sql. None is returned if the callable
+     |          passed into ``method`` does not return an integer number of rows.
+     |      
+     |          The number of returned rows affected is the sum of the ``rowcount``
+     |          attribute of ``sqlite3.Cursor`` or SQLAlchemy connectable which may not
+     |          reflect the exact number of written rows as stipulated in the
+     |          `sqlite3 <https://docs.python.org/3/library/sqlite3.html#sqlite3.Cursor.rowcount>`__ or
+     |          `SQLAlchemy <https://docs.sqlalchemy.org/en/14/core/connections.html#sqlalchemy.engine.BaseCursorResult.rowcount>`__.
+     |      
+     |          .. versionadded:: 1.4.0
+     |      
      |      Raises
      |      ------
      |      ValueError
@@ -13902,6 +14862,7 @@ CLASSES
      |      2  User 3
      |      
      |      >>> df.to_sql('users', con=engine)
+     |      3
      |      >>> engine.execute("SELECT * FROM users").fetchall()
      |      [(0, 'User 1'), (1, 'User 2'), (2, 'User 3')]
      |      
@@ -13910,12 +14871,14 @@ CLASSES
      |      >>> with engine.begin() as connection:
      |      ...     df1 = pd.DataFrame({'name' : ['User 4', 'User 5']})
      |      ...     df1.to_sql('users', con=connection, if_exists='append')
+     |      2
      |      
      |      This is allowed to support operations that require that the same
      |      DBAPI connection is used for the entire operation.
      |      
      |      >>> df2 = pd.DataFrame({'name' : ['User 6', 'User 7']})
      |      >>> df2.to_sql('users', con=engine, if_exists='append')
+     |      2
      |      >>> engine.execute("SELECT * FROM users").fetchall()
      |      [(0, 'User 1'), (1, 'User 2'), (2, 'User 3'),
      |       (0, 'User 4'), (1, 'User 5'), (0, 'User 6'),
@@ -13925,6 +14888,7 @@ CLASSES
      |      
      |      >>> df2.to_sql('users', con=engine, if_exists='replace',
      |      ...            index_label='id')
+     |      2
      |      >>> engine.execute("SELECT * FROM users").fetchall()
      |      [(0, 'User 6'), (1, 'User 7')]
      |      
@@ -13943,6 +14907,7 @@ CLASSES
      |      >>> from sqlalchemy.types import Integer
      |      >>> df.to_sql('integers', con=engine, index=False,
      |      ...           dtype={"A": Integer()})
+     |      3
      |      
      |      >>> engine.execute("SELECT * FROM integers").fetchall()
      |      [(1,), (None,), (2,)]
@@ -14015,14 +14980,14 @@ CLASSES
      |      
      |      >>> df_multiindex.to_xarray()
      |      <xarray.Dataset>
-     |      Dimensions:  (animal: 2, date: 2)
+     |      Dimensions:  (date: 2, animal: 2)
      |      Coordinates:
      |        * date     (date) datetime64[ns] 2018-01-01 2018-01-02
      |        * animal   (animal) object 'falcon' 'parrot'
      |      Data variables:
      |          speed    (date, animal) int64 350 18 361 15
      |  
-     |  truncate(self: 'FrameOrSeries', before=None, after=None, axis=None, copy: 'bool_t' = True) -> 'FrameOrSeries'
+     |  truncate(self: 'NDFrameT', before=None, after=None, axis=None, copy: 'bool_t' = True) -> 'NDFrameT'
      |      Truncate a Series or DataFrame before and after some index value.
      |      
      |      This is a useful shorthand for boolean indexing based on index
@@ -14036,6 +15001,7 @@ CLASSES
      |          Truncate all rows after this index value.
      |      axis : {0 or 'index', 1 or 'columns'}, optional
      |          Axis to truncate. Truncates the index (rows) by default.
+     |          For `Series` this parameter is unused and defaults to 0.
      |      copy : bool, default is True,
      |          Return a copy of the truncated section.
      |      
@@ -14139,7 +15105,7 @@ CLASSES
      |      2016-01-10 23:59:58  1
      |      2016-01-10 23:59:59  1
      |  
-     |  tshift(self: 'FrameOrSeries', periods: 'int' = 1, freq=None, axis: 'Axis' = 0) -> 'FrameOrSeries'
+     |  tshift(self: 'NDFrameT', periods: 'int' = 1, freq=None, axis: 'Axis' = 0) -> 'NDFrameT'
      |      Shift the time index, using the index's frequency if available.
      |      
      |      .. deprecated:: 1.1.0
@@ -14154,6 +15120,7 @@ CLASSES
      |          or time rule expressed as a string (e.g. 'EOM').
      |      axis : {0 or ‘index’, 1 or ‘columns’, None}, default 0
      |          Corresponds to the axis that contains the Index.
+     |          For `Series` this parameter is unused and defaults to 0.
      |      
      |      Returns
      |      -------
@@ -14165,7 +15132,7 @@ CLASSES
      |      attributes of the index. If neither of those attributes exist, a
      |      ValueError is thrown
      |  
-     |  tz_convert(self: 'FrameOrSeries', tz, axis=0, level=None, copy: 'bool_t' = True) -> 'FrameOrSeries'
+     |  tz_convert(self: 'NDFrameT', tz, axis=0, level=None, copy: 'bool_t' = True) -> 'NDFrameT'
      |      Convert tz-aware axis to target time zone.
      |      
      |      Parameters
@@ -14180,7 +15147,7 @@ CLASSES
      |      
      |      Returns
      |      -------
-     |      {klass}
+     |      Series/DataFrame
      |          Object with time zone converted axis.
      |      
      |      Raises
@@ -14188,7 +15155,7 @@ CLASSES
      |      TypeError
      |          If the axis is tz-naive.
      |  
-     |  tz_localize(self: 'FrameOrSeries', tz, axis=0, level=None, copy: 'bool_t' = True, ambiguous='raise', nonexistent: 'str' = 'raise') -> 'FrameOrSeries'
+     |  tz_localize(self: 'NDFrameT', tz, axis=0, level=None, copy: 'bool_t' = True, ambiguous='raise', nonexistent: 'str' = 'raise') -> 'NDFrameT'
      |      Localize tz-naive index of a Series or DataFrame to target time zone.
      |      
      |      This operation localizes the Index. To localize the values in a
@@ -14234,7 +15201,7 @@ CLASSES
      |      
      |      Returns
      |      -------
-     |      Series or DataFrame
+     |      Series/DataFrame
      |          Same type as the input.
      |      
      |      Raises
@@ -14306,7 +15273,7 @@ CLASSES
      |      2015-03-29 03:30:00+02:00    1
      |      dtype: int64
      |  
-     |  xs(self, key, axis=0, level=None, drop_level: 'bool_t' = True)
+     |  xs(self: 'NDFrameT', key: 'IndexLabel', axis: 'Axis' = 0, level: 'IndexLabel' = None, drop_level: 'bool_t' = True) -> 'NDFrameT'
      |      Return cross-section from the Series/DataFrame.
      |      
      |      This method takes a `key` argument to select data at a particular
@@ -14487,14 +15454,30 @@ CLASSES
      |      Raises
      |      ------
      |      KeyError
-     |          If 'label' does not exist in DataFrame.
+     |          * If getting a value and 'label' does not exist in a DataFrame or
+     |              Series.
+     |      ValueError
+     |          * If row/column label pair is not a tuple or if any label from
+     |              the pair is not a scalar for DataFrame.
+     |          * If label is list-like (*excluding* NamedTuple) for Series.
      |      
      |      See Also
      |      --------
+     |      DataFrame.at : Access a single value for a row/column pair by label.
      |      DataFrame.iat : Access a single value for a row/column pair by integer
      |          position.
      |      DataFrame.loc : Access a group of rows and columns by label(s).
-     |      Series.at : Access a single value using a label.
+     |      DataFrame.iloc : Access a group of rows and columns by integer
+     |          position(s).
+     |      Series.at : Access a single value by label.
+     |      Series.iat : Access a single value by integer position.
+     |      Series.loc : Access a group of rows by label(s).
+     |      Series.iloc : Access a group of rows by integer position(s).
+     |      
+     |      Notes
+     |      -----
+     |      See :ref:`Fast scalar value getting and setting <indexing.basics.get_value>`
+     |      for more details.
      |      
      |      Examples
      |      --------
@@ -14583,6 +15566,8 @@ CLASSES
      |        DataFrame) and that returns valid output for indexing (one of the above).
      |        This is useful in method chains, when you don't have a reference to the
      |        calling object, but would like to base your selection on some value.
+     |      - A tuple of row and column indexes. The tuple elements consist of one of the
+     |        above inputs, e.g. ``(0, 1)``.
      |      
      |      ``.iloc`` will raise ``IndexError`` if a requested indexer is
      |      out-of-bounds, except *slice* indexers which allow out-of-bounds
@@ -14954,9 +15939,11 @@ CLASSES
      |      sidewinder mark i          10      20
      |                 mark ii          1       4
      |      viper      mark ii          7       1
+     |      
+     |      Please see the :ref:`user guide<advanced.advanced_hierarchical>`
+     |      for more details and explanations of advanced indexing.
 
 DATA
-    __warningregistry__ = {'version': 98}
     colorConverter = <matplotlib.colors.ColorConverter object>
 
 ```
