@@ -25,7 +25,8 @@ def create_cmap(list_of_colors, name=None, grain=500):
 def histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, fontsize=12,
               y_pad=1.3, histbins='auto', saveloc=None, rotation=0, ax=None, 
               markersize=8, zorder=0, markerfacecolor='gray', alpha=0.5, markeredgewidth=0.0,
-              histplot_kws={}, boxplot_kws=defaultdict(dict), **kwargs):
+              histplot_kws={}, boxplot_kws=defaultdict(dict), height_ratios=(.15, .85), xlim=None, ylim=None,
+              ticksize=None, **kwargs):
     """Create histogram with boxplot in top margin.
     
     Parameters
@@ -71,7 +72,7 @@ def histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, 
                 'markerfacecolor': markerfacecolor,
                 'alpha': alpha,
                 'markeredgewidth' : markeredgewidth  # remove edge if markeredgewidth==0
-            })  
+            })
 
 #     col = 'data' if col is None else col
     if 'name' in dir(data):
@@ -87,7 +88,7 @@ def histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, 
     
     # creating a figure composed of two matplotlib.Axes objects (ax_box and ax_hist)
     if ax is None:
-        f, (ax_box, ax_hist) = plt.subplots(2, sharex=True, gridspec_kw={"height_ratios": (.15, .85)}, **kwargs)
+        f, (ax_box, ax_hist) = plt.subplots(2, sharex=True, gridspec_kw={"height_ratios": height_ratios}, **kwargs)
     else:
         ax_hist = ax
         divider = make_axes_locatable(ax_hist)
@@ -97,16 +98,34 @@ def histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, 
     sns.boxplot(x=data[col], ax=ax_box, **boxplot_kws)
     sns.histplot(data=data, x=col, ax=ax_hist, bins=histbins, **histplot_kws)
 
+    if ylim is not None:
+        ax_hist.set_ylim(ylim)
+    if xlim is not None:
+        ax_hist.set_xlim(xlim)
+        ax_box.set_xlim(xlim)
+
     # Remove xlabel and xticks from the boxplot
     xticklabels = ax_hist.get_xticklabels()
     ax_box.tick_params(labelbottom=False)
     ax_box.set_xlabel(None)
-    
+
     if title is not None:
         ax_hist.set_title(title, y=y_pad, fontdict=dict(fontsize=fontsize))
-        
+
     if xticks_by is not None:
-        ax_hist.set_xticks(np.arange(0, max(data[col]), xticks_by), rotation=rotation)
+        ax_hist.set_xticks(
+            np.arange(
+                ax_hist.get_xlim()[0],
+                ax_hist.get_xlim()[1] + (xticks_by / 2),
+                xticks_by
+            )
+        )
+
+    if rotation != 0 or ticksize is not None:
+        for label in ax.get_xticklabels():
+            label.set_rotation(rotation)
+            if ticksize is not None:
+                label.set_fontsize(ticksize)
 
     ax_hist.set_xlabel(xlab, fontsize=fontsize)
         
@@ -269,7 +288,8 @@ def save_pdf(saveloc):
 
 
 def scatter2d(x=None, y=None, cmap="jet", ylab=None, xlab=None, bins=100, saveloc=None, figsize=(5, 4), snsbins=60,
-                   title=None, xlim=None, ylim=None, vlim=(None, None), marginal_kws={}, title_kws={}) -> None:
+              title=None, xlim=None, ylim=None, vlim=(None, None), marginal_kws={}, title_kws={},
+              return_cbar=False, normalization='lognorm', cbar_label=None) -> None:
     """Make 2D scatterplot with marginal histograms for each axis.
 
     Parameters
@@ -286,21 +306,29 @@ def scatter2d(x=None, y=None, cmap="jet", ylab=None, xlab=None, bins=100, savelo
     xlim, ylim - tuple with min and max for each axis
     vlim - tuple with min and max for color bar (to standardize across figures)
     """
+    # interpret kwargs or set default
     if 'bins' not in pyimp.keys(marginal_kws):
         marginal_kws.update(dict(bins=snsbins))
+    if 'x' not in pyimp.keys(title_kws):
+        title_kws.update(dict(x=0.6))
+    if 'y' not in pyimp.keys(title_kws):
+        title_kws.update(dict(y=1.2))
+    if normalization == 'lognorm':
+        normalization = mcolors.LogNorm
+        cbar_label = r"Density of points" if cbar_label is None else cbar_label  # $\log_{10}$
     
     # plot data
     ax1 = sns.jointplot(x=x, y=y, marginal_kws=marginal_kws)
     ax1.fig.set_size_inches(figsize[0], figsize[1])
     ax1.ax_joint.cla()
     plt.sca(ax1.ax_joint)
-    plt.hist2d(x, y, bins, norm=mcolors.LogNorm(*vlim), cmap=cmap, range=None if xlim is None else np.array([xlim, ylim]))
+    plt.hist2d(x, y, bins, norm=normalization(*vlim), cmap=cmap, range=None if xlim is None else np.array([xlim, ylim]))
     
     # set title and axes labels
     if title is None:
-        plt.title("%s\nvs\n%s\n" % (xlab, ylab), y=1.2, x=0.6, **title_kws)
+        plt.title("%s\nvs\n%s\n" % (xlab, ylab), **title_kws)
     else:
-        plt.title(title, y=1.2, x=0.6, **title_kws)
+        plt.title(title, **title_kws)
 
     plt.ylabel(ylab, fontsize=12)
     plt.xlabel(xlab, fontsize=12)
@@ -308,13 +336,16 @@ def scatter2d(x=None, y=None, cmap="jet", ylab=None, xlab=None, bins=100, savelo
     # set up scale bar legend
     cbar_ax = ax1.fig.add_axes([1, 0.1, 0.03, 0.7])
     cb = plt.colorbar(cax=cbar_ax)
-    cb.set_label(r"$\log_{10}$ density of points", fontsize=13)
+    cb.set_label(cbar_label, fontsize=13)
     
     # save if prompted
     if saveloc is not None:
         save_pdf(saveloc)
         
         plt.show()
+        
+    if return_cbar is True:
+        return ax1, cbar_ax
     
     return ax1
 
@@ -434,7 +465,10 @@ class SeabornFig2Grid():
     
     thanks - https://stackoverflow.com/questions/35042255/how-to-plot-multiple-seaborn-jointplot-in-subplot/47664533#47664533
     """
+    
     def __init__(self, seaborngrid, fig,  subplot_spec):
+        import matplotlib
+        
         self.fig = fig
         self.sg = seaborngrid
         self.subplot = subplot_spec
@@ -443,52 +477,66 @@ class SeabornFig2Grid():
             self._movegrid()
         elif isinstance(self.sg, sns.axisgrid.JointGrid):
             self._movejointgrid()
+        elif isinstance(self.sg, matplotlib.axes._axes.Axes):
+            self._moveaxis()
         self._finalize()
         pass
+    
+    def _moveaxis(self):
+        h = math.ceil(self.sg.get_position().height)
+        self._resize()
+        self.subgrid = gridspec.GridSpecFromSubplotSpec(1, 1, subplot_spec=self.subplot)
+        self._moveaxes(self.sg, self.subgrid[0, 0])
 
     def _movegrid(self):
         """Move PairGrid or Facetgrid."""
         self._resize()
         n = self.sg.axes.shape[0]
         m = self.sg.axes.shape[1]
-        self.subgrid = gridspec.GridSpecFromSubplotSpec(n,m, subplot_spec=self.subplot)
+        self.subgrid = gridspec.GridSpecFromSubplotSpec(n, m, subplot_spec=self.subplot)
         for i in range(n):
             for j in range(m):
-                self._moveaxes(self.sg.axes[i,j], self.subgrid[i,j])
+                self._moveaxes(self.sg.axes[i, j], self.subgrid[i, j])
         pass
 
     def _movejointgrid(self):
         """Move Jointgrid."""
-        h= self.sg.ax_joint.get_position().height
-        h2= self.sg.ax_marg_x.get_position().height
-        r = int(np.round(h/h2))
+        h = self.sg.ax_joint.get_position().height
+        h2 = self.sg.ax_marg_x.get_position().height
+        r = int(np.round(h / h2))
         self._resize()
-        self.subgrid = gridspec.GridSpecFromSubplotSpec(r+1,r+1, subplot_spec=self.subplot)
+        self.subgrid = gridspec.GridSpecFromSubplotSpec(r + 1, r + 1, subplot_spec=self.subplot)
 
         self._moveaxes(self.sg.ax_joint, self.subgrid[1:, :-1])
         self._moveaxes(self.sg.ax_marg_x, self.subgrid[0, :-1])
         self._moveaxes(self.sg.ax_marg_y, self.subgrid[1:, -1])
         pass
 
-    def _moveaxes(self, ax, gs):
+    def _moveaxes(self, ax, grid_spec):
         #https://stackoverflow.com/a/46906599/4124317
         ax.remove()
-        ax.figure=self.fig
+        ax.figure = self.fig
         self.fig.axes.append(ax)
         self.fig.add_axes(ax)
-        ax._subplotspec = gs
-        ax.set_position(gs.get_position(self.fig))
-        ax.set_subplotspec(gs)
+        ax._subplotspec = grid_spec
+        ax.set_position(grid_spec.get_position(self.fig))
+        try:
+            ax.set_subplotspec(grid_spec)
+        except AttributeError:
+            ax._subplotspec = grid_spec
         pass
 
     def _finalize(self):
-        plt.close(self.sg.fig)
+        try:
+            plt.close(self.sg.fig)
+        except AttributeError:
+            pass
         self.fig.canvas.mpl_connect("resize_event", self._resize)
         self.fig.canvas.draw()
         pass
 
     def _resize(self, evt=None):
-        self.sg.fig.set_size_inches(self.fig.get_size_inches())
+        self.sg.figure.set_size_inches(self.fig.get_size_inches())
         pass
     
     pass
@@ -506,6 +554,44 @@ def pdf_to_png(pdf, outdir=None):
         raise NotImplementedError(f'unexpected number of pages: {len(pages) = }')
 
     pages[0].save(png)
+
+    return png
+
+
+def draw_xy(ax, lims=None, alpha=1, zorder=5, linewidth=0.5, color='k', linestyle='-', equal_aspect=False):
+    """Draw x=y line on a matplotlib ax."""
+    if lims is None:
+        lims = [
+            np.min([ax.get_xlim(), ax.get_ylim()]),  # min of both axes
+            np.max([ax.get_xlim(), ax.get_ylim()]),  # max of both axes
+        ]
+    ax.plot(lims, lims, color, alpha=alpha, zorder=zorder, linewidth=linewidth, linestyle=linestyle)
+    ax.set_xlim(lims)
+    ax.set_ylim(lims)
+    
+    if equal_aspect is True:
+        ax.set_aspect('equal')
+#     g.ax_marg_x.set_xlim(lims)
+#     g.ax_marg_y.set_ylim(lims)
+    
+    pass
+
+
+def pdf_to_png(pdf, outdir=None, page=None):
+    """Convert the first page of a pdf document to a png."""
+    pages = convert_from_path(pdf, 500)
+
+    png = pdf.replace('.pdf', '.png')
+    if outdir is not None:
+        png = f'{outdir}/{op.basename(png)}'  # png.replace(op.dirname(png), outdir)
+
+    if len(pages) > 1 and page is None:
+        raise NotImplementedError(f'unexpected number of pages: {len(pages) = }')
+
+    if page is None:  # if there's only one page, just convert without having to specify
+        page = 0
+
+    pages[page].save(png)
 
     return png
 
