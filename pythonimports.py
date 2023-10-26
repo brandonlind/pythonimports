@@ -747,13 +747,16 @@ def flatten(list_of_lists, unique=False) -> list:
     return vals
 
 
-def sleeping(counts: int, desc="sleeping", sleep=1) -> None:
+def sleeping(counts: int, desc="sleeping", sleep=1, raise_e=False) -> None:
     """Basically a sleep timer with a progress bar; counts up to `counts`, interval = 1sec."""
     try:
         for i in trange(counts, desc=desc):
             time.sleep(sleep)
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as e:
         print(ColorText(f"KeyboardInterrupt after {i} seconds of sleep.").warn())
+        if raise_e is True:
+            raise e
+        
     pass
 
 
@@ -913,3 +916,8 @@ def unwrap_dictionary(nested_dict, progress_bar=False):
             # we're still yielding the keys as a tuple
             yield (k,), v
     pass
+
+
+def lower_tri(df):
+    """Get values from the lower triangle of a pandas dataframe."""
+    return df.values[np.tril(np.ones(df.shape), k=-1).astype(bool)]
