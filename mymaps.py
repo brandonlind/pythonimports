@@ -128,7 +128,7 @@ def draw_pie_marker(ratios, xcoord, ycoord, sizes, colors, ax, edgecolors="black
     return pyimp.flatten(objects)
 
 
-def basemap(extent, shapefiles=None, figsize=(8, 15)):
+def basemap(extent, shapefiles=None, figsize=(8, 15), coastlines=0.6, add_bathym=True):
     """Build basemap +/- range shapefile.
 
     Parameters
@@ -188,11 +188,13 @@ def basemap(extent, shapefiles=None, figsize=(8, 15)):
                               edgecolor=color,
                               alpha=0.8,
                               zorder=3)
-    ax.coastlines(resolution="10m", zorder=4)
+            
+    ax.coastlines(resolution="10m", zorder=4, linewidth=coastlines)
     ax.add_feature(cfeature.BORDERS)
 
-    bathym = cfeature.NaturalEarthFeature(name="bathymetry_J_1000", scale="10m", category="physical")
-    ax.add_feature(bathym, edgecolor="none", facecolor="gray", alpha=0.1)
+    if add_bathym is True:
+        bathym = cfeature.NaturalEarthFeature(name="bathymetry_J_1000", scale="10m", category="physical")
+        ax.add_feature(bathym, edgecolor="none", facecolor="gray", alpha=0.1)
 
     return ax
 
