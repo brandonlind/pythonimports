@@ -14,6 +14,7 @@ from typing import Union
 from functools import partial
 import warnings
 import math
+from IPython.display import clear_output
 
 import pythonimports as pyimp
 import balance_queue as balq
@@ -1096,6 +1097,7 @@ class Squeue:
     def __init__(self, verbose=True, **kwargs):
         # get queue matching grepping
         self.sq = Squeue._getsq(**kwargs)
+        self.kwargs = dict(kwargs)
         # filter further with kwargs
         if len(self.sq) > 0:
             self.sq = self._filter_jobs(self, **kwargs)
@@ -1635,6 +1637,26 @@ class Squeue:
 
         # update each of the jobs
         Squeue._update_queue(self, cmd, "update", num_jobs=num_jobs, **kwargs)
+        pass
+    
+    def watch(self, sleep=5, progress_bar=True):
+        """Refresh __repr__ every `sleep` seconds, clear previous printout."""
+        import myslurm
+        
+        if progress_bar is True:
+            sleeper = partial(pyimp.sleeping, raise_e=True)
+        else:
+            sleeper = time.sleep
+        
+        try:
+            while True:
+                print(myslurm.Squeue(**self.kwargs))
+                sleeper(sleep)
+                clear_output(wait=True)
+                
+        except KeyboardInterrupt as e:
+            pass
+        
         pass
 
     def balance(self, parentdir='HOME', **kwargs):
