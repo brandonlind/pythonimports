@@ -16,6 +16,7 @@ class MySeries(pd.Series):
     pass
 
 
+# class ColorText(str):  # TODO see __add__
 class ColorText:
     """
     Use ANSI escape sequences to print colors +/- bold/underline to bash terminal.
@@ -24,6 +25,16 @@ class ColorText:
     -----
     execute ColorText.demo() for a printout of colors.
     """
+#     def __add__(self, *args, **kwargs):
+#         TODO: make sure this works:
+                # ColorText('hi') + 'hi'
+                # 'hi' + ColorText('hi')
+                # (ColorText('hi') + 'hi').bold()
+                # (ColorText('hi').green() + ColorText('hi').blue()).cyan()
+#         self.text = str.__add__(self.text, *args, **kwargs)
+        
+#         return self
+    
     @classmethod
     def demo(cls):
         """Prints examples of all colors in normal, bold, underline, bold+underline."""
