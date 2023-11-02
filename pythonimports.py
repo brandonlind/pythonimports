@@ -62,6 +62,9 @@ def fs(directory: str, pattern="", endswith="", startswith="", exclude=None, dir
     dirs - bool; True if keep only dirs, False if exclude dirs, None if keep files and dirs
     bnames - bool; True if return is file basenames, False if return is full file path
     """
+    if directory == '.':
+        directory = os.getcwd()
+
     if isinstance(exclude, str):
         exclude = [exclude]
     if dirs is False:
