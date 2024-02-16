@@ -181,6 +181,9 @@ def sbatch(shfiles: Union[str, list], sleep=0, printing=False, outdir=None, prog
         - eg for job_187.sh, the job name is job_187
         - this convention is used to make sure a job isn't submitted twice
     - `sbatch` therefore assumes that each job has a unique job name
+    - if the job's job name `filejob` is already in the queue, all jobs in the queue except the oldest
+        job are cancelled. the pid returned for the shfile will be the pid of the job that remains in 
+        the queue.
     """
 
     if isinstance(shfiles, str):
@@ -253,7 +256,7 @@ def sbatch(shfiles: Union[str, list], sleep=0, printing=False, outdir=None, prog
 
 
 def create_watcherfile(pids, directory, watcher_name="watcher", email="b.lind@northeastern.edu", time='0:00:01', ntasks=1, 
-                       rem_flags=None, mem=25, end_alert=False, fail_alert=True, begin_alert=False, added_text=''):
+                       rem_flags=None, mem=25, end_alert=False, fail_alert=True, begin_alert=False, added_text='', verbose=True):
     """From a list of dependency `pids`, sbatch a file that will not start until all `pids` have completed.
     
     Parameters
@@ -276,6 +279,8 @@ def create_watcherfile(pids, directory, watcher_name="watcher", email="b.lind@no
     begin_alert - bool
         use if wishing to receive an email when the job begins
     added text - any text to add within the body of the .sh file
+    verbose - bool
+        whether to print the watcherfile's slurm job ID, `watcher_pid`
 
     TODO
     ----
@@ -308,8 +313,11 @@ def create_watcherfile(pids, directory, watcher_name="watcher", email="b.lind@no
 
     with open(watcherfile, "w") as o:
         o.write(text)
-
-    print(sbatch(watcherfile, progress_bar=False))
+    
+    watcher_pid = sbatch(watcherfile, progress_bar=False)
+    
+    if verbose is True:
+        print(watcher_pid)
 
     return watcherfile
 
@@ -933,6 +941,33 @@ class Seffs:
                 del seffs[pid]
         
         return Seffs(seffs=seffs.copy(), unit=self.unit, units=self.units)
+    
+    def to_dataframe(self, time_units='hrs', mem_units='MB'):
+        """Convert seff info in Seffs to a dataframe, one row for each key (ie slurm_job_id) in self."""
+        series = []
+        for pid, seff in self.items():
+            # create a dictionary with values
+            seff_series = pd.Series(seff.__dict__)
+            seff_series.pop('info')  # remove
+            seff_series[f'core_walltime_{time_units}'] = seff.core_walltime(unit=time_units)
+            seff_series['cpu_efficiency'] = seff.cpu_e()
+            seff_series[f'cpu_usage_{time_units}'] = seff.cpu_u(unit=time_units)
+            seff_series[f'memory_used_{mem_units}'] = seff.mem(units=mem_units)
+            seff_series['memory_efficiency'] = seff.mem_e()
+            seff_series[f'memory_requested_{mem_units}'] = seff.mem_req(units=mem_units)
+            seff_series['state'] = seff.state()
+            seff_series[f'walltime_{time_units}'] = seff.walltime(unit=time_units)
+            seff_series.name = seff.slurm_job_id
+            
+            # convert to single-row dataframe
+            series_df = pd.DataFrame(seff_series).T
+            
+            # reorder columns
+            series_df = series_df[[col for col in series_df.columns if col not in ['out', 'job', 'sh']] + ['out', 'job', 'sh']]
+            
+            series.append(series_df)
+        
+        return pd.concat(series)
 
     pass
 
@@ -1434,7 +1469,7 @@ class Squeue:
 
         return _sq
 
-    def _update_queue(self, cmd, desc, user=False, num_jobs=None, **kwargs):
+    def _update_queue(self, cmd, desc, user=False, num_jobs=None, states=None, **kwargs):
         """Update jobs in queue and job info in Squeue class object.
         
         Parameters
@@ -1456,7 +1491,7 @@ class Squeue:
         elif desc == "scancel" and user is True:  # cancel all jobs
             return Squeue._update_job(["scancel", "-u", os.environ["USER"]])
         # get subset of jobs returned from __init__()
-        _sq = self._filter_jobs(self, states='PD', **kwargs)
+        _sq = self._filter_jobs(self, states='PD' if desc != 'scancel' else states, **kwargs)
         # update each of the jobs
         if len(_sq) > 0:
             if num_jobs is None:
