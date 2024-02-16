@@ -16,6 +16,8 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import matplotlib.gridspec as gridspec
 from collections import defaultdict
 from pdf2image import convert_from_path
+import seaborn
+
 
 def create_cmap(list_of_colors, name=None, grain=500):
     """Create a custom color map with fine-grain transition."""
@@ -23,7 +25,7 @@ def create_cmap(list_of_colors, name=None, grain=500):
 
 
 def histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, fontsize=12,
-              y_pad=1.3, histbins='auto', saveloc=None, rotation=0, ax=None, 
+              y_pad=1.3, histbins='auto', saveloc=None, rotation=0, ax=None, jitter=True, jit=0.15, marker='.',
               markersize=8, zorder=0, markerfacecolor='gray', alpha=0.5, markeredgewidth=0.0,
               histplot_kws={}, boxplot_kws=defaultdict(dict), height_ratios=(.15, .85), xlim=None, ylim=None,
               ticksize=None, **kwargs):
@@ -66,7 +68,10 @@ def histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, 
     ------
         thanks https://www.python-graph-gallery.com/24-histogram-with-a-boxplot-on-top-seaborn
     """
+    if 'flierprops' not in boxplot_kws:
+        boxplot_kws['flierprops'] = {}
     boxplot_kws['flierprops'].update({
+                'marker' : marker,
                 'markersize' : markersize,
                 'zorder' : zorder,
                 'markerfacecolor': markerfacecolor,
@@ -130,6 +135,9 @@ def histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, 
     ax_hist.set_xlabel(xlab, fontsize=fontsize)
         
     ax_hist.set_ylabel(ylab, fontsize=fontsize)
+    
+    if jitter is True:
+        jitter_fliers(axes=[ax_box], jitter_axis='y', jit=jit)
     
     if saveloc is not None:
         save_pdf(saveloc)
@@ -289,7 +297,7 @@ def save_pdf(saveloc):
 
 def scatter2d(x=None, y=None, cmap="jet", ylab=None, xlab=None, bins=100, saveloc=None, figsize=(5, 4), snsbins=60,
               title=None, xlim=None, ylim=None, vlim=(None, None), marginal_kws={}, title_kws={},
-              return_cbar=False, normalization='lognorm', cbar_label=None) -> None:
+              return_cbar=False, normalization='lognorm', cbar_label=None) -> seaborn.axisgrid.JointGrid:
     """Make 2D scatterplot with marginal histograms for each axis.
 
     Parameters
@@ -315,14 +323,14 @@ def scatter2d(x=None, y=None, cmap="jet", ylab=None, xlab=None, bins=100, savelo
         title_kws.update(dict(y=1.2))
     if normalization == 'lognorm':
         normalization = mcolors.LogNorm
-        cbar_label = r"Density of points" if cbar_label is None else cbar_label  # $\log_{10}$
+    cbar_label = r"Density of points" if cbar_label is None else cbar_label  # $\log_{10}$
     
     # plot data
     ax1 = sns.jointplot(x=x, y=y, marginal_kws=marginal_kws)
     ax1.fig.set_size_inches(figsize[0], figsize[1])
     ax1.ax_joint.cla()
     plt.sca(ax1.ax_joint)
-    plt.hist2d(x, y, bins, norm=normalization(*vlim), cmap=cmap, range=None if xlim is None else np.array([xlim, ylim]))
+    plt.hist2d(x, y, bins, norm=normalization(*vlim), cmin=1, cmap=cmap, range=None if xlim is None else np.array([xlim, ylim]))
     
     # set title and axes labels
     if title is None:
@@ -542,18 +550,31 @@ class SeabornFig2Grid():
     pass
 
 
-def pdf_to_png(pdf, outdir=None):
-    """Convert the first page of a pdf document to a png."""
+def pdf_to_png(pdf, page=0, outfile=None, outdir=None):
+    """Convert the first page of a pdf document to a png.
+    
+    Parameters
+    ----------
+    pdf : str
+        path to .pdf file
+    page : int
+        page index of pdf to save as png
+    outfile : str
+        path to save output png; default is '/path/to/pdf'.replace('.pdf', '.png')
+    outdir : str
+        if `outfile` is None, save as /path/to/outdir/basename.png
+    """
     pages = convert_from_path(pdf, 500)
 
     png = pdf.replace('.pdf', '.png')
+    
     if outdir is not None:
         png = f'{outdir}/{op.basename(png)}'  # png.replace(op.dirname(png), outdir)
+    
+    if outfile is not None:
+        png = outfile
 
-    if len(pages) > 1:
-        raise NotImplementedError(f'unexpected number of pages: {len(pages) = }')
-
-    pages[0].save(png)
+    pages[page].save(png)
 
     return png
 
@@ -595,3 +616,32 @@ def pdf_to_png(pdf, outdir=None, page=None):
 
     return png
 
+
+def jitter_fliers(g=None, axes=None, jitter_axis='x', jit=0.05):
+    """Add jitter to boxplot fliers.
+    
+    Parameters
+    ----------
+    g : seaborn.axisgrid.FacetGrid
+        eg returned from seaborn.catplot etc
+    axes : list of matplotlib.axes._subplots.AxesSubplot
+        
+    Notes
+    -----
+    Thanks - https://stackoverflow.com/questions/61638303/how-to-jitter-the-outliers-of-a-boxplot
+    """
+    if g is not None:
+        axes = g.axes.flat
+    
+    for ax in axes:
+        for artist in ax.get_lines():
+            if artist.get_linestyle() == "None":
+                if jitter_axis == 'x' :
+                    pos = artist.get_xdata()
+                    artist.set_xdata(pos + np.random.uniform(-jit, jit, len(pos)))
+                else:
+                    assert jitter_axis == 'y'
+                    pos = artist.get_ydata()
+                    artist.set_ydata(pos + np.random.uniform(-jit, jit, len(pos)))
+                    
+    pass
