@@ -9,6 +9,7 @@ from cartopy.io.img_tiles import Stamen
 from cartopy.io.shapereader import Reader
 from cartopy.io.img_tiles import GoogleTiles
 from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib.patches import Rectangle
 
 import pythonimports as pyimp
 
@@ -195,6 +196,69 @@ def basemap(extent, shapefiles=None, figsize=(8, 15), coastlines=0.6, add_bathym
     if add_bathym is True:
         bathym = cfeature.NaturalEarthFeature(name="bathymetry_J_1000", scale="10m", category="physical")
         ax.add_feature(bathym, edgecolor="none", facecolor="gray", alpha=0.1)
+
+    return ax
+
+
+def inset_map(extent, map_extent=None, shapes=[], shapefiles=None, figsize=(8, 15)):
+    """Create an black and white inset map for placing within a larger map.
+    
+    Parameters
+    ----------
+    extent - list
+        extent of inset map - [minlong, maxlong, minlat, maxlat]
+    map_extent - list
+        extent of larger map for drawing box within inset map
+    
+    
+    """
+    fig = plt.figure(figsize=figsize)
+
+    # create a map
+    ax = plt.axes(projection=ccrs.PlateCarree())
+    ax.set_extent(extent, crs=ccrs.PlateCarree())
+
+    ax.coastlines(resolution="10m", zorder=4, linewidth=0.6)
+    
+    land_50m = cfeature.NaturalEarthFeature("physical", "land", "50m", edgecolor="face")
+    ax.add_feature(land_50m, edgecolor="black", facecolor="gray", alpha=0.4)
+
+    states_provinces = cfeature.NaturalEarthFeature(category="cultural",
+                                                    name="admin_1_states_provinces_lines",
+                                                    scale="50m",
+                                                    facecolor="none")
+    ax.add_feature(states_provinces, edgecolor="black")
+
+    ax.add_feature(cfeature.BORDERS)
+
+    # add box for domain of larger map
+    if map_extent is not None:
+        lonmin, lonmax, latmin, latmax = map_extent
+        xy = (lonmin, latmin)
+        width = abs(lonmax - lonmin)
+        height = abs(latmax - latmin)
+        ax.add_patch(Rectangle(xy, width, height, facecolor='gray', alpha=0.5, linewidth=3))
+        ax.add_patch(Rectangle(xy, width, height, fill=False, edgecolor='k', linewidth=3))
+    
+    # add any other shapes to the map
+    for shape in shapes:
+        ax.add_patch(shape)
+    
+    # add shapefiles
+    if shapefiles is not None:
+        for color, shape in shapefiles:
+            ax.add_geometries(Reader(shape).geometries(),
+                              ccrs.PlateCarree(),
+                              facecolor=color,
+                              alpha=0.1,
+                              edgecolor="none",
+                              zorder=2)
+            ax.add_geometries(Reader(shape).geometries(),
+                              ccrs.PlateCarree(),
+                              facecolor="none",
+                              edgecolor=color,
+                              alpha=0.8,
+                              zorder=3)
 
     return ax
 
