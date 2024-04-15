@@ -1,23 +1,21 @@
 """Personalized functions to build figures."""
+import pythonimports as pyimp
+
 from matplotlib.patches import PathPatch
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.colors import rgb2hex, colorConverter, LinearSegmentedColormap
 import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
 from matplotlib_venn import venn3, venn3_circles
-import pandas as pd
-import seaborn as sns
-import pythonimports as pyimp
-import numpy as np
 import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
-import pythonimports as pyimp
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import matplotlib.gridspec as gridspec
 from collections import defaultdict
 from pdf2image import convert_from_path
-import seaborn
-
+import pandas as pd
+import seaborn as sns
+import numpy as np
 
 def create_cmap(list_of_colors, name=None, grain=500):
     """Create a custom color map with fine-grain transition."""
@@ -27,7 +25,7 @@ def create_cmap(list_of_colors, name=None, grain=500):
 def histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, fontsize=12,
               y_pad=1.3, histbins='auto', saveloc=None, rotation=0, ax=None, jitter=True, jit=0.15, marker='.',
               markersize=8, zorder=0, markerfacecolor='gray', alpha=0.5, markeredgewidth=0.0,
-              histplot_kws={}, boxplot_kws=defaultdict(dict), height_ratios=(.15, .85), xlim=None, ylim=None,
+              histplot_kws={}, boxplot_kws={}, height_ratios=(.15, .85), xlim=None, ylim=None,
               ticksize=None, **kwargs):
     """Create histogram with boxplot in top margin.
     
@@ -68,16 +66,27 @@ def histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, 
     ------
         thanks https://www.python-graph-gallery.com/24-histogram-with-a-boxplot-on-top-seaborn
     """
-    if 'flierprops' not in boxplot_kws:
-        boxplot_kws['flierprops'] = {}
-    boxplot_kws['flierprops'].update({
+    default_boxplot_kws = {
+        'flierprops' : {
                 'marker' : marker,
                 'markersize' : markersize,
                 'zorder' : zorder,
                 'markerfacecolor': markerfacecolor,
                 'alpha': alpha,
                 'markeredgewidth' : markeredgewidth  # remove edge if markeredgewidth==0
-            })
+            }
+    }
+    default_boxplot_kws.update(boxplot_kws)
+    # if 'flierprops' not in boxplot_kws:
+    #     boxplot_kws['flierprops'] = {}
+    # boxplot_kws['flierprops'].update({
+    #             'marker' : marker,
+    #             'markersize' : markersize,
+    #             'zorder' : zorder,
+    #             'markerfacecolor': markerfacecolor,
+    #             'alpha': alpha,
+    #             'markeredgewidth' : markeredgewidth  # remove edge if markeredgewidth==0
+    #         })
 
 #     col = 'data' if col is None else col
     if 'name' in dir(data):
@@ -100,7 +109,7 @@ def histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, 
         ax_box = divider.append_axes("top", size="15%", pad=0.1, sharex=ax_hist)
         
     # assigning a graph to each ax
-    sns.boxplot(x=data[col], ax=ax_box, **boxplot_kws)
+    sns.boxplot(x=data[col], ax=ax_box, **default_boxplot_kws)
     sns.histplot(data=data, x=col, ax=ax_hist, bins=histbins, **histplot_kws)
 
     if ylim is not None:
@@ -145,6 +154,101 @@ def histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, 
     if ax is None:
         plt.show()
         
+    return ax_box, ax_hist
+
+
+def stacked_histo_box(data, x=None, y=None, height_ratios=(0.15, 0.85), figsize=(9, 6), ax=None,
+                      box_linewidth=1.5, boxplot_kws={}, hist_bins=None, histplot_kws={}, **kwargs):
+    """Create stacked histogram with multi-category boxplot in top margin.
+    
+    Parameters
+    ----------
+    data : pd.DataFrame.astype({x : float | int, y : str | object})
+        dataframe with columns `x` and `y`, where `y` is the categories used for plotting
+    height_ratios : tuple
+        height (y-axis) ratios of boxplot and histogram
+    figsize : tuple
+        figure size
+    ax : None | matplotlib.axes.Axes | matplotlib.axes._subplots.AxesSubplot
+        axis for plotting
+    box_linewidth : float
+        edge width of boxplot, median line, whiskers, and caps
+    boxplot_kws : dict
+        passed to seaborn.boxplot
+    histplot_kws : dict
+        passed to AxesSubplot.hist
+    kwargs : dict
+        passed to plt.subplots
+    
+    Returns
+    -------
+    (ax_box, ax_hist)
+        AxesSubplot's for histogram and 
+    """
+    # update default boxplot kwargs
+    default_boxplot_kws = {'whiskerprops': {'color': '#bebebe', 'linewidth' : box_linewidth},
+                           'medianprops': {'color': '#bebebe', 'alpha': 1.0, 'linewidth' : box_linewidth},
+                           'boxprops': {'edgecolor': '#bebebe', 'linewidth' : box_linewidth},
+                           'flierprops': {'color': '#bebebe',
+                                          'markeredgecolor': '#bebebe',
+                                          'markerfacecolor': 'none',
+                                          'markeredgewidth': 0.5,
+                                          'markersize': 4,
+                                          'marker': '.'},
+                           'capprops': {'color': '#bebebe', 'linewidth' : box_linewidth}}
+    default_boxplot_kws.update(boxplot_kws)
+    if 'palette' not in default_boxplot_kws.keys():  # add a color palette to differentiate categories of `y`
+        default_boxplot_kws.update({'palette' : dict(zip(data[y].dropna().unique(), plt.cm.tab20.colors))})
+
+    # update default histplot kwargs
+    default_histplot_kws = {'edgecolor' : 'k'}
+    default_histplot_kws.update(histplot_kws)
+
+    # create a figure composed of two axes (ax_box and ax_hist)
+    if ax is None:
+        fig, (ax_box, ax_hist) = plt.subplots(2, sharex=True, figsize=figsize,
+                                              gridspec_kw={"height_ratios": height_ratios}, **kwargs)
+    else:
+        ax_hist = ax
+        divider = make_axes_locatable(ax_hist)
+        ax_box = divider.append_axes("top", size="15%", pad=0.1, sharex=ax_hist)
+
+    # create boxplot
+    sns.boxplot(
+        data=data,
+        x=x,
+        y=y,
+        hue=y,
+        ax=ax_box,
+        legend=False,
+        **default_boxplot_kws
+    )
+
+    # adjust boxplot properties
+    ax_box.set_yticks(ax_box.get_yticks())
+    ax_box.set_yticklabels([None] * len(data[y].dropna().unique()))
+    jitter_fliers(axes=[ax_box], jitter_axis='y', jit=0.15)
+    ax_box.set_ylabel(None)
+    ax_box.set_xlabel(None)
+    if ax is not None:
+        # Remove xlabel and xticks from the boxplot
+        xticklabels = ax_hist.get_xticklabels()
+        ax_box.tick_params(labelbottom=False)
+        ax_box.set_xlabel(None)
+
+    # create stacked histogram
+    histdata = data.groupby(y)[x].apply(pd.DataFrame)
+    ax_hist.hist(
+        histdata,
+        stacked=True,
+        color=histdata.columns.map(default_boxplot_kws['palette']),
+        **default_histplot_kws,
+    )
+
+    # add color dict to axes so I can access it without returning another variable
+    ax_box.__dict__['palette'] = default_boxplot_kws['palette']
+    ax_hist.__dict__['palette'] = default_boxplot_kws['palette']
+    
     return ax_box, ax_hist
 
 
@@ -297,7 +401,7 @@ def save_pdf(saveloc):
 
 def scatter2d(x=None, y=None, cmap="jet", ylab=None, xlab=None, bins=100, saveloc=None, figsize=(5, 4), snsbins=60,
               title=None, xlim=None, ylim=None, vlim=(None, None), marginal_kws={}, title_kws={},
-              return_cbar=False, normalization='lognorm', cbar_label=None) -> seaborn.axisgrid.JointGrid:
+              return_cbar=False, normalization='lognorm', cbar_label=None) -> sns.axisgrid.JointGrid:
     """Make 2D scatterplot with marginal histograms for each axis.
 
     Parameters
@@ -592,29 +696,27 @@ def draw_xy(ax, lims=None, alpha=1, zorder=5, linewidth=0.5, color='k', linestyl
     
     if equal_aspect is True:
         ax.set_aspect('equal')
-#     g.ax_marg_x.set_xlim(lims)
-#     g.ax_marg_y.set_ylim(lims)
     
     pass
 
 
-def pdf_to_png(pdf, outdir=None, page=None):
-    """Convert the first page of a pdf document to a png."""
-    pages = convert_from_path(pdf, 500)
+# def pdf_to_png(pdf, outdir=None, page=None):
+#     """Convert the first page of a pdf document to a png."""
+#     pages = convert_from_path(pdf, 500)
 
-    png = pdf.replace('.pdf', '.png')
-    if outdir is not None:
-        png = f'{outdir}/{op.basename(png)}'  # png.replace(op.dirname(png), outdir)
+#     png = pdf.replace('.pdf', '.png')
+#     if outdir is not None:
+#         png = f'{outdir}/{op.basename(png)}'  # png.replace(op.dirname(png), outdir)
 
-    if len(pages) > 1 and page is None:
-        raise NotImplementedError(f'unexpected number of pages: {len(pages) = }')
+#     if len(pages) > 1 and page is None:
+#         raise NotImplementedError(f'unexpected number of pages: {len(pages) = }')
 
-    if page is None:  # if there's only one page, just convert without having to specify
-        page = 0
+#     if page is None:  # if there's only one page, just convert without having to specify
+#         page = 0
 
-    pages[page].save(png)
+#     pages[page].save(png)
 
-    return png
+#     return png
 
 
 def jitter_fliers(g=None, axes=None, jitter_axis='x', jit=0.05):
