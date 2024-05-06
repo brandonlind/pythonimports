@@ -255,7 +255,7 @@ def sbatch(shfiles: Union[str, list], sleep=0, printing=False, outdir=None, prog
     return pids
 
 
-def create_watcherfile(pids, directory, watcher_name="watcher", email="b.lind@northeastern.edu", time='0:00:01', ntasks=1, 
+def create_watcherfile(pids, directory, watcher_name="watcher", email=None, time='0:00:01', ntasks=1, 
                        rem_flags=None, mem=25, end_alert=False, fail_alert=True, begin_alert=False, added_text='', verbose=True):
     """From a list of dependency `pids`, sbatch a file that will not start until all `pids` have completed.
     
@@ -342,7 +342,7 @@ class Seff:
     """
     def __init__(self, slurm_job_id):
         """Get return from seff command."""
-        info = os.popen("seff %s" % str(slurm_job_id)).read().split("\n")
+        info = os.popen(f"seff {slurm_job_id}").read().split("\n")
         info.remove("")
         self.info = [i for i in info[:11] if 'WARNING' not in i]
         self.info[-2] = self.info[-2].split("(estimated")[0]
