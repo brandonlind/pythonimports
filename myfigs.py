@@ -747,3 +747,79 @@ def jitter_fliers(g=None, axes=None, jitter_axis='x', jit=0.05):
                     artist.set_ydata(pos + np.random.uniform(-jit, jit, len(pos)))
                     
     pass
+
+
+def add_legend(ldict, markers='s', legendmarkerfacecolor='fill', markeredgecolor=None, title=None, ax=None,
+               loc='center left', bbox_to_anchor=(0.95, 0.50), fontsize=11, ncol=1, add_handles=[],
+               face_alpha=1, edge_alpha=1
+              ):
+    """Add a legend to `ax`.
+    
+    Parameters
+    ----------
+    ldict : dict
+        key = value = label used in legend labels, value = color
+    markers : dict | str
+        if dict, use keys in ldict. If str, specify marker for all ldict.keys()
+    legendmarkerfacecolor : 'fill' | str | tuple(R, G, B, [alpha])
+        if 'fill', use color in ldict. Otherwise, specify another color. use with `face_alpha`.
+    markeredgecolor : str | dict
+        use with `edge_alpha`. if dict, keys are ldict.keys()
+    title : str
+        title for legend
+    ax : e.g., matplotlib.axes._axes.Axes | cartopy.mpl.geoaxes.GeoAxes
+    loc : str
+        location of legend with respect to bbox_to_anchor location
+    bbox_to_anchor : tuple
+        Box that is used to position the legend in conjunction with *loc*.
+    fontsize : int
+        fontsize of legend. legend title is fontsize+1
+    ncol : int
+        the number of columns in the legend
+    face_alpha : int | dict
+        opacity of facecolor. if dict, keys are ldict.keys()
+    edge_alpha : int | dict
+        opacity of edgecolor. if dict, keys are ldict.keys()
+    """
+    if ax is None:
+        fig, ax = plt.subplots()
+    else:
+        fig = ax.get_figure()
+
+    # get the things that go into the legend
+    handles = []
+    for label, color in ldict.items():
+        marker = markers[label] if isinstance(markers, dict) else markers
+        facealpha = face_alpha[label] if isinstance(face_alpha, dict) else face_alpha
+        edgealpha = edge_alpha[label] if isinstance(edge_alpha, dict) else edge_alpha
+        
+        if legendmarkerfacecolor == 'fill':
+            markerfacecolor = (*colorConverter.to_rgb(color), facealpha)
+        else:
+            markerfacecolor = (*colorConverter.to_rgb(legendmarkerfacecolor), facealpha)
+
+        if markeredgecolor is None:
+            medgecolor = (*colorConverter.to_rgb(color), edgealpha)
+        elif isinstance(markeredgecolor, dict):
+            medgecolor = (*colorConverter.to_rgb(markeredgecolor[label]), edgealpha)
+        else:
+            medgecolor = markeredgecolor
+
+        handles.append(
+            mlines.Line2D([0], [0], marker=marker, color='none', markerfacecolor=markerfacecolor,
+                   markeredgecolor=medgecolor,
+                   label=label, markersize=fontsize)
+        )
+    handles.extend(add_handles)
+
+    # create a legend
+    leg1 = fig.legend(
+        handles=handles, fancybox=True, shadow=False, ncol=ncol, title=title, 
+        facecolor='whitesmoke', loc=loc, bbox_to_anchor=bbox_to_anchor,
+        prop=dict(family='serif', size=fontsize)
+    )
+    fig.add_artist(leg1)
+    plt.setp(leg1.get_title(), family='serif', fontsize=fontsize+1)
+    leg1.get_title().set_multialignment('center')
+    
+    pass
