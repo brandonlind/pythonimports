@@ -8,6 +8,7 @@ import random
 import string
 import shutil
 import datetime
+import subprocess
 import numpy as np
 import pandas as pd
 import session_info
@@ -34,7 +35,6 @@ from functools import partial
 from myslurm import *
 from mymaps import *
 from myclasses import ColorText
-#from myfigs import *
 
 # backwards compatibility
 bar_format = '{l_bar}{bar:15}{r_bar}'

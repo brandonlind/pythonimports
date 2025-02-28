@@ -1,5 +1,8 @@
 """Functions for mapping / GIS."""
+from scalebar import add_scalebar
 
+from os import path as op
+import os
 import numpy as np
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
@@ -10,6 +13,9 @@ from cartopy.io.shapereader import Reader
 from cartopy.io.img_tiles import GoogleTiles
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.patches import Rectangle
+from shapely.geometry import Polygon, box
+import geopandas as gpd
+from matplotlib.colors import colorConverter
 
 import pythonimports as pyimp
 
@@ -20,6 +26,12 @@ def gdalwarp(infile, netcdf_outfile, proj, gdalwarp_exe=None):
     Notes
     -----
     conda install -c conda-forge gdal
+
+    Notes
+    -----
+    to retrieve proj string from a file:
+        `gdalsrsinfo <filename>`
+        - thanks https://gis.stackexchange.com/questions/55196/how-can-i-get-the-proj4-string-or-epsg-code-from-a-shapefile-prj-file
     
     Parameters
     ----------
@@ -129,13 +141,124 @@ def draw_pie_marker(ratios, xcoord, ycoord, sizes, colors, ax, edgecolors="black
     return pyimp.flatten(objects)
 
 
-def basemap(extent, shapefiles=None, figsize=(8, 15), coastlines=0.6, add_bathym=True):
+def overlaps(polygon, polygons):
+    """Determine if `polygon` overlaps with any of the `polygons`."""
+    for poly in polygons:
+        if polygon.equals(poly):
+            continue
+        if polygon.intersects(poly):
+            return True
+
+    return False
+
+
+def cut_shapes(shapefile, cut=True, epsg=4326, cut_extent=None, query=None):
+    """Cut out overlapping polygons from non-overlapping polygons.
+    
+    Notes
+    -----
+    `cut_extent` is useful when original shapefile is large
+    """
+    geodf = gpd.read_file(shapefile)
+    # geodf = geodf.loc[geodf.AREA.sort_values(ascending=False).index]  # sort polygons from largest to smallest area
+
+    if cut_extent is not None:
+        geodf = geodf.clip(box(*cut_extent))
+
+    if query is not None:
+        geodf.query(query, inplace=True)
+    
+    if geodf.crs is None:
+        geodf.set_crs(epsg=epsg, inplace=True)
+    elif geodf.crs.to_epsg() != epsg:
+        geodf.to_crs(epsg=epsg, inplace=True)
+
+    if cut is False:
+        return [geom for geom in geodf.geometry]
+
+    # Iterate through each geometry
+    non_overlapping_geoms = []
+    overlapping_geoms = []
+    for geom in geodf.geometry:
+        if not overlaps(geom, non_overlapping_geoms):
+            non_overlapping_geoms.append(geom)
+        else:
+            overlapping_geoms.append(geom)
+
+    # cut out overlapping from non overlapping
+    polygons = []
+    for geom in pyimp.pbar(non_overlapping_geoms, desc=f'cutting polygons from {op.basename(shapefile)}'):
+        polygons.append(
+            Polygon(geom, holes=overlapping_geoms)# if isinstance(overlapping_geoms, list) else None)
+        )
+
+    return polygons
+
+
+def add_shapefiles_to_map(ax, shapefiles=None, face_alpha=0.1, edge_alpha=1, zorder=20, progress_bar=False, geo_kws={}, **kwargs):
+    """Add shapefiles to `ax`.
+    
+    Parameters
+    ----------
+    ax : cartopy.mpl.geoaxes.GeoAxes
+    shapefiles
+        - a list of tuples, each tuple is (color, /path/to/shapefile.shp)
+    kwargs : dict
+        - passed to cut_shapes - now only for `epsg` kwarg
+
+    Assumes
+    -------
+    - assumed dependent files associated with .shp 
+    - generally assumes epsg 4326
+    """
+    if shapefiles is not None:
+        if progress_bar is False:
+            iterator = shapefiles
+        else:
+            iterator = pyimp.pbar(shapefiles, desc='adding shapes')
+
+        for color, shape in iterator:
+            ax.add_geometries(cut_shapes(shape, **kwargs),
+                              ccrs.PlateCarree(),
+                              facecolor=(*colorConverter.to_rgb(color), face_alpha),
+                              edgecolor=(*colorConverter.to_rgb(color), edge_alpha),
+                              zorder=zorder,
+                              **geo_kws
+                             )
+    pass
+
+
+class _ShadedReliefESRI(GoogleTiles):
+    """https://stackoverflow.com/questions/37423997/cartopy-shaded-relief"""
+    # shaded relief
+    def _image_url(self, tile):
+        x, y, z = tile
+        url = (
+            "https://server.arcgisonline.com/ArcGIS/rest/services/"
+            "World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}.jpg"
+        ).format(z=z, y=y, x=x)
+        return url
+
+    pass
+
+
+def basemap(extent, shapefiles=None, coastlines=0.6, add_bathym=True, cut_extent=None, figsize=(8, 15), **kwargs):
     """Build basemap +/- range shapefile.
 
     Parameters
     ----------
-    - extent - the geographic extent to be displayed
-    - shapefiles - a list of tuples, each tuple is (color, shapefile_path.shp)
+    extent : list
+        - the geographic extent to be displayed eg [lon_min, lon_max, lat_min, lat_max]
+    shapefiles 
+        - a list of tuples, each tuple is (color, shapefile_path.shp)
+    coastlines : int
+        - linewidth of coastlines
+    add_bathym : bool
+        - whether or not to add bathymetry data (eg if adding shapefiles on top of oceans)
+    cut_extent : list
+        - different order than `extent`, the extent to cut shapefiles (default is an internally re-ordered `extent`)
+    kwargs : dict
+        - passed to add_shapefiles_to_map and cut_shapes
 
     # douglas-fir shortcuts
     coastrange = '/data/projects/pool_seq/environemental_data/shapefiles/Coastal_DF.shp'
@@ -148,47 +271,28 @@ def basemap(extent, shapefiles=None, figsize=(8, 15), coastlines=0.6, add_bathym
     extent=[-119.5, -58, 41, 60], figsize=(15,10),
     shapefiles=[('green', '/data/projects/pool_seq/environemental_data/shapefiles/jackpine.shp')]
     """
-    class _ShadedReliefESRI(GoogleTiles):
-        """https://stackoverflow.com/questions/37423997/cartopy-shaded-relief"""
-        # shaded relief
-        def _image_url(self, tile):
-            x, y, z = tile
-            url = (
-                "https://server.arcgisonline.com/ArcGIS/rest/services/"
-                "World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}.jpg"
-            ).format(z=z, y=y, x=x)
-            return url
-
-        pass
-
+    # if cut_extent is None:
+    #     cut_extent = [extent[0], extent[2], extent[1], extent[3]]
+    
     fig = plt.figure(figsize=figsize)
     ax = plt.axes(projection=_ShadedReliefESRI().crs)
     ax.set_extent(extent, crs=ccrs.PlateCarree())
     ax.add_image(_ShadedReliefESRI(), 7)
-    ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False, alpha=0.2)
+    ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False, alpha=0.2, zorder=10)
 
     land_50m = cfeature.NaturalEarthFeature("physical", "land", "50m", edgecolor="face")
     ax.add_feature(land_50m, edgecolor="black", facecolor="gray", alpha=0.4)
+
+    ax.add_feature(cfeature.RIVERS, edgecolor="lightsteelblue")
+    ax.add_feature(cfeature.LAKES, facecolor="lightsteelblue")
+    
     states_provinces = cfeature.NaturalEarthFeature(category="cultural",
                                                     name="admin_1_states_provinces_lines",
                                                     scale="50m",
                                                     facecolor="none")
     ax.add_feature(states_provinces, edgecolor="black")
 
-    if shapefiles is not None:
-        for color, shape in shapefiles:
-            ax.add_geometries(Reader(shape).geometries(),
-                              ccrs.PlateCarree(),
-                              facecolor=color,
-                              alpha=0.1,
-                              edgecolor="none",
-                              zorder=2)
-            ax.add_geometries(Reader(shape).geometries(),
-                              ccrs.PlateCarree(),
-                              facecolor="none",
-                              edgecolor=color,
-                              alpha=0.8,
-                              zorder=3)
+    add_shapefiles_to_map(ax, shapefiles, cut_extent=cut_extent, **kwargs)
             
     ax.coastlines(resolution="10m", zorder=4, linewidth=coastlines)
     ax.add_feature(cfeature.BORDERS)
@@ -200,7 +304,7 @@ def basemap(extent, shapefiles=None, figsize=(8, 15), coastlines=0.6, add_bathym
     return ax
 
 
-def inset_map(extent, map_extent=None, shapes=[], shapefiles=None, figsize=(8, 15)):
+def inset_map(extent, map_extent=None, shapes=[], shapefiles=None, figsize=(8, 15), **kwargs):
     """Create an black and white inset map for placing within a larger map.
     
     Parameters
@@ -209,8 +313,6 @@ def inset_map(extent, map_extent=None, shapes=[], shapefiles=None, figsize=(8, 1
         extent of inset map - [minlong, maxlong, minlat, maxlat]
     map_extent - list
         extent of larger map for drawing box within inset map
-    
-    
     """
     fig = plt.figure(figsize=figsize)
 
@@ -230,6 +332,8 @@ def inset_map(extent, map_extent=None, shapes=[], shapefiles=None, figsize=(8, 1
     ax.add_feature(states_provinces, edgecolor="black")
 
     ax.add_feature(cfeature.BORDERS)
+    
+    add_shapefiles_to_map(ax, shapefiles, **kwargs)
 
     # add box for domain of larger map
     if map_extent is not None:
@@ -243,22 +347,6 @@ def inset_map(extent, map_extent=None, shapes=[], shapefiles=None, figsize=(8, 1
     # add any other shapes to the map
     for shape in shapes:
         ax.add_patch(shape)
-    
-    # add shapefiles
-    if shapefiles is not None:
-        for color, shape in shapefiles:
-            ax.add_geometries(Reader(shape).geometries(),
-                              ccrs.PlateCarree(),
-                              facecolor=color,
-                              alpha=0.1,
-                              edgecolor="none",
-                              zorder=2)
-            ax.add_geometries(Reader(shape).geometries(),
-                              ccrs.PlateCarree(),
-                              facecolor="none",
-                              edgecolor=color,
-                              alpha=0.8,
-                              zorder=3)
 
     return ax
 
@@ -300,3 +388,24 @@ def plot_pie_freqs(locus, snpinfo, envinfo, saveloc=None, use_popnames=False, po
     plt.show()
 
     pass
+
+
+def read_geofile(geofile, epsg="epsg:4326", x_dim="latitude", y_dim="longitude", debug=False):
+    """Read in netcdf file."""
+    import xarray as xr
+    import rioxarray
+
+    ds = xr.open_dataset(geofile)
+    if debug:
+        print(f'{ds.variables = }')
+    ds.rio.set_spatial_dims(x_dim=x_dim, y_dim=y_dim, inplace=True)
+    ds.rio.write_crs(epsg, inplace=True)
+    
+    layers = [var for var in list(ds.variables) if var not in ['crs', x_dim, y_dim]]
+    assert len(layers) == 1, layers
+    layer = layers[0]
+    vals = ds[layer][:,:]
+    lons = ds[layer][x_dim]
+    lats = ds[layer][y_dim]
+    
+    return ds, layer, vals, lons, lats
