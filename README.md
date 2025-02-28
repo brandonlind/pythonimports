@@ -1,8 +1,8 @@
 help documentation as of 
 
-commit 2ace557251cdfe1e2d64f0b02da9ffecbe597931  
+commit 486326b04badc7965d477fe04800666448b9afa5  
 Author: Brandon Lind <lind.brandon.m@gmail.com>  
-Date:   Mon May 6 11:17:31 2024 -0400
+Date:   Wed Oct 16 13:50:30 2024 -0400
 
 ----
 ### Python Library Documentation: module pythonimports
@@ -325,7 +325,7 @@ DATA
     colorConverter = <matplotlib.colors.ColorConverter object>
     nb = functools.partial(<class 'tqdm.std.tqdm'>, bar_format='{l_bar}{ba...
     pbar = functools.partial(<class 'tqdm.std.tqdm'>, bar_format='{l_bar}{...
-    trange = functools.partial(<function trange at 0x7f64c8178720>, bar_fo...
+    trange = functools.partial(<function trange at 0x7f8993758720>, bar_fo...
 
 ```
 
@@ -497,12 +497,12 @@ CLASSES
 
 FUNCTIONS
     add_legend(ldict, markers='s', legendmarkerfacecolor='fill', markeredgecolor=None, title=None, ax=None, loc='center left', bbox_to_anchor=(0.95, 0.5), fontsize=11, ncol=1, add_handles=[], face_alpha=1, edge_alpha=1)
-        Ad a legend to `ax`.
+        Add a legend to `ax`.
 
         Parameters
         ----------
         ldict : dict
-            key = color, value = label used in legend labels
+            key = value = label used in legend labels, value = color
         markers : dict | str
             if dict, use keys in ldict. If str, specify marker for all ldict.keys()
         legendmarkerfacecolor : 'fill' | str | tuple(R, G, B, [alpha])
@@ -1461,7 +1461,7 @@ DATA
         - You can use Optional[X] as a shorthand for Union[X, None].
 
     pbar = functools.partial(<class 'tqdm.std.tqdm'>, bar_format='{l_bar}{...
-    trange = functools.partial(<function trange at 0x7f64c8178720>, bar_fo...
+    trange = functools.partial(<function trange at 0x7f8993758720>, bar_fo...
 
 ```
 
