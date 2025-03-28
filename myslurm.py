@@ -967,7 +967,19 @@ class Seffs:
             
             series.append(series_df)
         
-        return pd.concat(series)
+        df = pd.concat(series)
+
+        for col in df.columns:
+            try:
+                df[col] = pd.to_numeric(df[col])
+            except ValueError:
+                pass
+
+        return df
+
+    def describe(self, cols=['core_walltime_hrs', 'memory_used_MB'], **kwargs):
+        """Print out quantile info for walltime hours and memory used."""
+        return self.to_dataframe(**kwargs)[cols].describe()
 
     pass
 
