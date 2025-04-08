@@ -869,6 +869,11 @@ class Seffs:
         seffs = Seffs.filter_states(self.seffs, 'timeout')
         return Seffs(seffs=seffs.copy(), unit=self.unit, units=self.units)
 
+    def oom(self):
+        """Return Seffs object for any out of memory jobs."""
+        seffs = Seffs.filter_states(self.seffs, 'memory')
+        return Seffs(seffs=seffs.copy(), unit=self.unit, units=self.units)
+
     def sh_outs(self, sh_as_key=True, internal=False):
         """key = sh, val = list of outfiles."""
         shdict = defaultdict(list)
