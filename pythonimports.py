@@ -924,3 +924,37 @@ def unwrap_dictionary(nested_dict, progress_bar=False):
 def lower_tri(df):
     """Get values from the lower triangle of a pandas dataframe."""
     return df.values[np.tril(np.ones(df.shape), k=-1).astype(bool)]
+
+
+def print_directory_tree(root_dir, print_files=False, _indent=""):
+    """Print the directory tree for everything nested in `root_dir`.
+    
+    Parameters
+    ----------
+    root_dir : str | Path
+        a directory; must satisfy `os.path.isdir(root_dir)`
+    print_files : bool
+        whether to print filenames in addition to directory names within the tree
+    _indend : str
+        used internally
+    """
+    if _indent == "":
+        print(ColorText(os.path.basename(root_dir)).bold().underline())
+
+    all_items = os.listdir(root_dir)
+    items = pd.Series(all_items, index=[op.basename(item) for item in all_items]).sort_index()
+
+    for item in items:
+        path = f'{root_dir}/{item}'
+
+        if os.path.isdir(path):
+            print(_indent + "├── " + item)
+            try:
+                print_directory_tree(path, _indent=_indent + "│   ", print_files=print_files)
+            except TypeError as e:
+                print(f'{print_files = }')
+                raise e
+        else:
+            if print_files is True:
+                print(_indent + "├── " + item)
+    pass
