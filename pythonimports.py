@@ -6,6 +6,7 @@ import pydoc
 import pickle
 import random
 import string
+import socket
 import shutil
 import datetime
 import subprocess
@@ -305,6 +306,9 @@ def getdirs(paths: Union[str, list], verbose=False, exclude=None, **kwargs) -> l
     if isinstance(paths, str):
         print("converting to list")
         paths = [paths]
+
+    if isinstance(exclude, str):
+        exclude = [exclude]
         
     # get all subdirectories
     newdirs = []
@@ -833,6 +837,8 @@ def latest_commit(repopath=None):
     except KeyError as e:
         env = ''
 
+    hostname = 'hostname: %s\n' % socket.gethostname()
+
     gitout = pyimp._git_pretty(repopath)
     current_datetime = "Today:\t" + time.strftime("%B %d, %Y - %H:%M:%S %Z") + "\n"
     version = "python version: " + sys.version.split()[0] + "\n"
@@ -841,7 +847,7 @@ def latest_commit(repopath=None):
     print(
         hashes
         + current_datetime
-        + version + f'{env}\n'
+        + version + f'{env}{hostname}\n'
         + f"Current commit of {op.basename(repopath)}:\n"
         + gitout
         + hashes

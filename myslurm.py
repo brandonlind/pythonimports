@@ -15,6 +15,9 @@ from functools import partial
 import warnings
 import math
 from IPython.display import clear_output
+import base64
+import paramiko
+import pickle
 
 import pythonimports as pyimp
 import balance_queue as balq
@@ -347,6 +350,7 @@ class Seff:
         self.info = [i for i in info[:11] if 'WARNING' not in i]
         self.info[-2] = self.info[-2].split("(estimated")[0]
         self.slurm_job_id = str(slurm_job_id)
+        self.cluster = info[1].split()[1]
         if len(self.info) == 11:
             self.nodes = int(self.info[4].split()[-1])
             self.cpus = self.info[5].split()[-1]
@@ -515,9 +519,12 @@ class Seffs:
         self.cpu_us = MySeries([seff.cpu_u(unit=unit) for seff in seffs.values()],
                                index=pyimp.keys(seffs),
                                name=unit)
-
-        self.cpu_es = MySeries([seff.cpu_e() for seff in seffs.values()],
+        try:
+            self.cpu_es = MySeries([seff.cpu_e() for seff in seffs.values()],
                                index=pyimp.keys(seffs))
+        except IndexError as e:
+            print('skipping cpu_es')
+            pass
 
         self.core_walltimes = MySeries([seff.core_walltime(unit=unit) for seff in seffs.values()],
                                        index=pyimp.keys(seffs),
@@ -982,9 +989,80 @@ class Seffs:
 
         return df
 
+    def to_csv(self, path_or_buf, df_kwargs={}, *args, **kwargs):
+        """Write Seffs.to_dataframe to csv.
+
+        Parameters
+        ----------
+        df_kwargs : dict
+            passed to Seffs.to_dataframe (e.g., time_units='hrs', mem_units='MB')
+            default unless overwritten : kwargs = dict(index=False, header=True, sep='\t')
+        path_or_buf, args, kwargs
+            all passed to pd.DataFrame
+
+        Returns
+        -------
+        None
+        """
+        # overwrite default with input kwargs
+        kwargs = {**dict(index=False, header=True, sep='\t'), **kwargs}
+
+        self.to_dataframe(**df_kwargs).to_csv(path_or_buf, *args, **kwargs)
+
+        print('seffs written to: %s' % op.expanduser(path_or_buf))
+
+        pass
+
     def describe(self, cols=['core_walltime_hrs', 'memory_used_MB'], **kwargs):
         """Print out quantile info for walltime hours and memory used."""
         return self.to_dataframe(**kwargs)[cols].describe()
+
+    @staticmethod
+    def remote(hostname='login.hpc.cam.uchc.edu', outs=None, user=None, python=None):
+        """Connect to remote host and execute seff commands.
+        
+        Parameters
+        ----------
+        hostname : str
+            host address
+        outs : list | str
+            list of .out files
+        user : str
+            bash $USER
+        python : path
+            path to python executable        
+        """
+        if user is None:
+            user = os.environ['USER']
+
+        if python is None:
+            python = shutil.which('python')
+
+        if isinstance(outs, str):
+            outs = [outs]
+
+        ssh = paramiko.SSHClient()
+
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+        key = paramiko.RSAKey.from_private_key_file('%s/.ssh/id_rsa' % os.environ['HOME'])
+
+        ssh.connect(hostname, username=user, pkey=key)
+
+        stdin, stdout, stderr = ssh.exec_command(
+            f'{python} /home/FCAM/blind/remote_seffs.py %s' % ' '.join(outs)
+        )
+
+        # Read the output from stdout
+        output = stdout.read()
+
+        # Decode the base64 encoded output
+        decoded_output = base64.b64decode(output)
+
+        # Deserialize the object
+        seffs_object = pickle.loads(decoded_output)
+
+        return seffs_object
 
     pass
 
@@ -1062,6 +1140,19 @@ class SQInfo:
         else:
             memory = int(memory.replace("M", ""))
         return memory
+
+    def cancel(self, verbose=True):
+        """Cancel this job."""
+        Squeue._update_job(['scancel'], jobid=self.pid)
+        if verbose is True:
+            print(f"cancelled {self.pid}")
+        pass
+        
+    # def _update_job(cmd, job=None, jobid=None):
+    #     """Execute 'scontrol update' or 'scancel' command for jobid."""
+    #     # add jobid to command
+    #     if jobid is not None:
+    #         cmd.append(f"jobid={jobid}" if "scancel" not in cmd else jobid)
 
     pass
 
@@ -1662,7 +1753,7 @@ class Squeue:
         timelimit - total wall time requested
         """
         def _cmd(account=None, minmemorynode=None, timelimit=None, to_partition=None, to_reservation=None, to=None,
-                 to_res=None, **kwargs):
+                 to_res=None, to_qos=None, **kwargs):
             """Create bash command for slurm scontrol update."""
             # base command
             cmd_ = "scontrol update"
@@ -1679,9 +1770,12 @@ class Squeue:
             if to_partition is not None or to is not None:
                 to_partition = to_partition if to_partition is not None else to
                 cmd_ = f"{cmd_} partition={to_partition}"
+            if to_qos is not None:
+                cmd_ = f"{cmd_} qos={to_qos}"
             if to_reservation is not None or to_res is not None:
                 to_reservation = to_reservation if to_reservation is not None else to_res
                 cmd_ = f"{cmd_} reservation={to_reservation}"
+            print(f'{cmd_ = }')
             return cmd_
 
         # get scontrol update command
