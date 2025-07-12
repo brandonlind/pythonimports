@@ -1,8 +1,8 @@
 help documentation as of 
 
-commit 486326b04badc7965d477fe04800666448b9afa5  
+commit ca778d79cc7a559fde51494a1ce3c14bf1ba0f60  
 Author: Brandon Lind <lind.brandon.m@gmail.com>  
-Date:   Wed Oct 16 13:50:30 2024 -0400
+Date:   Sat Jul 12 15:45:46 2025 -0400
 
 ----
 ### Python Library Documentation: module pythonimports
@@ -179,6 +179,18 @@ FUNCTIONS
     pklload(path: str)
         Load object from a .pkl file
 
+    print_directory_tree(root_dir, print_files=False, _indent='')
+        Print the directory tree for everything nested in `root_dir`.
+
+        Parameters
+        ----------
+        root_dir : str | Path
+            a directory; must satisfy `os.path.isdir(root_dir)`
+        print_files : bool
+            whether to print filenames in addition to directory names within the tree
+        _indend : str
+            used internally
+
     printmd(string: str) -> None
         For jupyter notebook, print as markdown.
 
@@ -325,7 +337,7 @@ DATA
     colorConverter = <matplotlib.colors.ColorConverter object>
     nb = functools.partial(<class 'tqdm.std.tqdm'>, bar_format='{l_bar}{ba...
     pbar = functools.partial(<class 'tqdm.std.tqdm'>, bar_format='{l_bar}{...
-    trange = functools.partial(<function trange at 0x7f8993758720>, bar_fo...
+    trange = functools.partial(<function trange at 0x7fd366768360>, bar_fo...
 
 ```
 
@@ -886,6 +898,9 @@ CLASSES
      |  __repr__(self)
      |      Return repr(self).
      |
+     |  cancel(self, verbose=True)
+     |      Cancel this job.
+     |
      |  mem(self, units='MB')
      |
      |  ----------------------------------------------------------------------
@@ -1010,6 +1025,9 @@ CLASSES
      |
      |  copy(self)
      |
+     |  describe(self, cols=['core_walltime_hrs', 'memory_used_MB'], **kwargs)
+     |      Print out quantile info for walltime hours and memory used.
+     |
      |  failed(self)
      |      Return Seffs object for any failed job.
      |
@@ -1024,6 +1042,9 @@ CLASSES
      |
      |  most_recent(self)
      |      From the shfiles inferred from outs, pair most recent out with sh.
+     |
+     |  oom(self)
+     |      Return Seffs object for any out of memory jobs.
      |
      |  out_sh(self)
      |      key = out, val = sh.
@@ -1055,6 +1076,21 @@ CLASSES
      |  timeouts(self)
      |      Return Seffs object for any timeout jobs.
      |
+     |  to_csv(self, path_or_buf, df_kwargs={}, *args, **kwargs)
+     |      Write Seffs.to_dataframe to csv.
+     |
+     |      Parameters
+     |      ----------
+     |      df_kwargs : dict
+     |          passed to Seffs.to_dataframe (e.g., time_units='hrs', mem_units='MB')
+     |          default unless overwritten : kwargs = dict(index=False, header=True, sep='  ')
+     |      path_or_buf, args, kwargs
+     |          all passed to pd.DataFrame
+     |
+     |      Returns
+     |      -------
+     |      None
+     |
      |  to_dataframe(self, time_units='hrs', mem_units='MB')
      |      Convert seff info in Seffs to a dataframe, one row for each key (ie slurm_job_id) in self.
      |
@@ -1078,6 +1114,20 @@ CLASSES
      |      Execute Seffs in parallel using `lview`.
      |
      |      lview = ipyparallel.client.view.LoadBalancedView
+     |
+     |  remote(hostname='login.hpc.cam.uchc.edu', outs=None, user=None, python=None)
+     |      Connect to remote host and execute seff commands.
+     |
+     |      Parameters
+     |      ----------
+     |      hostname : str
+     |          host address
+     |      outs : list | str
+     |          list of .out files
+     |      user : str
+     |          bash $USER
+     |      python : path
+     |          path to python executable
      |
      |  ----------------------------------------------------------------------
      |  Data descriptors defined here:
@@ -1331,6 +1381,9 @@ CLASSES
      |  __repr__(self)
      |      Return repr(self).
      |
+     |  cancel(self, verbose=True)
+     |      Cancel this job.
+     |
      |  mem(self, units='MB')
      |
      |  ----------------------------------------------------------------------
@@ -1461,7 +1514,7 @@ DATA
         - You can use Optional[X] as a shorthand for Union[X, None].
 
     pbar = functools.partial(<class 'tqdm.std.tqdm'>, bar_format='{l_bar}{...
-    trange = functools.partial(<function trange at 0x7f8993758720>, bar_fo...
+    trange = functools.partial(<function trange at 0x7fd366768360>, bar_fo...
 
 ```
 
