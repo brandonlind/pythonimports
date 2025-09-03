@@ -1013,7 +1013,7 @@ class Seffs:
 
         pass
 
-    def describe(self, cols=['core_walltime_hrs', 'memory_used_MB'], **kwargs):
+    def describe(self, cols=['walltime_hrs', 'core_walltime_hrs', 'memory_used_MB'], **kwargs):
         """Print out quantile info for walltime hours and memory used."""
         return self.to_dataframe(**kwargs)[cols].describe()
 
