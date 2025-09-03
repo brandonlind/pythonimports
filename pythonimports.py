@@ -30,7 +30,7 @@ from typing import Optional, Union
 from datetime import datetime as dt
 from tqdm.notebook import tqdm as tnb
 from collections import OrderedDict, Counter, defaultdict
-from IPython.display import Markdown, display, clear_output
+from IPython.display import Markdown, display, clear_output, HTML
 from functools import partial
 
 from myslurm import *
@@ -768,7 +768,7 @@ def sleeping(counts: int, desc="sleeping", sleep=1, raise_e=False) -> None:
 
 
 def _git_pretty(repo, split_lines=False):
-    """Get the latest commit hash, author, and date for the repo `repo`."""
+    """Get the latest commit hash, author, date, and url for the repo `repo`."""
     cwd = os.getcwd()
     os.chdir(repo)
 
@@ -777,11 +777,15 @@ def _git_pretty(repo, split_lines=False):
     ).decode("utf-8").split("\n")[:3]
 
     if split_lines is False:
-        gitout = "  \n".join(gitout) + "\n"
+        gitout = "  \n".join(gitout)# + "\n"
+
+    output = subprocess.run('git remote get-url origin'.split(), capture_output=True, check=True)
+    origin = output.stdout.decode().strip()
+    url = origin.replace('git@', 'https://').replace('.com:', ".com/").removesuffix('.git')
 
     os.chdir(cwd)
 
-    return gitout
+    return gitout, url
 
 
 def _find_pythonimports():
@@ -826,11 +830,18 @@ def _update_pythonimports_README():
 
 
 def latest_commit(repopath=None):
-    """Print latest commit upon import for git repo in `repopath`, default `_find_pythonimports()`."""
+    """Display latest commit upon import for git repo in `repopath`, make repo clickable.
+
+    Parameters
+    ----------
+    repopath : str
+         path to directory with .git - default `_find_pythonimports()`
+    """
     import pythonimports as pyimp
 
     if repopath is None:
         repopath = pyimp._find_pythonimports()
+    repo_name = op.basename(repopath)
 
     try:
         env = 'conda env: %s\n' % os.environ['CONDA_DEFAULT_ENV']
@@ -839,19 +850,38 @@ def latest_commit(repopath=None):
 
     hostname = 'hostname: %s\n' % socket.gethostname()
 
-    gitout = pyimp._git_pretty(repopath)
+    output = subprocess.run('git remote get-url origin'.split(), capture_output=True, check=True)
+    origin = output.stdout.decode().strip()
+    url = origin.replace('git@', 'https://').replace('.com:', ".com/").removesuffix('.git')
+
+    # gitout = pyimp._git_pretty(repopath)
+    gitout, url = pyimp._git_pretty(repopath)
     current_datetime = "Today:\t" + time.strftime("%B %d, %Y - %H:%M:%S %Z") + "\n"
     version = "python version: " + sys.version.split()[0] + "\n"
-    hashes = "##################################################################\n"
+    hashes = "##################################################################"
 
-    print(
-        hashes
-        + current_datetime
-        + version + f'{env}{hostname}\n'
-        + f"Current commit of {op.basename(repopath)}:\n"
-        + gitout
-        + hashes
-    )
+    html_output = f"""
+<div style="font-size:13px; font-family:monospace;">
+<pre>
+{hashes}
+{current_datetime.strip()}
+{version}{env}{hostname}
+Current commit of <a href="{url}" target="_blank">{repo_name}</a>:
+{gitout}
+{hashes}
+</pre>
+    """
+    
+    display(HTML(html_output))
+
+    # print(
+    #     hashes
+    #     + current_datetime
+    #     + version + f'{env}{hostname}\n'
+    #     + f"Current commit of {repo_name}:\n"
+    #     + gitout
+    #     + hashes
+    # )
 
     pass
 
