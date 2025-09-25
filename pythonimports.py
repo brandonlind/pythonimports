@@ -829,13 +829,15 @@ def _update_pythonimports_README():
     return file
 
 
-def latest_commit(repopath=None):
+def latest_commit(repopath=None, html=True):
     """Display latest commit upon import for git repo in `repopath`, make repo clickable.
 
     Parameters
     ----------
     repopath : str
-         path to directory with .git - default `_find_pythonimports()`
+        path to directory with .git - default `_find_pythonimports()`
+    html : bool
+        whether to display output with HTML (for jupyter notebooks) or to print output (for command line)
     """
     import pythonimports as pyimp
 
@@ -846,21 +848,17 @@ def latest_commit(repopath=None):
     try:
         env = 'conda env: %s\n' % os.environ['CONDA_DEFAULT_ENV']
     except KeyError as e:
-        env = ''
+        env = 'unable to detect conda environment'
 
     hostname = 'hostname: %s\n' % socket.gethostname()
 
-    output = subprocess.run('git remote get-url origin'.split(), capture_output=True, check=True)
-    origin = output.stdout.decode().strip()
-    url = origin.replace('git@', 'https://').replace('.com:', ".com/").removesuffix('.git')
-
-    # gitout = pyimp._git_pretty(repopath)
     gitout, url = pyimp._git_pretty(repopath)
     current_datetime = "Today:\t" + time.strftime("%B %d, %Y - %H:%M:%S %Z") + "\n"
     version = "python version: " + sys.version.split()[0] + "\n"
     hashes = "##################################################################"
 
-    html_output = f"""
+    if html is True:
+        html_output = f"""
 <div style="font-size:13px; font-family:monospace;">
 <pre>
 {hashes}
@@ -870,18 +868,18 @@ Current commit of <a href="{url}" target="_blank">{repo_name}</a>:
 {gitout}
 {hashes}
 </pre>
-    """
+"""
     
-    display(HTML(html_output))
-
-    # print(
-    #     hashes
-    #     + current_datetime
-    #     + version + f'{env}{hostname}\n'
-    #     + f"Current commit of {repo_name}:\n"
-    #     + gitout
-    #     + hashes
-    # )
+        display(HTML(html_output))
+    else:
+        print(
+            hashes + '\n'
+            + current_datetime
+            + version + f'{env}{hostname}\n'
+            + f"Current commit of {repo_name}:\n"
+            + gitout + '\n'
+            + hashes
+        )
 
     pass
 
