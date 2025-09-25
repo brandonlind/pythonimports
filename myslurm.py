@@ -1970,6 +1970,34 @@ class Squeue:
 
         pass
 
+    def to_dataframe(self):
+        """Convert the squeue info into a pd.DataFrame."""
+        series = []
+        for pid, info in self.sq.items():
+            info_dict = info.__dict__.copy()
+            info_dict.pop('info')
+            series.append(pd.Series(info_dict, name=pid))
+        df = pd.concat(series, axis=1).T
+        df.columns = df.columns.to_series().apply(str.upper).tolist()
+        return df
+
+    def print(self):
+        """Print out the squeue info similar to how it would appear in command line."""
+        df = self.to_dataframe()
+        # calculate max width for each column
+        col_widths = {col: max(df[col].astype(str).map(len).max(), len(str(col))) for col in df.columns}
+        
+        # create a format string
+        row_format = "  ".join([f"{{:<{col_widths[col]}}}" for col in df.columns])
+        
+        # print header
+        print(row_format.format(*df.columns))
+        
+        # print rows
+        for idx, row in df.iterrows():
+            print(row_format.format(*row.astype(str)))
+        pass
+
     pass
 
 
