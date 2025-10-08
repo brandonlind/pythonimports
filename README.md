@@ -1,9 +1,6 @@
 help documentation as of 
 
-commit ca778d79cc7a559fde51494a1ce3c14bf1ba0f60  
-Author: Brandon Lind <lind.brandon.m@gmail.com>  
-Date:   Sat Jul 12 15:45:46 2025 -0400
-
+('commit f447ba2c8bba8b3d996589427d424907a41a8e4a  \nAuthor: Brandon Lind <lind.brandon.m@gmail.com>  \nDate:   Tue Oct 7 21:56:21 2025 -0400', 'https://github.com/brandonlind/pythonimports')
 ----
 ### Python Library Documentation: module pythonimports
 ```
@@ -96,8 +93,15 @@ FUNCTIONS
     keys(dikt: dict) -> list
         Get a list of keys in a dictionary.
 
-    latest_commit(repopath=None)
-        Print latest commit upon import for git repo in `repopath`, default `_find_pythonimports()`.
+    latest_commit(repopath=None, html=True)
+        Display latest commit upon import for git repo in `repopath`, make repo clickable.
+
+        Parameters
+        ----------
+        repopath : str
+            path to directory with .git - default `_find_pythonimports()`
+        html : bool
+            whether to display output with HTML (for jupyter notebooks) or to print output (for command line)
 
     lower_tri(df)
         Get values from the lower triangle of a pandas dataframe.
@@ -337,7 +341,7 @@ DATA
     colorConverter = <matplotlib.colors.ColorConverter object>
     nb = functools.partial(<class 'tqdm.std.tqdm'>, bar_format='{l_bar}{ba...
     pbar = functools.partial(<class 'tqdm.std.tqdm'>, bar_format='{l_bar}{...
-    trange = functools.partial(<function trange at 0x7fd366768360>, bar_fo...
+    trange = functools.partial(<function trange at 0x7f2c0a058360>, bar_fo...
 
 ```
 
@@ -348,7 +352,141 @@ DATA
 NAME
     mymaps - Functions for mapping / GIS.
 
+CLASSES
+    cartopy.io.img_tiles.GoogleTiles(cartopy.io.img_tiles.GoogleWTS)
+        ESRIShadedReliefTint
+
+    class ESRIShadedReliefTint(cartopy.io.img_tiles.GoogleTiles)
+     |  ESRIShadedReliefTint(color=(70, 110, 160), strength=0.4, desaturate=0.8, **kwargs)
+     |
+     |  ESRI World Shaded Relief (pre-colored) with a customizable color tint.
+     |
+     |  Parameters
+     |  ----------
+     |  color : (R, G, B)
+     |      The target tint color, e.g., (40, 100, 170) for a cool blue.
+     |  strength : float in [0, 1]
+     |      How strongly to push toward the tint color (0=no tint, 1=full tint).
+     |  desaturate : float
+     |      Factor to desaturate the original tile before tinting (1.0 = unchanged).
+     |
+     |  Method resolution order:
+     |      ESRIShadedReliefTint
+     |      cartopy.io.img_tiles.GoogleTiles
+     |      cartopy.io.img_tiles.GoogleWTS
+     |      builtins.object
+     |
+     |  Methods defined here:
+     |
+     |  __init__(self, color=(70, 110, 160), strength=0.4, desaturate=0.8, **kwargs)
+     |      Parameters
+     |      ----------
+     |      desired_tile_form: optional
+     |          Defaults to 'RGB'.
+     |      style: optional
+     |          The style for the Google Maps tiles.  One of 'street',
+     |          'satellite', 'terrain', and 'only_streets'.  Defaults to 'street'.
+     |      url: optional
+     |          URL pointing to a tile source and containing {x}, {y}, and {z}.
+     |          Such as: ``'https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}.jpg'``
+     |
+     |  get_image(self, tile)
+     |
+     |  ----------------------------------------------------------------------
+     |  Data and other attributes defined here:
+     |
+     |  __abstractmethods__ = frozenset()
+     |
+     |  ----------------------------------------------------------------------
+     |  Methods inherited from cartopy.io.img_tiles.GoogleWTS:
+     |
+     |  find_images = _find_images(self, target_domain, target_z, start_tile=(0, 0, 0))
+     |
+     |  image_for_domain(self, target_domain, target_z)
+     |
+     |  subtiles(self, x_y_z)
+     |
+     |  tile_bbox(self, x, y, z, y0_at_north_pole=True)
+     |      Return the ``(x0, x1), (y0, y1)`` bounding box for the given x, y, z
+     |      tile position.
+     |
+     |      Parameters
+     |      ----------
+     |      x
+     |          The x tile coordinate in the Google tile numbering system.
+     |      y
+     |          The y tile coordinate in the Google tile numbering system.
+     |      z
+     |          The z tile coordinate in the Google tile numbering system.
+     |
+     |      y0_at_north_pole: optional
+     |          Boolean representing whether the numbering of the y coordinate
+     |          starts at the north pole (as is the convention for Google tiles)
+     |          or not (in which case it will start at the south pole, as is the
+     |          convention for TMS). Defaults to True.
+     |
+     |  tileextent(self, x_y_z)
+     |      Return extent tuple ``(x0,x1,y0,y1)`` in Mercator coordinates.
+     |
+     |  ----------------------------------------------------------------------
+     |  Data descriptors inherited from cartopy.io.img_tiles.GoogleWTS:
+     |
+     |  __dict__
+     |      dictionary for instance variables
+     |
+     |  __weakref__
+     |      list of weak references to the object
+
 FUNCTIONS
+    add_north_arrow(ax, location_xy=(0.92, 0.08), length_km=None, color='k', lw=2.5, mutation_scale=18, text='N', font_size=12, box_alpha=1, zorder=1000)
+        Add a north-pointing arrow that is geodetically correct at its placement location.
+
+        Parameters
+        ----------
+        ax : Cartopy GeoAxes
+        location_xy : (x, y)
+            Placement in axes fraction coords (0-1). E.g., (0.92, 0.08) ~ bottom-right.
+        length_km : float or None
+            Arrow length in km. If None, picks a nice value ~1/8 of the map height.
+        color : str
+            Arrow and text color.
+        lw : float
+            Arrow line width.
+        mutation_scale : float
+            Controls arrowhead size for FancyArrowPatch.
+        text : str
+            Label for the arrow (usually 'N').
+        font_size : int
+            Font size for the label.
+        box_alpha : float
+            Background alpha for the label for readability.
+
+    add_scalebar(ax: matplotlib.axes._axes.Axes, length_km=None, location_xy=(0.1, 0.05), ndiv: int = 2, height_frac: float = 0.01, linewidth: float = 2.5, color: str = 'k', font_size: int = 9, box_alpha: float = 1, units: str = 'km', arrow_location=(0.15, 0.08), zorder=1000) -> None
+        Add a scale bar that is accurate at its placement location for the current map.
+        Distances computed on WGS84 using a rhumb line (constant latitude for east-west bar).
+
+        Parameters
+        ----------
+        ax : plt.Axes (Cartopy axes)
+        length_km : float or None
+            If None, choose ~1/4 of map width at the bar's latitude, rounded to {1,2,5}*10^n.
+        location_xy : tuple
+            Placement in axes fraction coordinates (x,y). (0,0)=bottom-left.
+        ndiv : int
+            Number of subdivisions (e.g., 2 → 0, mid, end ticks).
+        height_frac : float
+            Bar height as a fraction of the map's latitude span (visual thickness).
+        linewidth : float
+            Line width for the bar.
+        color : str
+            Color of the bar and text.
+        font_size : int
+            Font size for labels.
+        box_alpha : float
+            Opacity for the background text box.
+        units : str
+            Display units ("km" recommended).
+
     add_shapefiles_to_map(ax, shapefiles=None, face_alpha=0.1, edge_alpha=1, zorder=20, progress_bar=False, geo_kws={}, **kwargs)
         Add shapefiles to `ax`.
 
@@ -365,34 +503,52 @@ FUNCTIONS
         - assumed dependent files associated with .shp
         - generally assumes epsg 4326
 
-    basemap(extent, shapefiles=None, coastlines=0.6, add_bathym=True, cut_extent=None, figsize=(8, 15), **kwargs)
-        Build basemap +/- range shapefile.
+    basemap(extent, projection=None, centralize_projection_on_extent=True, shaded_relief: str = 'stock', stamen_zoom=None, figsize=(10, 8), add_rivers=True, gridline_kwargs=None, gridline_width=0.5, scalebar_kwargs={}, scalebar_zorder=1000, shapefiles=None, cut_extent=None, scalebar=True, x_interval=None, y_interval=None, ticklabels=True, **kwargs)
+        Create a Cartopy map for the given extent with shaded relief and an accurate scale bar.
 
         Parameters
         ----------
-        extent : list
-            - the geographic extent to be displayed eg [lon_min, lon_max, lat_min, lat_max]
-        shapefiles
-            - a list of tuples, each tuple is (color, shapefile_path.shp)
-        coastlines : int
-            - linewidth of coastlines
-        add_bathym : bool
-            - whether or not to add bathymetry data (eg if adding shapefiles on top of oceans)
+        extent : [min_lon, max_lon, min_lat, max_lat]
+            Geographic extent in degrees.
+        projection : ccrs.Projection or None
+            If None, choose based on extent (recenter PlateCarree or Lambert Azimuthal for high-lat).
+        centralize_projection_on_extent : bool
+            If True and projection is None, center the projection at the extent's center longitude (and
+            latitude for azimuthal).
+        shaded_relief : str
+            "stock" uses ax.stock_img() (low-res but offline).
+            "stamen-terrain" / "stamen-toner-lite" use tile servers (requires internet).
+            "none" disables a background.
+        stamen_zoom : int or None
+            If None, approximates a zoom from the extent width.
+        figsize : (w, h)
+            Matplotlib figure size in inches.
+        add_rivers : bool
+            whether to add river and lake centerlines from natural earth feature
+        gridline_kwargs : dict
+            Customization for gridlines (e.g., {"linewidth":0.5, "color":"gray"}).
+        scalebar_kwargs : dict
+            Args passed to add_scalebar (e.g., {"length_km":100, "location_xy":(0.1,0.08)}).
+        scalebar_zorder : int
+            zorder for scalebar and north arrow
+        shapefiles : list
+            a list of tuples, each tuple is (color, shapefile_path.shp)
         cut_extent : list
-            - different order than `extent`, the extent to cut shapefiles (default is an internally re-ordered `extent`)
+            different order than `extent`, the extent to cut shapefiles (default is an internally re-ordered `extent`)
+        scalebar : bool
+            whether to add a scalebar
         kwargs : dict
-            - passed to add_shapefiles_to_map and cut_shapes
+            passed to add_shapefiles_to_map and cut_shapes
+        x_interval : [int, float]
+            manually set interval of x-axis (in degrees)
+        y_interval : [int, float]
+            manually set interval of y-axis (in degrees)
+        ticklables : bool
+            whether to keep x- and y- ticklabels
 
-        # douglas-fir shortcuts
-        coastrange = '/data/projects/pool_seq/environemental_data/shapefiles/Coastal_DF.shp'
-        intrange = '/data/projects/pool_seq/environemental_data/shapefiles/Interior_DF.shp'
-            # df_shapfiles = zip(['lime', 'purple'], [coastrange, intrange])
-            # extent=[-130, -112.5, 37.5, 55.5]
-            # zoom out [-130, -108.5, 32.5, 55.5]
-
-        # jack pine shortcuts
-        extent=[-119.5, -58, 41, 60], figsize=(15,10),
-        shapefiles=[('green', '/data/projects/pool_seq/environemental_data/shapefiles/jackpine.shp')]
+        Returns
+        -------
+        fig, ax
 
     cut_shapes(shapefile, cut=True, epsg=4326, cut_extent=None, query=None)
         Cut out overlapping polygons from non-overlapping polygons.
@@ -425,6 +581,8 @@ FUNCTIONS
         -----
         - thanks stackoverflow! https://stackoverflow.com/questions/56337732/how-to-plot-scatter-pie-chart-using-matplotlib
 
+    draw_rectangle(ax, extent, facecolor='gray', alpha=0.5, linewidth=3, zorder=1500)
+
     gdalwarp(infile, netcdf_outfile, proj, gdalwarp_exe=None)
         Convert `infile` (eg .tif or .nc) to WGS84 `netcdf_outfile` (.nc).
 
@@ -451,7 +609,7 @@ FUNCTIONS
             path to gdalwarp executable - eg one created with conda
                 ~/anaconda3/envs/gdal_env/bin/gdalwarp
 
-    inset_map(extent, map_extent=None, shapes=[], shapefiles=None, figsize=(8, 15), **kwargs)
+    inset_map(extent, map_extent=None, shapes=[], shapefiles=None, figsize=(8, 15), projection=None, **kwargs)
         Create an black and white inset map for placing within a larger map.
 
         Parameters
@@ -1025,7 +1183,7 @@ CLASSES
      |
      |  copy(self)
      |
-     |  describe(self, cols=['core_walltime_hrs', 'memory_used_MB'], **kwargs)
+     |  describe(self, cols=['walltime_hrs', 'core_walltime_hrs', 'memory_used_MB'], **kwargs)
      |      Print out quantile info for walltime hours and memory used.
      |
      |  failed(self)
@@ -1304,6 +1462,9 @@ CLASSES
      |  pids(self, **kwargs)
      |      Get a list of pids, subset with kwargs.
      |
+     |  print(self)
+     |      Print out the squeue info similar to how it would appear in command line.
+     |
      |  release(self, num_jobs=None, **kwargs)
      |      Release held jobs. Parameters described in `Squeue._update_job.__doc__`.
      |
@@ -1318,6 +1479,9 @@ CLASSES
      |      Print counts of states and statuses of the queue.
      |
      |  times(self, unit='clock', **kwargs)
+     |
+     |  to_dataframe(self)
+     |      Convert the squeue info into a pd.DataFrame.
      |
      |  update(self, num_jobs=None, **kwargs)
      |      Update jobs in slurm queue with scontrol, and update job info in Squeue class.
@@ -1514,7 +1678,7 @@ DATA
         - You can use Optional[X] as a shorthand for Union[X, None].
 
     pbar = functools.partial(<class 'tqdm.std.tqdm'>, bar_format='{l_bar}{...
-    trange = functools.partial(<function trange at 0x7fd366768360>, bar_fo...
+    trange = functools.partial(<function trange at 0x7f2c0a058360>, bar_fo...
 
 ```
 
