@@ -12,8 +12,10 @@ from functools import partial
 from cartopy.io.img_tiles import Stamen
 from cartopy.io.shapereader import Reader
 from cartopy.io.img_tiles import GoogleTiles
+from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.patches import Rectangle, FancyArrowPatch
+import matplotlib.ticker as mticker
 from shapely.geometry import Polygon, box
 import geopandas as gpd
 from matplotlib.colors import colorConverter
@@ -549,6 +551,7 @@ def add_scalebar(ax: plt.Axes,
     
     pass
 
+
 def basemap(
     extent,
     projection=None,
@@ -558,11 +561,15 @@ def basemap(
     figsize=(10, 8),
     add_rivers=True,
     gridline_kwargs=None,
+    gridline_width=0.5,
     scalebar_kwargs={},
     scalebar_zorder=1000,
     shapefiles=None,
     cut_extent=None,
     scalebar=True,
+    x_interval=None,
+    y_interval=None,
+    ticklabels=True,
     **kwargs
 ):
     """
@@ -585,18 +592,28 @@ def basemap(
         If None, approximates a zoom from the extent width.
     figsize : (w, h)
         Matplotlib figure size in inches.
+    add_rivers : bool
+        whether to add river and lake centerlines from natural earth feature
     gridline_kwargs : dict
         Customization for gridlines (e.g., {"linewidth":0.5, "color":"gray"}).
     scalebar_kwargs : dict
         Args passed to add_scalebar (e.g., {"length_km":100, "location_xy":(0.1,0.08)}).
+    scalebar_zorder : int
+        zorder for scalebar and north arrow
     shapefiles : list
-        - a list of tuples, each tuple is (color, shapefile_path.shp)
+        a list of tuples, each tuple is (color, shapefile_path.shp)
     cut_extent : list
-        - different order than `extent`, the extent to cut shapefiles (default is an internally re-ordered `extent`)
+        different order than `extent`, the extent to cut shapefiles (default is an internally re-ordered `extent`)
+    scalebar : bool
+        whether to add a scalebar
     kwargs : dict
-        - passed to add_shapefiles_to_map and cut_shapes
-    scale : bool
-        whether to add a scale bar or not
+        passed to add_shapefiles_to_map and cut_shapes
+    x_interval : [int, float]
+        manually set interval of x-axis (in degrees)
+    y_interval : [int, float]
+        manually set interval of y-axis (in degrees)
+    ticklables : bool
+        whether to keep x- and y- ticklabels
 
     Returns
     -------
@@ -621,7 +638,7 @@ def basemap(
     # Set the displayed extent using geodetic PlateCarree coordinates
     ax.set_extent(extent, crs=ccrs.PlateCarree())
 
-    # ax.add_image(mm._ShadedReliefESRI(), 7)
+    # ax.add_image(_ShadedReliefESRI(), 7)
     ax.add_image(ESRIShadedReliefTint(color=(255, 255, 255), strength=0.35, desaturate=0.7), 7)
     
     # Optional map adornments
@@ -654,16 +671,30 @@ def basemap(
     add_shapefiles_to_map(ax, shapefiles, cut_extent=cut_extent, zorder=100, **kwargs)
 
     # add gridlines
-    gl_kwargs = dict(draw_labels=True, linewidth=0.5, color="gray", alpha=0.5, linestyle="--", zorder=100)
-    if gridline_kwargs:
-        gl_kwargs.update(gridline_kwargs)
+    xmin, xmax, ymin, ymax = ax.get_extent(crs=ccrs.PlateCarree())
+    gl_kwargs = dict(draw_labels=True, linewidth=gridline_width, color="gray", alpha=0.5, linestyle="--", zorder=100)
     gl = ax.gridlines(**gl_kwargs)
-    # Some projections don't support label toggles; try/except to be safe.
-    for attr in ["top_labels", "right_labels"]:
-        try:
-            setattr(gl, attr, False)
-        except Exception:
-            pass
+    ax._gridliner = gl
+
+    gl.xformatter = LongitudeFormatter()
+    gl.yformatter = LatitudeFormatter()
+
+    gl.top_labels = False
+    gl.right_labels = False
+
+    if ticklabels is False:
+        gl.bottom_labels = False
+        gl.left_labels = False
+
+    if gridline_kwargs:
+        for key, value in gridline_kwargs.items():
+            setattr(gl, key, value)
+
+    # Set locators dynamically
+    if x_interval is not None:
+        gl.xlocator = mticker.FixedLocator(np.arange(np.floor(xmin), np.ceil(xmax) + x_interval, x_interval))
+    if y_interval is not None:
+        gl.ylocator = mticker.FixedLocator(np.arange(np.floor(ymin), np.ceil(ymax) + y_interval, y_interval))
 
     if scalebar is True:
         add_scalebar(ax, zorder=scalebar_zorder, **scalebar_kwargs)
@@ -746,8 +777,22 @@ class _ShadedReliefESRI(GoogleTiles):
 
 #     return ax
 
+def draw_rectangle(ax, extent, facecolor='gray', alpha=0.5, linewidth=3, zorder=1500):
+    lonmin, lonmax, latmin, latmax = extent
+    xy = (lonmin, latmin)
+    width = abs(lonmax - lonmin)
+    height = abs(latmax - latmin)
+    ax.add_patch(
+        Rectangle(xy, width, height, transform=ccrs.PlateCarree(), facecolor=facecolor, alpha=alpha, linewidth=linewidth, edgecolor='none',
+                  zorder=1500)
+    )
+    ax.add_patch(
+        Rectangle(xy, width, height, transform=ccrs.PlateCarree(), fill=False, edgecolor=(0, 0, 0, 1), linewidth=linewidth, zorder=zorder)
+    )
+    pass
 
-def inset_map(extent, map_extent=None, shapes=[], shapefiles=None, figsize=(8, 15), **kwargs):
+
+def inset_map(extent, map_extent=None, shapes=[], shapefiles=None, figsize=(8, 15), projection=None, **kwargs):
     """Create an black and white inset map for placing within a larger map.
     
     Parameters
@@ -758,9 +803,13 @@ def inset_map(extent, map_extent=None, shapes=[], shapefiles=None, figsize=(8, 1
         extent of larger map for drawing box within inset map
     """
     fig = plt.figure(figsize=figsize)
+    
+    if projection is None:
+        projection = ccrs.PlateCarree()
 
     # create a map
-    ax = plt.axes(projection=ccrs.PlateCarree())
+    # ax = plt.axes(projection=ccrs.PlateCarree())
+    ax = plt.axes(projection=projection)
     ax.set_extent(extent, crs=ccrs.PlateCarree())
 
     ax.coastlines(resolution="10m", zorder=4, linewidth=0.6)
@@ -780,12 +829,13 @@ def inset_map(extent, map_extent=None, shapes=[], shapefiles=None, figsize=(8, 1
 
     # add box for domain of larger map
     if map_extent is not None:
-        lonmin, lonmax, latmin, latmax = map_extent
-        xy = (lonmin, latmin)
-        width = abs(lonmax - lonmin)
-        height = abs(latmax - latmin)
-        ax.add_patch(Rectangle(xy, width, height, facecolor='gray', alpha=0.5, linewidth=3))
-        ax.add_patch(Rectangle(xy, width, height, fill=False, edgecolor='k', linewidth=3))
+        draw_rectangle(ax, map_extent)
+        # lonmin, lonmax, latmin, latmax = map_extent
+        # xy = (lonmin, latmin)
+        # width = abs(lonmax - lonmin)
+        # height = abs(latmax - latmin)
+        # ax.add_patch(Rectangle(xy, width, height, facecolor='gray', alpha=0.5, linewidth=3))
+        # ax.add_patch(Rectangle(xy, width, height, fill=False, edgecolor='k', linewidth=3))
     
     # add any other shapes to the map
     for shape in shapes:
