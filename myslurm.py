@@ -1014,7 +1014,25 @@ class Seffs:
         pass
 
     def describe(self, cols=['walltime_hrs', 'core_walltime_hrs', 'memory_used_MB'], **kwargs):
-        """Print out quantile info for walltime hours and memory used."""
+        """Print out quantile info for walltime hours and memory used.
+
+        Parameters
+        ----------
+        cols : list
+            a list of columns that will be created by Seffs.to_dataframe()
+            default list of columns is assumed if specifying time_units or mem_units
+        kwargs : dict
+            passed to self.to_dataframe()
+            if time_units or mem_units are specified, the default `cols` list is updated accordingly
+        """
+        if 'time_units' in kwargs.keys():
+            time_units = kwargs['time_units']
+            cols[:2] = [f'walltime_{time_units}', f'core_walltime_{time_units
+
+        if 'mem_units' in kwargs.keys():
+            mem_units = kwargs['mem_units']
+            cols[-1] = f'memory_used_{mem_units}'
+
         return self.to_dataframe(**kwargs)[cols].describe()
 
     @staticmethod
