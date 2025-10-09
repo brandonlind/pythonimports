@@ -1027,7 +1027,7 @@ class Seffs:
         """
         if 'time_units' in kwargs.keys():
             time_units = kwargs['time_units']
-            cols[:2] = [f'walltime_{time_units}', f'core_walltime_{time_units
+            cols[:2] = [f'walltime_{time_units}', f'core_walltime_{time_units}']
 
         if 'mem_units' in kwargs.keys():
             mem_units = kwargs['mem_units']
