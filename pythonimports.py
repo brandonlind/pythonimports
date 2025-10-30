@@ -868,6 +868,7 @@ Current commit of <a href="{url}" target="_blank">{repo_name}</a>:
 {gitout}
 {hashes}
 </pre>
+</div>
 """
     
         display(HTML(html_output))
