@@ -283,13 +283,16 @@ def printmd(string: str) -> None:
     display(Markdown(string))
 
 
-def makedir(directory: str) -> str:
+def makedir(directory: str, real=False) -> str:
     """If directory doesn't exist, create it.
 
     Return directory.
     """
 #     if not op.exists(directory):
     os.makedirs(directory, exist_ok=True)
+
+    if real is True:
+        directory = op.realpath(directory)
     
     return directory
 
@@ -612,8 +615,15 @@ def parallel_read(f: str, linenums=None, nrows=None, header=0, lview=None, dview
     if linenums is None:
         if verbose:
             print("\tdeterming line numbers for ", ColorText(f).gray(), " ...")
-        lines = subprocess.check_output([shutil.which("awk"), "{print $1}", f]).split(b"\n")
-        linenums = len([line for line in lines if line != b""])  # use this 2avoid weird cases where file ends with '\n'
+        if f.endswith('.txt') or f.endswith('.csv'):
+            # lines = subprocess.check_output([shutil.which("awk"), "{print $1}", f]).split(b"\n")
+            lines = subprocess.check_output([shutil.which("awk"), "{print $1}", f], text=True).split('\n')
+        elif f.endswith('.gz'):
+            lines = subprocess.run(
+                fr"{shutil.which('zcat')} {f} | awk '{{print $1}}'",
+                capture_output=True, text=True, shell=True
+            ).stdout.split('\n')
+        linenums = len([line for line in lines if line != ""])  # use this 2avoid weird cases where file ends with '\n'
 
     # evenly distribute jobs across engines
     if nrows is None:
@@ -669,7 +679,7 @@ def parallel_read(f: str, linenums=None, nrows=None, header=0, lview=None, dview
 
         if header is not None:
             # if there is a header, subtract from line count
-            linenums = linenums - 1
+            linenums =- 1
 
         if assert_rowcount is True:
             assert nrow(df) == linenums, (nrow(df), linenums)
