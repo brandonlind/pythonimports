@@ -23,7 +23,7 @@ def create_cmap(list_of_colors, name=None, grain=500):
 
 
 def histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, fontsize=12,
-              y_pad=1.3, histbins='auto', saveloc=None, rotation=0, ax=None, jitter=True, jit=0.15, marker='.',
+              y_pad=None, histbins='auto', saveloc=None, rotation=0, ax=None, jitter=True, jit=0.15, marker='.',
               markersize=8, zorder=0, markerfacecolor='gray', alpha=0.5, markeredgewidth=0.0,
               histplot_kws={}, boxplot_kws={}, height_ratios=(.15, .85), xlim=None, ylim=None,
               ticksize=None, **kwargs):
@@ -102,7 +102,7 @@ def histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, 
     
     # creating a figure composed of two matplotlib.Axes objects (ax_box and ax_hist)
     if ax is None:
-        f, (ax_box, ax_hist) = plt.subplots(2, sharex=True, gridspec_kw={"height_ratios": height_ratios}, **kwargs)
+        f, (ax_box, ax_hist) = plt.subplots(2, sharex=True, gridspec_kw={"height_ratios": height_ratios}, constrained_layout=True, **kwargs)
     else:
         ax_hist = ax
         divider = make_axes_locatable(ax_hist)
@@ -124,7 +124,7 @@ def histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, 
     ax_box.set_xlabel(None)
 
     if title is not None:
-        ax_hist.set_title(title, y=y_pad, fontdict=dict(fontsize=fontsize))
+        ax_box.set_title(title, y=y_pad, fontdict=dict(fontsize=fontsize))
 
     if xticks_by is not None:
         ax_hist.set_xticks(
@@ -150,6 +150,7 @@ def histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, 
     
     if saveloc is not None:
         save_pdf(saveloc)
+        plt.show()
     
     if ax is None:
         plt.show()
@@ -654,7 +655,7 @@ class SeabornFig2Grid():
     pass
 
 
-def pdf_to_png(pdf, page=0, outfile=None, outdir=None):
+def pdf_to_png(pdf, page=0, outfile=None, outdir=None, dpi=500):
     """Convert the first page of a pdf document to a png.
     
     Parameters
@@ -668,7 +669,7 @@ def pdf_to_png(pdf, page=0, outfile=None, outdir=None):
     outdir : str
         if `outfile` is None, save as /path/to/outdir/basename.png
     """
-    pages = convert_from_path(pdf, 500)
+    pages = convert_from_path(pdf, dpi=dpi)
 
     png = pdf.replace('.pdf', '.png')
     
@@ -822,4 +823,9 @@ def add_legend(ldict, markers='s', legendmarkerfacecolor='fill', markeredgecolor
     plt.setp(leg1.get_title(), family='serif', fontsize=fontsize+1)
     leg1.get_title().set_multialignment('center')
     
+    pass
+
+def save_png(saveloc, dpi=300):
+    plt.savefig(saveloc, dpi=dpi, bbox_inches='tight')
+    print(pyimp.ColorText("Saved to: ").bold(), saveloc)
     pass
