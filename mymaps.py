@@ -15,18 +15,23 @@ from cartopy.io.img_tiles import GoogleTiles
 from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.patches import Rectangle, FancyArrowPatch
+import matplotlib.transforms as mtransforms
 import matplotlib.ticker as mticker
+import matplotlib.patheffects as pe
 from shapely.geometry import Polygon, box
 import geopandas as gpd
 from matplotlib.colors import colorConverter
 from PIL import Image, ImageEnhance, ImageChops
 from pyproj import Geod
+from scipy.interpolate import interp1d
+from scipy.ndimage import gaussian_filter1d
 
 import pythonimports as pyimp
 
 
 def gdalwarp(infile, netcdf_outfile, proj, gdalwarp_exe=None):
-    """Convert `infile` (eg .tif or .nc) to WGS84 `netcdf_outfile` (.nc).
+    """
+    Convert `infile` (eg .tif or .nc) to WGS84 `netcdf_outfile` (.nc).
     
     Notes
     -----
@@ -70,10 +75,59 @@ def gdalwarp(infile, netcdf_outfile, proj, gdalwarp_exe=None):
     return output
 
 
-def draw_pie_marker(ratios, xcoord, ycoord, sizes, colors, ax, edgecolors="black", slice_edgecolors="none", alpha=1,
-                    edge_linewidths=1.5, slice_linewidths=1.5, zorder=10, transform=False, label=None, edgefactor=1,
-                    label_kws={}):
-    """Draw a pie chart at coordinates `[xcoord,ycoord]` on `ax`.
+def draw_pie_marker(
+    ratios, xcoord, ycoord, sizes, colors, ax,
+    edgecolors="black", slice_edgecolors="none", alpha=1,
+    edge_linewidths=1.5, slice_linewidths=1.5, zorder=10, transform=False, label=None,
+    label_kws={},
+    add_edge_outlines=False, outline_scale=0.01, edgefactor=1, outline_alpha=None
+):
+    """
+    Draw a pie chart at coordinates `[xcoord, ycoord]` on a matplotlib or cartopy axis, `ax`.
+
+
+    This function creates a pie chart as a scatter marker, optionally with an outer
+    colored edge and thin black outlines for improved visibility.
+
+    Parameters
+    ----------
+    ratios : list of float
+        Ratios for pie slices. For example, `[1, 1]` or `[0.5, 0.5]` creates two equal slices.
+    xcoord, ycoord : float
+        Coordinates where the pie chart will be drawn.
+    sizes : float or array-like
+        Size of the pie chart marker in points² (scatter `s` parameter).
+    colors : list of str
+        Colors for each pie slice.
+    ax : matplotlib.axes.Axes or cartopy.mpl.geoaxes.GeoAxesSubplot
+        Axis object on which to draw the pie chart.
+    edgecolors : str, default="black"
+        Color of the outer edge ring around the pie chart.
+    slice_edgecolors : str, default="none"
+        Color of the slice boundaries inside the pie chart.
+    alpha : float, default=1
+        Opacity for pie slices and edge rings.
+    edge_linewidths : float, default=1.5
+        Line width for the colored edge ring.
+    slice_linewidths : float, default=1.5
+        Line width for slice boundaries.
+    zorder : int, default=10
+        Drawing order for the pie chart.
+    transform : bool, default=False
+        If True, apply PlateCarree transform for geographic coordinates.
+    label : str or None, optional
+        Text label to annotate at the pie chart location.
+    label_kws : dict, optional
+        Keyword arguments passed to `ax.annotate` for the label.
+    add_edge_outlines : bool, default=False
+        If True, draw thin black outlines at the inner and outer boundaries of the
+        colored edge ring.
+    outline_scale : float, default=0.05
+        Scale factor for outline line widths relative to `edge_linewidths`.
+    edgefactor : float, default=1
+        Factor to scale the radius of the colored edge ring relative to the pie.
+    outline_alpha : float or None, optional
+        Opacity for outlines. Defaults to `alpha` if None.
 
     Parameters
     ----------
@@ -96,15 +150,40 @@ def draw_pie_marker(ratios, xcoord, ycoord, sizes, colors, ax, edgecolors="black
     -----
     - thanks stackoverflow! https://stackoverflow.com/questions/56337732/how-to-plot-scatter-pie-chart-using-matplotlib
     """
+    # normalize ratios
     ratios = [ratio / sum(ratios) for ratio in ratios]
 
+    # Ensure sizes is an array (scatter expects area in points^2)
+    sizes_arr = np.atleast_1d(np.array(sizes, dtype=float))
+
+    # Precompute a unit circle path
+    unit_t = np.linspace(0, 2 * np.pi, 100)
+    unit_circle_xy = np.column_stack([np.cos(unit_t), np.sin(unit_t)])
+
+    # Helpers: convert scatter area (pt^2) <-> radius (pt)
+    def area_to_radius(area_pt2):
+        return np.sqrt(area_pt2 / np.pi)
+
+    def radius_to_area(radius_pt):
+        return np.pi * (radius_pt ** 2)
+
+    # Base pie size and edge size
+    base_s = sizes_arr
+    edge_s = base_s * float(edgefactor)
+
+    # Radii in points (center radii for the marker paths)
+    r_base = area_to_radius(base_s)
+    r_edge = area_to_radius(edge_s)
+
+
     markers = []
-    previous = 0
+    previous = 0.0
     # calculate the points of the pie pieces
     for color, ratio in zip(colors, ratios):
         this = 2 * np.pi * ratio + previous
         x = np.cos(np.linspace(previous, this, 100)).tolist()
         y = np.sin(np.linspace(previous, this, 100)).tolist()
+
         if len(ratios) > 1 and 1 not in ratios:
             # commenting this section out will convert pie chart to cross-sectional shading
             # adding the [0] to x and y without a condition will result in an interior edge when circle should
@@ -114,34 +193,70 @@ def draw_pie_marker(ratios, xcoord, ycoord, sizes, colors, ax, edgecolors="black
 
         xy = np.column_stack([x, y])
         previous = this
-        markers.append({"marker": xy,
-                        "s": np.abs(xy).max() ** 2 * np.array(sizes),
-                        "alpha": alpha,
-                        "facecolor": color,
-                        "edgecolors": slice_edgecolors,
-                        "linewidths": slice_linewidths})
-    markers.append({"marker": np.column_stack([np.cos(np.linspace(0, 2 * np.pi, 100)).tolist(),
-                                               np.sin(np.linspace(0, 2 * np.pi, 100)).tolist()]),
-                    "s": np.abs(xy).max() ** 2 * np.array(sizes) * edgefactor,
-                    "facecolor": "none",
-                    "edgecolors": edgecolors,
-                    "linewidths": edge_linewidths,
-                    "alpha": alpha})
+
+        markers.append({
+            "marker": xy,
+            "s": np.abs(xy).max() ** 2 * np.array(sizes),
+            "alpha": alpha,
+            "facecolor": color,
+            "edgecolors": slice_edgecolors,
+            "linewidths": slice_linewidths
+        })
+
+
+    markers.append({
+        "marker": unit_circle_xy,
+        "s": edge_s,
+        "facecolor": "none",
+        "edgecolors": edgecolors,
+        "linewidths": edge_linewidths,
+        "alpha": alpha
+    })
+
+    # add optional black outlines between the edgecolor and the pie and on the outside of the edgecolor
+    if add_edge_outlines:
+        outline_alpha_eff = alpha if outline_alpha is None else outline_alpha
+        # Thin relative to colored edge; clamp a minimum for visibility on HiDPI
+        olw = max(0.15, float(edge_linewidths) * float(outline_scale))
+
+        # INNER boundary of colored edge: center at (r_edge - edge_linewidths/2)
+        r_inner_center = np.maximum(0.05, r_edge - float(edge_linewidths) / 2.0)
+        s_inner = radius_to_area(r_inner_center)
+
+        markers.append({
+            "marker": unit_circle_xy,
+            "s": s_inner,
+            "facecolor": "none",
+            "edgecolors": "black",
+            "linewidths": olw,
+            "alpha": outline_alpha_eff
+        })
+
+        # OUTER boundary of colored edge: center at (r_edge + edge_linewidths/2)
+        r_outer_center = r_edge + float(edge_linewidths) / 2.0
+        s_outer = radius_to_area(r_outer_center)
+
+        markers.append({
+            "marker": unit_circle_xy,
+            "s": s_outer,
+            "facecolor": "none",
+            "edgecolors": "black",
+            "linewidths": olw,
+            "alpha": outline_alpha_eff
+        })
 
     # scatter each of the pie pieces to create pies
-    scatter = (ax.scatter if transform is False else partial(ax.scatter, transform=ccrs.PlateCarree()))
-    annotate = (ax.annotate if transform is False
-                else partial(ax.annotate, xycoords=ccrs.PlateCarree()._as_mpl_transform(ax)))
-    
-    objects = []
-    for marker in markers:
-        objects.append(
-            scatter(xcoord, ycoord, zorder=zorder, **marker)
-        )
+    if transform is False:
+        scatter = ax.scatter
+        annotate = ax.annotate
+    else:
+        scatter = partial(ax.scatter, transform=ccrs.PlateCarree())
+        annotate = partial(ax.annotate, ccrs.PlateCarree()._as_mpl_transform(ax))
+
+    objects = [scatter(xcoord, ycoord, zorder=zorder, **m) for m in markers]
+
     if label is not None:
-        objects.append(
-            annotate(label, (xcoord, ycoord), zorder=zorder + 10, **label_kws)
-        )
+        objects.append(annotate(label, xcoord, ycoord, zorder=zorder + 10, **label_kws))
 
     return pyimp.flatten(objects)
 
@@ -158,7 +273,8 @@ def overlaps(polygon, polygons):
 
 
 def cut_shapes(shapefile, cut=True, epsg=4326, cut_extent=None, query=None):
-    """Cut out overlapping polygons from non-overlapping polygons.
+    """
+    Cut out overlapping polygons from non-overlapping polygons.
     
     Notes
     -----
@@ -201,7 +317,8 @@ def cut_shapes(shapefile, cut=True, epsg=4326, cut_extent=None, query=None):
 
 
 def add_shapefiles_to_map(ax, shapefiles=None, face_alpha=0.1, edge_alpha=1, zorder=20, progress_bar=False, geo_kws={}, **kwargs):
-    """Add shapefiles to `ax`.
+    """
+    Add shapefiles to `ax`.
     
     Parameters
     ----------
@@ -793,7 +910,8 @@ def draw_rectangle(ax, extent, facecolor='gray', alpha=0.5, linewidth=3, zorder=
 
 
 def inset_map(extent, map_extent=None, shapes=[], shapefiles=None, figsize=(8, 15), projection=None, **kwargs):
-    """Create an black and white inset map for placing within a larger map.
+    """
+    Create an black and white inset map for placing within a larger map.
     
     Parameters
     ----------
@@ -902,3 +1020,95 @@ def read_geofile(geofile, epsg="epsg:4326", x_dim="latitude", y_dim="longitude",
     lats = ds[layer][y_dim]
     
     return ds, layer, vals, lons, lats
+
+
+def make_arc(ax, lat, lon_start, lon_end, n=100):
+    """
+    Generate interpolators for an arc along a constant latitude between two longitudes.
+
+    Parameters
+    ----------
+    ax : matplotlib.axes._subplots.AxesSubplot
+        The matplotlib axis with a Cartopy projection used for coordinate transformation.
+    lat : float
+        Latitude at which the arc is drawn.
+    lon_start : float
+        Starting longitude of the arc.
+    lon_end : float
+        Ending longitude of the arc.
+    n : int, optional
+        Number of points to sample along the arc (default is 100).
+
+    Returns
+    -------
+    fx : scipy.interpolate.interp1d
+        Interpolator for x-coordinates along the arc.
+    fy : scipy.interpolate.interp1d
+        Interpolator for y-coordinates along the arc.
+    fangle : scipy.interpolate.interp1d
+        Interpolator for angle (in degrees) of the arc at each point.
+    arc_length : float
+        Total length of the arc in display coordinates.
+    """
+    lons = np.linspace(lon_start, lon_end, n)
+    lats = np.full_like(lons, lat)
+    xy = ax.projection.transform_points(ccrs.PlateCarree(), lons, lats)[:, :2]
+    x, y = xy.T
+    arc_length = np.concatenate([[0], np.cumsum(np.sqrt(np.diff(x)**2 + np.diff(y)**2))])
+
+    # Interpolators
+    fx = interp1d(arc_length, x)
+    fy = interp1d(arc_length, y)
+
+    dx = np.gradient(x)
+    dy = np.gradient(y)
+    angles = np.degrees(np.arctan2(dy, dx))
+    angles = gaussian_filter1d(angles, sigma=2)
+    fangle = interp1d(arc_length, angles)
+
+    return fx, fy, fangle, arc_length[-1]
+
+
+def add_arc_label(ax, lat, lon_start, lon_end, label, offset_points=0, **text_kwargs):
+    """
+    Add a curved label along an arc at a constant latitude between two longitudes.
+
+    Parameters
+    ----------
+    ax : matplotlib.axes._subplots.AxesSubplot
+        The matplotlib axis with a Cartopy projection used for coordinate transformation.
+    lat : float
+        Latitude at which the arc is drawn.
+    lon_start : float
+        Starting longitude of the arc.
+    lon_end : float
+        Ending longitude of the arc.
+    label : str
+        Text string to be placed along the arc.
+    offset_points : float, optional
+        Vertical offset in points from the arc (default is 0).
+    **text_kwargs : dict
+        Additional keyword arguments passed to `ax.text()` for styling the text.
+
+    Returns
+    -------
+    None
+    """
+    fx, fy, fangle, arc_len = make_arc(ax=ax, lat=lat, lon_start=lon_start, lon_end=lon_end)
+    spacing = arc_len / (len(label) + 1)
+    positions = np.linspace(spacing, arc_len - spacing, len(label))
+
+    text_transform = mtransforms.offset_copy(ax.transData, fig=ax.figure, y=offset_points, units='points')
+
+    text_kwargs = {
+        **{'ha' : 'center', 'va' : 'center', 'fontsize' : 11, 'color' : 'k', 'zorder' : 2000},
+        **text_kwargs
+    }
+    for char, s in zip(label, positions):
+        px = fx(s)
+        py = fy(s)
+        angle = float(fangle(s))
+
+        ax.text(px, py, char, rotation=angle, transform=text_transform, **text_kwargs)
+
+    pass
