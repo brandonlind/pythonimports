@@ -204,7 +204,7 @@ def sbatch(shfiles: Union[str, list], sleep=0, printing=False, outdir=None, prog
     pids = []
     for sh in iterator:
         # make sure job matches filename
-        filejob = op.basename(sh).split(".")[0]
+        filejob = op.basename(sh).removesuffix(".sh")
         sbatchflag = [line for line in pyimp.read(sh, lines=True) if '--job-name' in line][0].split("job-name=")[1]
         if filejob != sbatchflag:
             exceptiontext = pyimp.ColorText(
@@ -1771,7 +1771,7 @@ class Squeue:
         timelimit - total wall time requested
         """
         def _cmd(account=None, minmemorynode=None, timelimit=None, to_partition=None, to_reservation=None, to=None,
-                 to_res=None, to_qos=None, **kwargs):
+                 to_res=None, to_qos=None, numcpus=None, **kwargs):
             """Create bash command for slurm scontrol update."""
             # base command
             cmd_ = "scontrol update"
@@ -1793,6 +1793,8 @@ class Squeue:
             if to_reservation is not None or to_res is not None:
                 to_reservation = to_reservation if to_reservation is not None else to_res
                 cmd_ = f"{cmd_} reservation={to_reservation}"
+            if numcpus is not None:
+                cmd_ = f"{cmd_} NumCPUs={numcpus}"
             print(f'{cmd_ = }')
             return cmd_
 
