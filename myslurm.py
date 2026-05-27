@@ -1033,7 +1033,12 @@ class Seffs:
             mem_units = kwargs['mem_units']
             cols[-1] = f'memory_used_{mem_units}'
 
-        return self.to_dataframe(**kwargs)[cols].describe()
+        if len(self) > 0:
+            return self.to_dataframe(**kwargs)[cols].describe()
+        else:
+            print(pyimp.ColorText('Seffs is empty, and there is nothing to describe.').warn().bold())
+
+        pass
 
     @staticmethod
     def remote(hostname='login.hpc.cam.uchc.edu', outs=None, user=None, python=None):
@@ -2020,6 +2025,46 @@ class Squeue:
 
     pass
 
+
+def slurm_header(job, threads, mem, partition='general', qos='general', email=None, alerts=['END', 'FAIL']):
+    """Create slurm header.
+    
+    Parameters
+    ----------
+    job : str
+    threads : int
+    mem : int
+        eg 1000 for 1000M. eg 40G for 40G.
+    partition : str
+    qos : str
+    email : str
+    alerts : str | list
+
+    Returns
+    -------
+    header : str
+    """
+
+    header = f'''#!/bin/bash
+#SBATCH --job-name={job}
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task={threads}
+#SBATCH --mem={mem}
+#SBATCH --partition={partition}
+#SBATCH --qos={qos}
+#SBATCH -o %x_%j.out
+'''
+
+    if isinstance(alerts, str):
+        alerts = [alerts]
+    else:
+        assert isinstance(alerts, list)
+
+    if email is not None:
+        email_text = '\n'.join([f'#SBATCH --mail-user={email}', '#SBATCH --mail-type=%s' % ','.join(alerts)])
+        header += email_text
+
+    return header
 
 getsq = Squeue._getsq  # backwards compatibility
 
