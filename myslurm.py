@@ -2064,7 +2064,8 @@ def slurm_header(job, threads, mem, partition='general', qos='general', email=No
         assert isinstance(alerts, list)
 
     if add_flags is not None:
-        header += '\n'.join(add_flags)
+        flag_text = '\n'.join(add_flags) + '\n'
+        header += flag_text
 
     if email is not None:
         email_text = '\n'.join([f'#SBATCH --mail-user={email}', '#SBATCH --mail-type=%s' % ','.join(alerts)])
