@@ -2026,9 +2026,9 @@ class Squeue:
     pass
 
 
-def slurm_header(job, threads, mem, partition='general', qos='general', email=None, alerts=['END', 'FAIL']):
+def slurm_header(job, threads, mem, partition='general', qos='general', email=None, add_flags=None, alerts=['END', 'FAIL']):
     """Create slurm header.
-    
+
     Parameters
     ----------
     job : str
@@ -2037,8 +2037,11 @@ def slurm_header(job, threads, mem, partition='general', qos='general', email=No
         eg 1000 for 1000M. eg 40G for 40G.
     partition : str
     qos : str
-    email : str
+    email : None | str
+    add_flags : None | list
+        any other flags that are needed - eg ['#SBATCH --gres=gpu:1', '#SBATCH --constraint="gpu_A100"']
     alerts : str | list
+        email alerts for the slurm job - only used if email is specified
 
     Returns
     -------
@@ -2059,6 +2062,9 @@ def slurm_header(job, threads, mem, partition='general', qos='general', email=No
         alerts = [alerts]
     else:
         assert isinstance(alerts, list)
+
+    if add_flags is not None:
+        header += '\n'.join(add_flags)
 
     if email is not None:
         email_text = '\n'.join([f'#SBATCH --mail-user={email}', '#SBATCH --mail-type=%s' % ','.join(alerts)])
