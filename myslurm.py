@@ -1427,9 +1427,11 @@ class Squeue:
     def _handle_mem(mem):
         """If the memory units are specified, remove."""
         mem = str(mem)
-        if mem.endswith("M") or mem.endswith("G"):
+        if mem.endswith("M"):
             mem = mem[:-1]
-        return mem
+        elif mem.endswith("G"):
+            mem = int(mem[:-1]) * 1024
+        return str(mem)
 
     @staticmethod
     def _handle_account(account):
