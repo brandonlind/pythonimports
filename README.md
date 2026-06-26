@@ -1,11 +1,6 @@
 help documentation as of 
 
-commit f447ba2c8bba8b2d996589427d424907a41a8e4a
-
-Author: Brandon Lind <lind.brandon.m@gmail.com>
-
-Date: Tue Oct 7 21:56:21 2025 -400
-
+('commit beaf90840404ddb96b92b7db46f46e53ffc04308  \nAuthor: Brandon Lind <lind.brandon.m@gmail.com>  \nDate:   Thu Jun 25 10:46:56 2026 -0400', 'https://github.com/brandonlind/pythonimports')
 ----
 ### Python Library Documentation: module pythonimports
 ```
@@ -120,7 +115,7 @@ FUNCTIONS
     make_jobs(fxn, inputs: list, lview) -> list
         Send each arg from inputs to a function command; async.
 
-    makedir(directory: str) -> str
+    makedir(directory: str, real=False) -> str
         If directory doesn't exist, create it.
 
         Return directory.
@@ -346,7 +341,7 @@ DATA
     colorConverter = <matplotlib.colors.ColorConverter object>
     nb = functools.partial(<class 'tqdm.std.tqdm'>, bar_format='{l_bar}{ba...
     pbar = functools.partial(<class 'tqdm.std.tqdm'>, bar_format='{l_bar}{...
-    trange = functools.partial(<function trange at 0x7f2c0a058360>, bar_fo...
+    trange = functools.partial(<function trange at 0x7f290d6c5ee0>, bar_fo...
 
 ```
 
@@ -443,6 +438,30 @@ CLASSES
      |      list of weak references to the object
 
 FUNCTIONS
+    add_arc_label(ax, lat, lon_start, lon_end, label, offset_points=0, **text_kwargs)
+        Add a curved label along an arc at a constant latitude between two longitudes.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes._subplots.AxesSubplot
+            The matplotlib axis with a Cartopy projection used for coordinate transformation.
+        lat : float
+            Latitude at which the arc is drawn.
+        lon_start : float
+            Starting longitude of the arc.
+        lon_end : float
+            Ending longitude of the arc.
+        label : str
+            Text string to be placed along the arc.
+        offset_points : float, optional
+            Vertical offset in points from the arc (default is 0).
+        **text_kwargs : dict
+            Additional keyword arguments passed to `ax.text()` for styling the text.
+
+        Returns
+        -------
+        None
+
     add_north_arrow(ax, location_xy=(0.92, 0.08), length_km=None, color='k', lw=2.5, mutation_scale=18, text='N', font_size=12, box_alpha=1, zorder=1000)
         Add a north-pointing arrow that is geodetically correct at its placement location.
 
@@ -562,8 +581,52 @@ FUNCTIONS
         -----
         `cut_extent` is useful when original shapefile is large
 
-    draw_pie_marker(ratios, xcoord, ycoord, sizes, colors, ax, edgecolors='black', slice_edgecolors='none', alpha=1, edge_linewidths=1.5, slice_linewidths=1.5, zorder=10, transform=False, label=None, edgefactor=1, label_kws={})
-        Draw a pie chart at coordinates `[xcoord,ycoord]` on `ax`.
+    draw_pie_marker(ratios, xcoord, ycoord, sizes, colors, ax, edgecolors='black', slice_edgecolors='none', alpha=1, edge_linewidths=1.5, slice_linewidths=1.5, zorder=10, transform=False, label=None, label_kws={}, add_edge_outlines=False, outline_scale=0.01, edgefactor=1, outline_alpha=None)
+        Draw a pie chart at coordinates `[xcoord, ycoord]` on a matplotlib or cartopy axis, `ax`.
+
+
+        This function creates a pie chart as a scatter marker, optionally with an outer
+        colored edge and thin black outlines for improved visibility.
+
+        Parameters
+        ----------
+        ratios : list of float
+            Ratios for pie slices. For example, `[1, 1]` or `[0.5, 0.5]` creates two equal slices.
+        xcoord, ycoord : float
+            Coordinates where the pie chart will be drawn.
+        sizes : float or array-like
+            Size of the pie chart marker in points² (scatter `s` parameter).
+        colors : list of str
+            Colors for each pie slice.
+        ax : matplotlib.axes.Axes or cartopy.mpl.geoaxes.GeoAxesSubplot
+            Axis object on which to draw the pie chart.
+        edgecolors : str, default="black"
+            Color of the outer edge ring around the pie chart.
+        slice_edgecolors : str, default="none"
+            Color of the slice boundaries inside the pie chart.
+        alpha : float, default=1
+            Opacity for pie slices and edge rings.
+        edge_linewidths : float, default=1.5
+            Line width for the colored edge ring.
+        slice_linewidths : float, default=1.5
+            Line width for slice boundaries.
+        zorder : int, default=10
+            Drawing order for the pie chart.
+        transform : bool, default=False
+            If True, apply PlateCarree transform for geographic coordinates.
+        label : str or None, optional
+            Text label to annotate at the pie chart location.
+        label_kws : dict, optional
+            Keyword arguments passed to `ax.annotate` for the label.
+        add_edge_outlines : bool, default=False
+            If True, draw thin black outlines at the inner and outer boundaries of the
+            colored edge ring.
+        outline_scale : float, default=0.05
+            Scale factor for outline line widths relative to `edge_linewidths`.
+        edgefactor : float, default=1
+            Factor to scale the radius of the colored edge ring relative to the pie.
+        outline_alpha : float or None, optional
+            Opacity for outlines. Defaults to `alpha` if None.
 
         Parameters
         ----------
@@ -623,6 +686,33 @@ FUNCTIONS
             extent of inset map - [minlong, maxlong, minlat, maxlat]
         map_extent - list
             extent of larger map for drawing box within inset map
+
+    make_arc(ax, lat, lon_start, lon_end, n=100)
+        Generate interpolators for an arc along a constant latitude between two longitudes.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes._subplots.AxesSubplot
+            The matplotlib axis with a Cartopy projection used for coordinate transformation.
+        lat : float
+            Latitude at which the arc is drawn.
+        lon_start : float
+            Starting longitude of the arc.
+        lon_end : float
+            Ending longitude of the arc.
+        n : int, optional
+            Number of points to sample along the arc (default is 100).
+
+        Returns
+        -------
+        fx : scipy.interpolate.interp1d
+            Interpolator for x-coordinates along the arc.
+        fy : scipy.interpolate.interp1d
+            Interpolator for y-coordinates along the arc.
+        fangle : scipy.interpolate.interp1d
+            Interpolator for angle (in degrees) of the arc at each point.
+        arc_length : float
+            Total length of the arc in display coordinates.
 
     overlaps(polygon, polygons)
         Determine if `polygon` overlaps with any of the `polygons`.
@@ -748,7 +838,7 @@ FUNCTIONS
         -----
         thanks https://matplotlib.org/3.2.0/gallery/lines_bars_and_markers/gradient_bar.html
 
-    histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, fontsize=12, y_pad=1.3, histbins='auto', saveloc=None, rotation=0, ax=None, jitter=True, jit=0.15, marker='.', markersize=8, zorder=0, markerfacecolor='gray', alpha=0.5, markeredgewidth=0.0, histplot_kws={}, boxplot_kws={}, height_ratios=(0.15, 0.85), xlim=None, ylim=None, ticksize=None, **kwargs)
+    histo_box(data, xticks_by=None, title=None, xlab=None, ylab=None, col=None, fontsize=12, y_pad=None, histbins='auto', saveloc=None, rotation=0, ax=None, jitter=True, jit=0.15, marker='.', markersize=8, zorder=0, markerfacecolor='gray', alpha=0.5, markeredgewidth=0.0, histplot_kws={}, boxplot_kws={}, height_ratios=(0.15, 0.85), xlim=None, ylim=None, ticksize=None, **kwargs)
         Create histogram with boxplot in top margin.
 
         Parameters
@@ -818,7 +908,7 @@ FUNCTIONS
         xlim, ylim - tuple with min and max for each axis
         vlim - tuple with min and max for color bar (to standardize across figures)
 
-    pdf_to_png(pdf, page=0, outfile=None, outdir=None)
+    pdf_to_png(pdf, page=0, outfile=None, outdir=None, dpi=500)
         Convert the first page of a pdf document to a png.
 
         Parameters
@@ -834,6 +924,8 @@ FUNCTIONS
 
     save_pdf(saveloc)
         After creating a figure in jupyter notebooks, save as PDFs at `saveloc`.
+
+    save_png(saveloc, dpi=300)
 
     scatter2d(x=None, y=None, cmap='jet', ylab=None, xlab=None, bins=100, saveloc=None, figsize=(5, 4), snsbins=60, title=None, xlim=None, ylim=None, vlim=(None, None), marginal_kws={}, title_kws={}, return_cbar=False, normalization='lognorm', cbar_label=None) -> seaborn.axisgrid.JointGrid
         Make 2D scatterplot with marginal histograms for each axis.
@@ -1190,6 +1282,15 @@ CLASSES
      |
      |  describe(self, cols=['walltime_hrs', 'core_walltime_hrs', 'memory_used_MB'], **kwargs)
      |      Print out quantile info for walltime hours and memory used.
+     |
+     |      Parameters
+     |      ----------
+     |      cols : list
+     |          a list of columns that will be created by Seffs.to_dataframe()
+     |          default list of columns is assumed if specifying time_units or mem_units
+     |      kwargs : dict
+     |          passed to self.to_dataframe()
+     |          if time_units or mem_units are specified, the default `cols` list is updated accordingly
      |
      |  failed(self)
      |      Return Seffs object for any failed job.
@@ -1651,6 +1752,27 @@ FUNCTIONS
             job are cancelled. the pid returned for the shfile will be the pid of the job that remains in
             the queue.
 
+    slurm_header(job, threads, mem, partition='general', qos='general', email=None, add_flags=None, alerts=['END', 'FAIL'])
+        Create slurm header.
+
+        Parameters
+        ----------
+        job : str
+        threads : int
+        mem : int
+            eg 1000 for 1000M. eg 40G for 40G.
+        partition : str
+        qos : str
+        email : None | str
+        add_flags : None | list
+            any other flags that are needed - eg ['#SBATCH --gres=gpu:1', '#SBATCH --constraint="gpu_A100"']
+        alerts : str | list
+            email alerts for the slurm job - only used if email is specified
+
+        Returns
+        -------
+        header : str
+
 DATA
     Union = typing.Union
         Union type; Union[X, Y] means either X or Y.
@@ -1683,7 +1805,7 @@ DATA
         - You can use Optional[X] as a shorthand for Union[X, None].
 
     pbar = functools.partial(<class 'tqdm.std.tqdm'>, bar_format='{l_bar}{...
-    trange = functools.partial(<function trange at 0x7f2c0a058360>, bar_fo...
+    trange = functools.partial(<function trange at 0x7f290d6c5ee0>, bar_fo...
 
 ```
 
@@ -1777,6 +1899,8 @@ NAME
 CLASSES
     builtins.object
         ColorText
+    pandas.core.series.Series(pandas.core.base.IndexOpsMixin, pandas.core.generic.NDFrame)
+        MySeries
 
     class ColorText(builtins.object)
      |  ColorText(text: str = '')
@@ -1830,7 +1954,7 @@ CLASSES
      |  ----------------------------------------------------------------------
      |  Class methods defined here:
      |
-     |  demo() from builtins.type
+     |  demo()
      |      Prints examples of all colors in normal, bold, underline, bold+underline.
      |
      |  ----------------------------------------------------------------------
